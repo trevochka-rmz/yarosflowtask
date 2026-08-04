@@ -147,3 +147,19 @@
     color: var(--color-foreground);
   }
 }
+
+@utility bg-brand-gradient {
+  background-image: var(--gradient-brand);
+}
+
+@utility bg-surface-gradient {
+  background-image: var(--gradient-surface);
+}
+
+@utility shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+@utility text-brand-deep {
+  color: var(--brand-deep);
+}
