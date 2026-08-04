@@ -2,8 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { PriorityBadge, StatusBadge } from "@/components/Badges";
-import { api, formatDate, STATUS_LABELS, type Task, type TaskStatus } from "@/lib/api";
+import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import {
+  api,
+  assigneeCount,
+  formatDate,
+  STATUS_LABELS,
+  type Task,
+  type TaskStatus,
+} from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -20,11 +27,13 @@ export const Route = createFileRoute("/tasks/")({
 });
 
 type Scope = "all" | "author" | "assigned";
+type Assignment = "any" | "with" | "without";
 
 function TasksPage() {
   const { data: user } = useCurrentUser();
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<TaskStatus | "">("");
+  const [assignment, setAssignment] = useState<Assignment>("any");
   const userId = user?.id ?? 1;
 
   const query = useQuery({
@@ -37,25 +46,38 @@ function TasksPage() {
     },
   });
 
+  const tasks = (query.data ?? []).filter((t) => {
+    if (assignment === "with") return assigneeCount(t) >= 1;
+    if (assignment === "without") return assigneeCount(t) === 0;
+    return true;
+  });
+
   const scopes: { key: Scope; label: string }[] = [
     { key: "all", label: "Все" },
     { key: "author", label: "Мои созданные" },
     { key: "assigned", label: "Назначенные мне" },
   ];
 
+  const assignments: { key: Assignment; label: string }[] = [
+    { key: "any", label: "Все" },
+    { key: "with", label: "Назначенные" },
+    { key: "without", label: "Без исполнителя" },
+  ];
+
   return (
     <AppLayout>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-brand-deep">Задачи</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Отслеживайте прогресс от постановки ТЗ до выполнения.
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">Задачи</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Отслеживайте прогресс от постановки ТЗ до выполнения.
+        </p>
+      </div>
+
+      <div className="mt-4 space-y-3">
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
-          className="h-10 rounded-md border border-input bg-card px-3 text-sm"
+          className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm sm:w-56"
         >
           <option value="">Все статусы</option>
           {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -64,75 +86,135 @@ function TasksPage() {
             </option>
           ))}
         </select>
+
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+            {scopes.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setScope(s.key)}
+                className={cn(
+                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  scope === s.key
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+            {assignments.map((a) => (
+              <button
+                key={a.key}
+                onClick={() => setAssignment(a.key)}
+                className={cn(
+                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  assignment === a.key
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-5 inline-flex rounded-lg border border-border bg-card p-1">
-        {scopes.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setScope(s.key)}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              scope === s.key
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      <div className="mt-5">
         {query.isPending ? (
-          <div className="space-y-3 p-6">
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-6">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-6 animate-pulse rounded bg-muted" />
             ))}
           </div>
         ) : query.isError ? (
-          <p className="p-6 text-sm text-destructive">{(query.error as Error).message}</p>
-        ) : (query.data?.length ?? 0) === 0 ? (
-          <p className="p-8 text-center text-sm text-muted-foreground">Задач пока нет.</p>
+          <p className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive">
+            {(query.error as Error).message}
+          </p>
+        ) : tasks.length === 0 ? (
+          <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Задач пока нет.
+          </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">#</th>
-                  <th className="px-4 py-3 font-medium">Название</th>
-                  <th className="px-4 py-3 font-medium">Статус</th>
-                  <th className="px-4 py-3 font-medium">Приоритет</th>
-                  <th className="px-4 py-3 font-medium">Категория</th>
-                  <th className="px-4 py-3 font-medium">Создана</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {query.data?.map((task) => (
-                  <tr key={task.id} className="transition-colors hover:bg-accent/40">
-                    <td className="px-4 py-3 text-muted-foreground">{task.id}</td>
-                    <td className="px-4 py-3">
-                      <Link
-                        to="/tasks/$taskId"
-                        params={{ taskId: String(task.id) }}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {task.title}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
+          <>
+            {/* Мобильные карточки */}
+            <ul className="space-y-3 md:hidden">
+              {tasks.map((task) => (
+                <li key={task.id}>
+                  <Link
+                    to="/tasks/$taskId"
+                    params={{ taskId: String(task.id) }}
+                    className="block rounded-2xl border border-border bg-card p-4 shadow-soft active:bg-accent/40"
+                  >
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                      <span className="min-w-0 font-medium text-foreground">{task.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">#{task.id}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
                       <StatusBadge status={task.status} />
-                    </td>
-                    <td className="px-4 py-3">
                       <PriorityBadge priority={task.priority} />
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{task.category ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(task.created_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <AssignmentBadge count={assigneeCount(task)} />
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {task.category ?? "Без категории"} · {formatDate(task.created_at)}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            {/* Таблица для больших экранов */}
+            <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft md:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">#</th>
+                      <th className="px-4 py-3 font-medium">Название</th>
+                      <th className="px-4 py-3 font-medium">Статус</th>
+                      <th className="px-4 py-3 font-medium">Исполнители</th>
+                      <th className="px-4 py-3 font-medium">Приоритет</th>
+                      <th className="px-4 py-3 font-medium">Категория</th>
+                      <th className="px-4 py-3 font-medium">Создана</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {tasks.map((task) => (
+                      <tr key={task.id} className="transition-colors hover:bg-accent/40">
+                        <td className="px-4 py-3 text-muted-foreground">{task.id}</td>
+                        <td className="px-4 py-3">
+                          <Link
+                            to="/tasks/$taskId"
+                            params={{ taskId: String(task.id) }}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {task.title}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={task.status} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <AssignmentBadge count={assigneeCount(task)} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <PriorityBadge priority={task.priority} />
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{task.category ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDate(task.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </AppLayout>
