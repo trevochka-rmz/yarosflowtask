@@ -4,8 +4,6 @@ export const API_BASE_URL =
 export type Role = "manager" | "employee";
 export type TaskStatus =
   | "draft"
-  | "unassigned"
-  | "assigned"
   | "in_progress"
   | "review"
   | "done"
@@ -153,8 +151,6 @@ export const api = {
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   draft: "Черновик",
-  unassigned: "Без исполнителя",
-  assigned: "Назначена",
   in_progress: "В работе",
   review: "На проверке",
   done: "Выполнена",
@@ -170,16 +166,24 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 
 export function nextStatuses(status: TaskStatus, role: Role): TaskStatus[] {
   if (role === "employee") {
-    if (status === "assigned") return ["in_progress"];
+    if (status === "draft") return ["in_progress"];
     if (status === "in_progress") return ["review"];
     return [];
   }
   if (status === "review") return ["done", "in_progress"];
-  if (status === "assigned") return ["in_progress", "cancelled"];
+  if (status === "draft") return ["in_progress", "cancelled"];
   if (status === "in_progress") return ["review", "cancelled"];
-  if (status === "unassigned") return ["cancelled"];
   if (status === "done") return ["in_progress"];
   return [];
+}
+
+/** Назначение — не статус: определяем по количеству исполнителей. */
+export function assigneeCount(task: Task): number {
+  return task.assignees?.length ?? 0;
+}
+
+export function isAssigned(task: Task): boolean {
+  return assigneeCount(task) >= 1;
 }
 
 export function userLabel(u: { full_name?: string | null; username?: string | null; id: number }) {
