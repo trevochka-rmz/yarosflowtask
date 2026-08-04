@@ -90,24 +90,59 @@ function Index() {
             }}
           />
           <div className="flex flex-col gap-2 px-2 pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <span className="hidden text-xs text-muted-foreground sm:inline">Ctrl / ⌘ + Enter — отправить</span>
-            <Button
-              size="lg"
-              className="w-full sm:w-auto"
-              disabled={loading || !text.trim()}
-              onClick={() => mutation.mutate(text.trim())}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> AI формирует ТЗ…
-                </>
-              ) : (
-                <>
-                  Создать ТЗ <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              {voice.recording
+                ? "Идёт запись — нажмите «Стоп», текст появится в поле"
+                : voice.transcribing
+                  ? "Распознаём речь…"
+                  : "Ctrl / ⌘ + Enter — отправить"}
+            </span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                size="lg"
+                variant={voice.recording ? "destructive" : "outline"}
+                className="w-full sm:w-auto"
+                disabled={voice.transcribing || loading}
+                onClick={voice.toggle}
+              >
+                {voice.transcribing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Распознаём…
+                  </>
+                ) : voice.recording ? (
+                  <>
+                    <Square className="h-4 w-4" /> Стоп
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4" /> Голосом
+                  </>
+                )}
+              </Button>
+              <Button
+                size="lg"
+                className="w-full sm:w-auto"
+                disabled={loading || !text.trim()}
+                onClick={() => mutation.mutate(text.trim())}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> AI формирует ТЗ…
+                  </>
+                ) : (
+                  <>
+                    Создать ТЗ <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
+          {voice.recording ? (
+            <div className="flex items-center gap-2 px-2 pb-2 text-xs text-destructive sm:hidden">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" /> Идёт запись…
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap justify-center gap-2">
