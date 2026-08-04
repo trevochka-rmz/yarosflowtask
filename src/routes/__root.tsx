@@ -78,18 +78,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "YAROS.TaskFlow" },
+      { title: "YAROS.TaskFlow — заметка превращается в ТЗ" },
       {
         name: "description",
-        content: "Управление задачами: от свободной заметки до готового ТЗ и выполнения.",
+        content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
-      { property: "og:title", content: "YAROS.TaskFlow" },
+      { property: "og:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
       {
         property: "og:description",
-        content: "Управление задачами: от свободной заметки до готового ТЗ и выполнения.",
+        content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
+      { name: "twitter:description", content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/PcD7cIrXZMT91gMTkdPAq2Mnuip1/social-images/social-1785818786973-social-image.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/PcD7cIrXZMT91gMTkdPAq2Mnuip1/social-images/social-1785818786973-social-image.webp" },
     ],
     links: [
       {
