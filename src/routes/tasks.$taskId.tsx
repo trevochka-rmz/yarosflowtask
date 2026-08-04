@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { PriorityBadge, StatusBadge } from "@/components/Badges";
+import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -116,63 +116,65 @@ function TaskDetail() {
       <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="space-y-6">
           <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-            <div className="bg-brand-gradient px-6 py-5 text-primary-foreground">
+            <div className="bg-brand-gradient px-4 py-4 text-primary-foreground sm:px-6 sm:py-5">
               <div className="text-xs opacity-80">Задача #{task.id}</div>
-              <h1 className="mt-1 text-2xl font-semibold">{task.title}</h1>
+              <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">{task.title}</h1>
             </div>
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-border">
-                <tr>
-                  <th className="w-48 bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+            <table className="w-full text-sm max-sm:block">
+              <tbody className="divide-y divide-border max-sm:block">
+                <tr className="max-sm:block">
+                  <th className="bg-muted/40 px-4 py-2 sm:w-48 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Статус / приоритет
                   </th>
-                  <td className="px-6 py-3">
+                  <td className="px-4 py-3 sm:px-6">
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge status={task.status} />
                       <PriorityBadge priority={task.priority} />
+                      <AssignmentBadge count={task.assignees?.length ?? 0} />
                     </div>
                   </td>
                 </tr>
-                <tr>
-                  <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+                <tr className="max-sm:block">
+                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Категория
                   </th>
-                  <td className="px-6 py-3">{task.category ?? "—"}</td>
+                  <td className="px-4 py-3 sm:px-6">{task.category ?? "—"}</td>
                 </tr>
-                <tr>
-                  <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+                <tr className="max-sm:block">
+                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Описание
                   </th>
-                  <td className="px-6 py-3 whitespace-pre-wrap">{task.description}</td>
+                  <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.description}</td>
                 </tr>
-                <tr>
-                  <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+                <tr className="max-sm:block">
+                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Критерии приёмки
                   </th>
-                  <td className="px-6 py-3 whitespace-pre-wrap">{task.acceptance_criteria}</td>
+                  <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.acceptance_criteria}</td>
                 </tr>
-                <tr>
-                  <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+                <tr className="max-sm:block">
+                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Дедлайн
                   </th>
-                  <td className="px-6 py-3">
+                  <td className="px-4 py-3 sm:px-6">
                     {formatDate(task.deadline ?? task.ai_suggested_deadline)}
                   </td>
                 </tr>
-                <tr>
-                  <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+                <tr className="max-sm:block">
+                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Исходная заметка
                   </th>
-                  <td className="px-6 py-3 whitespace-pre-wrap text-muted-foreground">{task.raw_text}</td>
+                  <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap text-muted-foreground">{task.raw_text}</td>
                 </tr>
               </tbody>
             </table>
             {transitions.length > 0 ? (
-              <div className="flex flex-wrap gap-2 border-t border-border bg-muted/30 px-6 py-4">
+              <div className="grid grid-cols-1 gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex sm:flex-wrap sm:px-6">
                 {transitions.map((s) => (
                   <Button
                     key={s}
                     variant={s === "done" ? "default" : "outline"}
+                    className="w-full sm:w-auto"
                     disabled={statusMutation.isPending}
                     onClick={() => statusMutation.mutate(s)}
                   >
@@ -183,7 +185,7 @@ function TaskDetail() {
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">Комментарии</h2>
             <div className="mt-4 space-y-4">
               {comments.data?.length ? (
@@ -202,7 +204,7 @@ function TaskDetail() {
                 <p className="text-sm text-muted-foreground">Комментариев пока нет.</p>
               )}
             </div>
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <Textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
@@ -210,6 +212,7 @@ function TaskDetail() {
                 className="min-h-20"
               />
               <Button
+                className="w-full sm:w-auto"
                 disabled={!comment.trim() || commentMutation.isPending}
                 onClick={() => commentMutation.mutate(comment.trim())}
               >
@@ -224,7 +227,7 @@ function TaskDetail() {
         </div>
 
         <div className="space-y-6">
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">Исполнители</h2>
             {task.assignees?.length ? (
               <ul className="mt-3 space-y-1 text-sm">
@@ -276,7 +279,7 @@ function TaskDetail() {
             ) : null}
           </section>
 
-          <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">История</h2>
             {history.data?.length ? (
               <ol className="mt-3 space-y-3 text-sm">

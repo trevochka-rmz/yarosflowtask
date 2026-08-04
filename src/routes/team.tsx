@@ -20,7 +20,7 @@ function TeamPage() {
 
   return (
     <AppLayout>
-      <h1 className="text-3xl font-semibold tracking-tight text-brand-deep">Команда</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">Команда</h1>
       <p className="mt-1 text-sm text-muted-foreground">Руководители и сотрудники системы.</p>
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
@@ -33,7 +33,24 @@ function TeamPage() {
         ) : query.isError ? (
           <p className="p-6 text-sm text-destructive">{(query.error as Error).message}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="divide-y divide-border md:hidden">
+            {query.data?.map((u) => (
+              <li key={u.id} className="p-4">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="min-w-0 font-medium">{userLabel(u)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">#{u.id}</span>
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {u.username ? `@${u.username}` : u.tg_id} · {u.role === "manager" ? "Руководитель" : "Сотрудник"}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {u.is_active ? "Активен" : "Неактивен"} · {formatDate(u.last_activity)}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -63,6 +80,7 @@ function TeamPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </AppLayout>

@@ -61,32 +61,33 @@ function Index() {
         <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
           <Sparkles className="h-3.5 w-3.5" /> AI-постановка задач
         </span>
-        <h1 className="mt-5 text-4xl font-semibold tracking-tight text-brand-deep sm:text-5xl">
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-brand-deep sm:text-4xl md:text-5xl">
           Заметка → готовое ТЗ
         </h1>
-        <p className="mt-3 text-base text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground sm:text-base">
           Напишите мысль в свободной форме. Система соберёт название, описание, критерии приёмки,
           приоритет и категорию, а затем задачу можно назначить сотрудникам.
         </p>
       </section>
 
-      <section className="mx-auto mt-8 max-w-3xl">
+      <section className="mx-auto mt-6 max-w-3xl sm:mt-8">
         <div className="rounded-3xl border border-border bg-card p-3 shadow-soft">
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Например: нужно переделать личный кабинет, добавить экспорт в Excel и уведомления..."
-            className="min-h-36 resize-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
+            className="min-h-32 resize-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0 sm:min-h-36"
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && text.trim()) {
                 mutation.mutate(text.trim());
               }
             }}
           />
-          <div className="flex items-center justify-between gap-3 px-2 pb-1">
-            <span className="text-xs text-muted-foreground">Ctrl / ⌘ + Enter — отправить</span>
+          <div className="flex flex-col gap-2 px-2 pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <span className="hidden text-xs text-muted-foreground sm:inline">Ctrl / ⌘ + Enter — отправить</span>
             <Button
               size="lg"
+              className="w-full sm:w-auto"
               disabled={loading || !text.trim()}
               onClick={() => mutation.mutate(text.trim())}
             >
@@ -128,54 +129,54 @@ function Index() {
 
       {task && !loading ? (
         <section className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-          <div className="bg-brand-gradient px-6 py-5 text-primary-foreground">
+          <div className="bg-brand-gradient px-4 py-4 text-primary-foreground sm:px-6 sm:py-5">
             <div className="text-xs opacity-80">Задача #{task.id}</div>
-            <h2 className="mt-1 text-2xl font-semibold">{task.title}</h2>
+            <h2 className="mt-1 text-xl font-semibold sm:text-2xl">{task.title}</h2>
           </div>
-          <table className="w-full text-sm">
-            <tbody className="divide-y divide-border">
-              <tr>
-                <th className="w-48 bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+          <table className="w-full text-sm max-sm:block">
+            <tbody className="divide-y divide-border max-sm:block">
+              <tr className="max-sm:block">
+                <th className="bg-muted/40 px-4 py-2 sm:w-48 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                   Статус
                 </th>
-                <td className="px-6 py-3">
+                <td className="px-4 py-3 sm:px-6">
                   <div className="flex flex-wrap gap-2">
                     <StatusBadge status={task.status} />
                     <PriorityBadge priority={task.priority} />
                   </div>
                 </td>
               </tr>
-              <tr>
-                <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+              <tr className="max-sm:block">
+                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                   Категория
                 </th>
-                <td className="px-6 py-3">{task.category ?? "—"}</td>
+                <td className="px-4 py-3 sm:px-6">{task.category ?? "—"}</td>
               </tr>
-              <tr>
-                <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+              <tr className="max-sm:block">
+                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                   Описание
                 </th>
-                <td className="px-6 py-3 whitespace-pre-wrap">{task.description}</td>
+                <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.description}</td>
               </tr>
-              <tr>
-                <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+              <tr className="max-sm:block">
+                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                   Критерии приёмки
                 </th>
-                <td className="px-6 py-3 whitespace-pre-wrap">{task.acceptance_criteria}</td>
+                <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.acceptance_criteria}</td>
               </tr>
-              <tr>
-                <th className="bg-muted/40 px-6 py-3 text-left align-top font-medium text-muted-foreground">
+              <tr className="max-sm:block">
+                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                   Срок (AI)
                 </th>
-                <td className="px-6 py-3">{formatDate(task.ai_suggested_deadline)}</td>
+                <td className="px-4 py-3 sm:px-6">{formatDate(task.ai_suggested_deadline)}</td>
               </tr>
             </tbody>
           </table>
-          <div className="flex flex-wrap gap-2 border-t border-border bg-muted/30 px-6 py-4">
-            <Button onClick={() => navigate({ to: "/tasks/$taskId", params: { taskId: String(task.id) } })}>
+          <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex-row sm:flex-wrap sm:px-6">
+            <Button className="w-full sm:w-auto" onClick={() => navigate({ to: "/tasks/$taskId", params: { taskId: String(task.id) } })}>
               Открыть и назначить
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="outline" className="w-full sm:w-auto" asChild>
               <Link to="/tasks">Все задачи</Link>
             </Button>
           </div>
