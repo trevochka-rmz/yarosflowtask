@@ -92,8 +92,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
       { name: "twitter:description", content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/PcD7cIrXZMT91gMTkdPAq2Mnuip1/social-images/social-1785818786973-social-image.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/PcD7cIrXZMT91gMTkdPAq2Mnuip1/social-images/social-1785818786973-social-image.webp" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620" },
     ],
     links: [
       {
