@@ -56,6 +56,11 @@ function Index() {
 
   const loading = mutation.isPending;
 
+  const voice = useVoiceInput({
+    onText: (spoken) => setText((prev) => (prev.trim() ? `${prev.trim()} ${spoken}` : spoken)),
+    onError: (message) => toast.error(message),
+  });
+
   return (
     <AppLayout>
       <section className="mx-auto max-w-3xl text-center">
