@@ -8,8 +8,6 @@ import {
 
 const STATUS_STYLES: Record<TaskStatus, string> = {
   draft: "bg-muted text-muted-foreground",
-  unassigned: "bg-secondary text-secondary-foreground",
-  assigned: "bg-accent text-accent-foreground",
   in_progress: "bg-primary/12 text-primary",
   review: "bg-chart-5/15 text-chart-5",
   done: "bg-chart-2/15 text-chart-2",
@@ -44,6 +42,14 @@ export function PriorityBadge({ priority }: { priority: Priority }) {
   return (
     <Pill className={PRIORITY_STYLES[priority] ?? PRIORITY_STYLES.medium}>
       {PRIORITY_LABELS[priority] ?? priority}
+    </Pill>
+  );
+}
+
+export function AssignmentBadge({ count }: { count: number }) {
+  return (
+    <Pill className={count > 0 ? "bg-accent text-accent-foreground" : "bg-secondary text-secondary-foreground"}>
+      {count > 0 ? `Назначена · ${count}` : "Не назначена"}
     </Pill>
   );
 }
