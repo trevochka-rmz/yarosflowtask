@@ -149,28 +149,37 @@ function TasksPage() {
             {/* Мобильные карточки */}
             <ul className="space-y-3 md:hidden">
               {tasks.map((task) => (
-                <li key={task.id}>
-                  <Link
-                    to="/tasks/$taskId"
-                    params={{ taskId: String(task.id) }}
-                    className="block rounded-2xl border border-border bg-card p-4 shadow-soft active:bg-accent/40"
-                  >
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                      <span className="min-w-0 font-medium text-foreground">{task.title}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">#{task.id}</span>
+                <li
+                  key={task.id}
+                  className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+                >
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                    <Link
+                      to="/tasks/$taskId"
+                      params={{ taskId: String(task.id) }}
+                      className="min-w-0 font-medium text-foreground"
+                    >
+                      {task.title}
+                    </Link>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <ExportMenu taskId={task.id} />
+                      <DeleteTaskButton taskId={task.id} title={task.title} />
                     </div>
+                  </div>
+                  <Link to="/tasks/$taskId" params={{ taskId: String(task.id) }} className="block">
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <StatusBadge status={task.status} />
                       <PriorityBadge priority={task.priority} />
                       <AssignmentBadge count={assigneeCount(task)} />
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground">
-                      {task.category ?? "Без категории"} · {formatDate(task.created_at)}
+                      #{task.id} · {task.category ?? "Без категории"} · {formatDate(task.created_at)}
                     </div>
                   </Link>
                 </li>
               ))}
             </ul>
+
 
             {/* Таблица для больших экранов */}
             <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft md:block">
