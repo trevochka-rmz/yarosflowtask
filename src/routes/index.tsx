@@ -4,12 +4,14 @@ import { useState } from "react";
 import { Loader2, Sparkles, ArrowRight, Mic, Square } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
+import { FilePicker, PickedFiles } from "@/components/Attachments";
 import { PriorityBadge, StatusBadge } from "@/components/Badges";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { api, formatDate, type Task } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useVoiceInput } from "@/lib/use-voice-input";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
