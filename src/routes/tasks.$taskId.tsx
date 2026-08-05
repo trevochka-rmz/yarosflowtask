@@ -208,7 +208,10 @@ function TaskDetail() {
                 ))}
               </div>
             ) : null}
+              </>
+            )}
           </section>
+
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">Комментарии</h2>
