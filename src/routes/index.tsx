@@ -40,21 +40,36 @@ const EXAMPLES = [
 
 function Index() {
   const [text, setText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [task, setTask] = useState<Task | null>(null);
   const { data: user } = useCurrentUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (rawText: string) => api.createTask(user?.id ?? 1, rawText),
+    mutationFn: async (rawText: string) => {
+      const userId = user?.id ?? 1;
+      const created = await api.createTask(userId, rawText);
+      if (files.length) {
+        try {
+          await api.uploadAttachments(created.id, userId, files);
+          toast.success("Файлы прикреплены");
+        } catch (e) {
+          toast.error((e as Error).message);
+        }
+      }
+      return created;
+    },
     onSuccess: (created) => {
       setTask(created);
       setText("");
+      setFiles([]);
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Техническое задание готово");
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
 
   const loading = mutation.isPending;
 
