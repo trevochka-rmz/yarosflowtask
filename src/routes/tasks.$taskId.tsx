@@ -307,8 +307,15 @@ function TaskDetail() {
             ) : null}
           </section>
 
+          <TaskAttachments taskId={id} userId={currentId} />
+
+          <div className="flex justify-end">
+            <ExportMenu taskId={id} variant="button" />
+          </div>
+
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">История</h2>
+
             {history.data?.length ? (
               <ol className="mt-3 space-y-3 text-sm">
                 {history.data.map((h) => (
