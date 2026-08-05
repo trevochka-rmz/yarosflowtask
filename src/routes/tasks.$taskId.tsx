@@ -123,10 +123,29 @@ function TaskDetail() {
         <div className="space-y-6">
           <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div className="bg-brand-gradient px-4 py-4 text-primary-foreground sm:px-6 sm:py-5">
-              <div className="text-xs opacity-80">Задача #{task.id}</div>
-              <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">{task.title}</h1>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs opacity-80">Задача #{task.id}</div>
+                  <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">{task.title}</h1>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                  title={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                  className="h-9 w-9 shrink-0 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+                  onClick={() => setEditing((v) => !v)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+            {editing ? (
+              <TaskEditForm task={task} userId={currentId} onDone={() => setEditing(false)} />
+            ) : (
+              <>
             <table className="w-full text-sm max-sm:block">
+
               <tbody className="divide-y divide-border max-sm:block">
                 <tr className="max-sm:block">
                   <th className="bg-muted/40 px-4 py-2 sm:w-48 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
