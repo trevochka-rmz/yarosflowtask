@@ -155,7 +155,9 @@ function Index() {
                   </>
                 )}
               </Button>
-            </div>
+          <PickedFiles files={files} onRemove={(i) => setFiles((prev) => prev.filter((_, x) => x !== i))} />
+          </div>
+
           </div>
           {voice.recording ? (
             <div className="flex items-center gap-2 px-2 pb-2 text-xs text-destructive sm:hidden">
