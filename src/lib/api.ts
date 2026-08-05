@@ -1,13 +1,8 @@
 export const API_BASE_URL =
-  (import.meta.env['VITE_API_BASE_URL'] as string | undefined) ?? "http://localhost:3000/api";
+  (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:3000/api";
 
 export type Role = "manager" | "employee";
-export type TaskStatus =
-  | "draft"
-  | "in_progress"
-  | "review"
-  | "done"
-  | "cancelled";
+export type TaskStatus = "draft" | "in_progress" | "review" | "done" | "cancelled";
 export type Priority = "low" | "medium" | "high" | "critical";
 
 export interface User {
@@ -109,7 +104,9 @@ export async function apiFetch<T>(
       ...(init?.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
     });
   } catch {
-    throw new Error(`Не удалось связаться с сервером (${API_BASE_URL}). Проверьте, что backend запущен.`);
+    throw new Error(
+      `Не удалось связаться с сервером (${API_BASE_URL}). Проверьте, что backend запущен.`,
+    );
   }
 
   let payload: unknown = null;
@@ -188,9 +185,26 @@ export async function exportTask(id: number, format: ExportFormat) {
     throw new Error(message);
   }
   const blob = await res.blob();
+
+  function pickDownloadName(disposition: string, fallback: string): string {
+    const star = /filename\*=(?:UTF-8''|utf-8'')\s*([^;\s]+)/i.exec(disposition);
+    if (star?.[1]) {
+      try {
+        return decodeURIComponent(star[1].replace(/^["']|["']$/g, "").trim());
+      } catch {
+        /* ignore */
+      }
+    }
+    const quoted = /filename="([^"]+)"/i.exec(disposition);
+    if (quoted?.[1]) return quoted[1];
+    const plain = /(?:^|;)\s*filename=([^;]+)/i.exec(disposition);
+    if (plain?.[1]) return plain[1].replace(/^["']|["']$/g, "").trim();
+    return fallback;
+  }
+
   const disposition = res.headers.get("content-disposition") ?? "";
-  const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
-  const name = match?.[1] ? decodeURIComponent(match[1]) : `task-${id}.${EXPORT_EXT[format]}`;
+  const name = pickDownloadName(disposition, `task-${id}.${EXPORT_EXT[format]}`);
+
   const href = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = href;
@@ -217,9 +231,11 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
   } catch {
     throw new Error(`Не удалось связаться с сервером (${API_BASE_URL}).`);
   }
-  const payload = (await res.json().catch(() => null)) as
-    | { success?: boolean; message?: string; data?: Attachment[] }
-    | null;
+  const payload = (await res.json().catch(() => null)) as {
+    success?: boolean;
+    message?: string;
+    data?: Attachment[];
+  } | null;
   if (!res.ok || payload?.success === false) {
     throw new Error(payload?.message ?? `Не удалось загрузить файлы (${res.status})`);
   }
@@ -252,7 +268,6 @@ export const api = {
   deleteAttachment: (id: number) => apiFetch<unknown>(`/attachments/${id}`, { method: "DELETE" }),
   exportTask,
 };
-
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   draft: "Черновик",
