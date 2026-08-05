@@ -127,6 +127,105 @@ export async function apiFetch<T>(
   return (body?.data ?? (payload as T)) as T;
 }
 
+export interface Attachment {
+  id: number;
+  task_id: number;
+  comment_id: number | null;
+  uploaded_by: number;
+  tg_file_id: string | null;
+  file_type: string;
+  file_name: string;
+  storage_path?: string;
+  mime_type: string | null;
+  file_size: number | null;
+  url: string;
+  created_at?: string;
+}
+
+export type ExportFormat = "md" | "docx" | "pdf" | "zip";
+
+/** Базовый origin backend без /api — для ссылок на /uploads/... */
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
+
+export function fileUrl(url: string) {
+  return /^https?:\/\//.test(url) ? url : `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+function authHeaders(): Record<string, string> {
+  const initData = getTelegramInitData();
+  return initData ? { "X-Telegram-Init-Data": initData } : { "X-Dev-User-Id": getDevUserId() };
+}
+
+export const EXPORT_LABELS: Record<ExportFormat, string> = {
+  md: "Markdown (.md)",
+  docx: "Word (.docx)",
+  pdf: "PDF (кириллица)",
+  zip: "ZIP (все файлы)",
+};
+
+const EXPORT_EXT: Record<ExportFormat, string> = {
+  md: "md",
+  docx: "docx",
+  pdf: "pdf",
+  zip: "zip",
+};
+
+export async function exportTask(id: number, format: ExportFormat) {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/tasks/${id}/export/${format}`, { headers: authHeaders() });
+  } catch {
+    throw new Error(`Не удалось связаться с сервером (${API_BASE_URL}).`);
+  }
+  if (!res.ok) {
+    let message = `Ошибка экспорта (${res.status})`;
+    try {
+      const body = (await res.clone().json()) as { message?: string };
+      if (body?.message) message = body.message;
+    } catch {
+      /* not json */
+    }
+    throw new Error(message);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
+  const name = match?.[1] ? decodeURIComponent(match[1]) : `task-${id}.${EXPORT_EXT[format]}`;
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(href);
+}
+
+async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
+  const form = new FormData();
+  form.append("taskId", String(taskId));
+  form.append("uploadedBy", String(uploadedBy));
+  files.forEach((f) => form.append("files", f));
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/attachments/task/upload`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: form,
+    });
+  } catch {
+    throw new Error(`Не удалось связаться с сервером (${API_BASE_URL}).`);
+  }
+  const payload = (await res.json().catch(() => null)) as
+    | { success?: boolean; message?: string; data?: Attachment[] }
+    | null;
+  if (!res.ok || payload?.success === false) {
+    throw new Error(payload?.message ?? `Не удалось загрузить файлы (${res.status})`);
+  }
+  return payload?.data ?? [];
+}
+
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
   employees: () => apiFetch<User[]>("/users/employees"),
@@ -143,11 +242,17 @@ export const api = {
     apiFetch<Task>(`/tasks/${id}/status`, { method: "PATCH", body: { status, changedBy } }),
   updateTask: (id: number, patch: Record<string, unknown>) =>
     apiFetch<Task>(`/tasks/${id}`, { method: "PATCH", body: patch }),
+  deleteTask: (id: number) => apiFetch<unknown>(`/tasks/${id}`, { method: "DELETE" }),
   comments: (taskId: number) => apiFetch<Comment[]>(`/comments/task/${taskId}`),
   addComment: (taskId: number, authorId: number, body: string) =>
     apiFetch<Comment>("/comments", { method: "POST", body: { taskId, authorId, body } }),
   history: (taskId: number) => apiFetch<HistoryEntry[]>(`/history/task/${taskId}`),
+  attachments: (taskId: number) => apiFetch<Attachment[]>(`/attachments/task/${taskId}`),
+  uploadAttachments: uploadFiles,
+  deleteAttachment: (id: number) => apiFetch<unknown>(`/attachments/${id}`, { method: "DELETE" }),
+  exportTask,
 };
+
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   draft: "Черновик",
