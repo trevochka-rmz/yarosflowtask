@@ -81,19 +81,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "YAROS.TaskFlow — заметка превращается в ТЗ" },
       {
         name: "description",
-        content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+        content:
+          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
       { property: "og:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
       {
         property: "og:description",
-        content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+        content:
+          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
-      { name: "twitter:description", content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620" },
+      {
+        name: "twitter:description",
+        content:
+          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620",
+      },
     ],
     links: [
       {
@@ -101,6 +115,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
+    ],
+    scripts: [
+      {
+        src: "https://telegram.org/js/telegram-web-app.js",
+      },
     ],
   }),
 
@@ -126,6 +145,19 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const tg = (
+      window as unknown as {
+        Telegram?: { WebApp?: { ready?: () => void; expand?: () => void } };
+      }
+    ).Telegram?.WebApp;
+
+    if (tg) {
+      tg.ready?.();
+      tg.expand?.();
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

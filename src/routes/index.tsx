@@ -12,7 +12,6 @@ import { api, formatDate, type Task } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useVoiceInput } from "@/lib/use-voice-input";
 
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -25,7 +24,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
       {
         property: "og:description",
-        content: "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+        content:
+          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
     ],
   }),
@@ -42,13 +42,18 @@ function Index() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [task, setTask] = useState<Task | null>(null);
-  const { data: user } = useCurrentUser();
+  const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: async (rawText: string) => {
-      const userId = user?.id ?? 1;
+      if (!user?.id) {
+        throw new Error(
+          "Пользователь ещё не загружен. Откройте приложение из Telegram или обновите страницу.",
+        );
+      }
+      const userId = user.id;
       const created = await api.createTask(userId, rawText);
       if (files.length) {
         try {
@@ -70,13 +75,30 @@ function Index() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-
   const loading = mutation.isPending;
 
   const voice = useVoiceInput({
     onText: (spoken) => setText((prev) => (prev.trim() ? `${prev.trim()} ${spoken}` : spoken)),
     onError: (message) => toast.error(message),
   });
+
+  if (userLoading) {
+    return (
+      <AppLayout>
+        <p className="text-center text-sm text-muted-foreground">Вход…</p>
+      </AppLayout>
+    );
+  }
+
+  if (userError || !user) {
+    return (
+      <AppLayout>
+        <p className="text-center text-sm text-destructive">
+          Не удалось определить пользователя. Откройте Mini App из Telegram.
+        </p>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -122,7 +144,7 @@ function Index() {
                 size="lg"
                 variant={voice.recording ? "destructive" : "outline"}
                 className="w-full sm:w-auto"
-                disabled={voice.transcribing || loading}
+                disabled={loading || userLoading || !user || !text.trim()}
                 onClick={voice.toggle}
               >
                 {voice.transcribing ? (
@@ -157,7 +179,10 @@ function Index() {
               </Button>
             </div>
           </div>
-          <PickedFiles files={files} onRemove={(i) => setFiles((prev) => prev.filter((_, x) => x !== i))} />
+          <PickedFiles
+            files={files}
+            onRemove={(i) => setFiles((prev) => prev.filter((_, x) => x !== i))}
+          />
 
           {voice.recording ? (
             <div className="flex items-center gap-2 px-2 pb-2 text-xs text-destructive sm:hidden">
@@ -224,7 +249,9 @@ function Index() {
                 <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                   Критерии приёмки
                 </th>
-                <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.acceptance_criteria}</td>
+                <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">
+                  {task.acceptance_criteria}
+                </td>
               </tr>
               <tr className="max-sm:block">
                 <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
@@ -235,7 +262,12 @@ function Index() {
             </tbody>
           </table>
           <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex-row sm:flex-wrap sm:px-6">
-            <Button className="w-full sm:w-auto" onClick={() => navigate({ to: "/tasks/$taskId", params: { taskId: String(task.id) } })}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() =>
+                navigate({ to: "/tasks/$taskId", params: { taskId: String(task.id) } })
+              }
+            >
               Открыть и назначить
             </Button>
             <Button variant="outline" className="w-full sm:w-auto" asChild>
