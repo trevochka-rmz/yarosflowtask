@@ -45,6 +45,8 @@ function TaskDetail() {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
+  const [editing, setEditing] = useState(false);
+
 
   const taskQuery = useQuery({ queryKey: ["task", id], queryFn: () => api.task(id) });
   const employees = useQuery({ queryKey: ["employees"], queryFn: () => api.employees() });
