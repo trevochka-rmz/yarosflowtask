@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
+import { TaskAttachments } from "@/components/Attachments";
 import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import { ExportMenu } from "@/components/ExportMenu";
+import { TaskEditForm } from "@/components/TaskEditForm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -16,6 +19,7 @@ import {
   type TaskStatus,
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
+
 
 export const Route = createFileRoute("/tasks/$taskId")({
   head: () => ({
