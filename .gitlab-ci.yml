@@ -1,10 +1,10 @@
 stages:
   - build
-  - migrate
   - deploy
 
 variables:
   IMAGE_TAG: "${CI_PROJECT_NAME}:${CI_COMMIT_REF_NAME}"
+  CONTAINER_NAME: "${CI_PROJECT_NAME}"
 
 build:
   stage: build
@@ -14,19 +14,6 @@ build:
     - cat "$ENV_FILE" > .env
     - echo "Собираем Docker-образ $IMAGE_TAG..."
     - docker build -t $IMAGE_TAG .
-  artifacts:
-    paths:
-      - .env
-    expire_in: 1h
-
-migrate:
-  stage: migrate
-  tags:
-    - prod-new
-  script:
-    - cat "$ENV_FILE" > .env
-    - echo "Запускаем миграции..."
-    - docker run --rm --env-file .env $IMAGE_TAG npm run migrate
 
 deploy:
   stage: deploy
