@@ -115,6 +115,8 @@ function Index() {
                   : "Ctrl / ⌘ + Enter — отправить"}
             </span>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <FilePicker files={files} onChange={setFiles} disabled={loading} />
+
               <Button
                 type="button"
                 size="lg"
