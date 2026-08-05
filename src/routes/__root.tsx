@@ -157,11 +157,23 @@ function RootComponent() {
       tg.ready?.();
       tg.expand?.();
     }
-  }, []);
+
+    // initData появляется не мгновенно — обновляем /auth/me
+    const t1 = window.setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: ["current-user"] });
+    }, 100);
+    const t2 = window.setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: ["current-user"] });
+    }, 800);
+
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="top-center" richColors />
     </QueryClientProvider>

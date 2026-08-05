@@ -33,7 +33,20 @@ export function ExportMenu({ taskId, variant = "icon", className }: ExportMenuPr
     setBusy(format);
     try {
       await exportTask(taskId, format);
-      toast.success("Файл выгружен");
+
+      const isTelegram = Boolean(
+        (window as unknown as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp,
+      );
+
+      if (isTelegram) {
+        toast.success("Файл сформирован", {
+          description:
+            "Если файл не сохранился: ⋮ → «Открыть в браузере» и скачайте снова. В Telegram встроенный браузер часто блокирует скачивание.",
+          duration: 5000,
+        });
+      } else {
+        toast.success("Файл выгружен");
+      }
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
