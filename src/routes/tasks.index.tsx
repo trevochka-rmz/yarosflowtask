@@ -222,6 +222,13 @@ function TasksPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{task.category ?? "—"}</td>
                         <td className="px-4 py-3 text-muted-foreground">{formatDate(task.created_at)}</td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-center justify-end gap-0.5">
+                            <ExportMenu taskId={task.id} />
+                            <DeleteTaskButton taskId={task.id} title={task.title} />
+                          </div>
+                        </td>
+
                       </tr>
                     ))}
                   </tbody>
