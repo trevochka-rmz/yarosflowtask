@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import { DeleteTaskButton } from "@/components/DeleteTaskButton";
+import { ExportMenu } from "@/components/ExportMenu";
+
 import {
   api,
   assigneeCount,
