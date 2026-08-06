@@ -12,11 +12,11 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Копируем всё из builder
 COPY --from=builder /app ./
 
 EXPOSE 3003
 ENV NODE_ENV=production
 ENV PORT=3003
 
+# Измененная команда запуска
 CMD ["node", ".output/server/index.mjs"]
