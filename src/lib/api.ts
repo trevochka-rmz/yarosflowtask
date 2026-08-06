@@ -45,6 +45,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   assignees?: Assignee[];
+  assignee_count?: number;
 }
 
 export interface Comment {
