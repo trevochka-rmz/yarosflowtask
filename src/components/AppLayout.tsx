@@ -76,7 +76,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   {user.role === "manager" ? "Руководитель" : "Сотрудник"}
                 </div>
               </div>
+              {!inMiniApp ? (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  aria-label="Выйти"
+                  title="Выйти"
+                  className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
+
           ) : null}
         </div>
       </header>
