@@ -214,68 +214,6 @@ function Index() {
         </section>
       ) : null}
 
-      {task && !loading ? (
-        <section className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-          <div className="bg-brand-gradient px-4 py-4 text-primary-foreground sm:px-6 sm:py-5">
-            <div className="text-xs opacity-80">Задача #{task.id}</div>
-            <h2 className="mt-1 text-xl font-semibold sm:text-2xl">{task.title}</h2>
-          </div>
-          <table className="w-full text-sm max-sm:block">
-            <tbody className="divide-y divide-border max-sm:block">
-              <tr className="max-sm:block">
-                <th className="bg-muted/40 px-4 py-2 sm:w-48 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                  Статус
-                </th>
-                <td className="px-4 py-3 sm:px-6">
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={task.status} />
-                    <PriorityBadge priority={task.priority} />
-                  </div>
-                </td>
-              </tr>
-              <tr className="max-sm:block">
-                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                  Категория
-                </th>
-                <td className="px-4 py-3 sm:px-6">{task.category ?? "—"}</td>
-              </tr>
-              <tr className="max-sm:block">
-                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                  Описание
-                </th>
-                <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.description}</td>
-              </tr>
-              <tr className="max-sm:block">
-                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                  Критерии приёмки
-                </th>
-                <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">
-                  {task.acceptance_criteria}
-                </td>
-              </tr>
-              <tr className="max-sm:block">
-                <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                  Срок (AI)
-                </th>
-                <td className="px-4 py-3 sm:px-6">{formatDate(task.ai_suggested_deadline)}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex-row sm:flex-wrap sm:px-6">
-            <Button
-              className="w-full sm:w-auto"
-              onClick={() =>
-                navigate({ to: "/tasks/$taskId", params: { taskId: String(task.id) } })
-              }
-            >
-              Открыть и назначить
-            </Button>
-            <Button variant="outline" className="w-full sm:w-auto" asChild>
-              <Link to="/tasks">Все задачи</Link>
-            </Button>
-          </div>
-        </section>
-      ) : null}
     </AppLayout>
   );
 }
