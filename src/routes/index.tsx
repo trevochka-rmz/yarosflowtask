@@ -143,7 +143,7 @@ function Index() {
                 size="lg"
                 variant={voice.recording ? "destructive" : "outline"}
                 className="w-full sm:w-auto"
-                disabled={loading || userLoading || !user || !text.trim()}
+                disabled={loading || userLoading || !user}
                 onClick={voice.toggle}
               >
                 {voice.transcribing ? (
