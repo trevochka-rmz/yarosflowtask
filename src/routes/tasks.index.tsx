@@ -37,7 +37,7 @@ function TasksPage() {
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<TaskStatus | "">("");
   const [assignment, setAssignment] = useState<Assignment>("any");
-  const userId = user?.id ?? 1;
+  const userId = user?.id ?? 0;
 
   const query = useQuery({
     queryKey: ["tasks", scope, status, assignment, userId],

@@ -41,7 +41,7 @@ function TaskDetail() {
   const { taskId } = Route.useParams();
   const id = Number(taskId);
   const { data: user } = useCurrentUser();
-  const currentId = user?.id ?? 1;
+  const currentId = user?.id ?? 0;
   const role = user?.role ?? "manager";
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
