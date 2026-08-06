@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { TaskAttachments } from "@/components/Attachments";
 import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TaskEditForm } from "@/components/TaskEditForm";
 import { Button } from "@/components/ui/button";
