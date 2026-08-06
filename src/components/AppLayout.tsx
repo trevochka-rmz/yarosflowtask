@@ -1,14 +1,40 @@
 import { Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { userHandle } from "@/lib/api";
+import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
+import { TelegramLoginPage } from "@/components/TelegramLoginPage";
 
 const navLink =
   "whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground";
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { data: user } = useCurrentUser();
+  const { data: user, isLoading, isError } = useCurrentUser();
+  const queryClient = useQueryClient();
+  const inMiniApp = getTelegramInitData() !== null;
+  const canUseSite = inMiniApp || getToken() !== null || import.meta.env.DEV;
+
+  if (!canUseSite || (isError && !inMiniApp)) {
+    return <TelegramLoginPage />;
+  }
+
+  if (isLoading && !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+        Загрузка…
+      </div>
+    );
+  }
+
+  const signOut = () => {
+    clearToken();
+    queryClient.clear();
+  };
+
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,7 +76,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   {user.role === "manager" ? "Руководитель" : "Сотрудник"}
                 </div>
               </div>
+              {!inMiniApp ? (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  aria-label="Выйти"
+                  title="Выйти"
+                  className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
+
           ) : null}
         </div>
       </header>

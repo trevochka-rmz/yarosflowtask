@@ -69,33 +69,16 @@ export interface HistoryEntry {
   changed_by_name?: string | null;
 }
 
-const DEV_USER_ID_KEY = "yaros.devUserId";
+import { authHeaders, clearToken, setToken, type TelegramWidgetUser } from "./auth";
 
-export function getDevUserId(): string {
-  if (typeof window === "undefined") return "1";
-  return window.localStorage.getItem(DEV_USER_ID_KEY) ?? "1";
-}
-
-export function setDevUserId(id: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(DEV_USER_ID_KEY, id);
-}
-
-function getTelegramInitData(): string | null {
-  if (typeof window === "undefined") return null;
-  const tg = (window as unknown as { Telegram?: { WebApp?: { initData?: string } } }).Telegram;
-  const initData = tg?.WebApp?.initData;
-  return initData && initData.length > 0 ? initData : null;
-}
+export { authHeaders };
 
 export async function apiFetch<T>(
   path: string,
-  init?: { method?: string; body?: unknown },
+  init?: { method?: string; body?: unknown; skipAuth?: boolean },
 ): Promise<T> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const initData = getTelegramInitData();
-  if (initData) headers["X-Telegram-Init-Data"] = initData;
-  else headers["X-Dev-User-Id"] = getDevUserId();
+  if (!init?.skipAuth) Object.assign(headers, authHeaders());
 
   let res: Response;
   try {
@@ -108,6 +91,10 @@ export async function apiFetch<T>(
     throw new Error(
       `Не удалось связаться с сервером (${API_BASE_URL}). Проверьте, что backend запущен.`,
     );
+  }
+
+  if (res.status === 401 || res.status === 403) {
+    clearToken();
   }
 
   let payload: unknown = null;
@@ -124,6 +111,18 @@ export async function apiFetch<T>(
   }
   return (body?.data ?? (payload as T)) as T;
 }
+
+/** Вход через виджет Telegram на обычном сайте. */
+export async function telegramLogin(widgetUser: TelegramWidgetUser) {
+  const data = await apiFetch<{ user: User; token: string }>("/auth/telegram-login", {
+    method: "POST",
+    body: widgetUser,
+    skipAuth: true,
+  });
+  if (data?.token) setToken(data.token);
+  return data;
+}
+
 
 export interface Attachment {
   id: number;
@@ -149,10 +148,6 @@ export function fileUrl(url: string) {
   return /^https?:\/\//.test(url) ? url : `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
-function authHeaders(): Record<string, string> {
-  const initData = getTelegramInitData();
-  return initData ? { "X-Telegram-Init-Data": initData } : { "X-Dev-User-Id": getDevUserId() };
-}
 
 export const EXPORT_LABELS: Record<ExportFormat, string> = {
   md: "Markdown (.md)",
