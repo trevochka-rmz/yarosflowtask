@@ -18,5 +18,5 @@ EXPOSE 3003
 ENV NODE_ENV=production
 ENV PORT=3003
 
-# Измененная команда запуска
-CMD ["node", ".output/server/index.mjs"]
+# Правильный способ - использовать sh
+CMD ["sh", "-c", "node .output/server/index.mjs"]
