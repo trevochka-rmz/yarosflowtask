@@ -57,8 +57,10 @@ export function TelegramLoginPage() {
           Вход только через Telegram — тот же аккаунт, что и в Mini App.
         </p>
 
-        <div ref={containerRef} className="mt-6 flex min-h-[3rem] justify-center" />
-
+        <div
+          ref={containerRef}
+          className="mt-6 flex min-h-[3rem] justify-center rounded-xl bg-white p-3"
+        />
         {pending ? <p className="mt-4 text-sm text-muted-foreground">Выполняем вход…</p> : null}
       </div>
     </div>
