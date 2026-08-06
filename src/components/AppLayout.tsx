@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { userLabel } from "@/lib/api";
+import { userHandle } from "@/lib/api";
 
 const navLink =
   "whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground";
