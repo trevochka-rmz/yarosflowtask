@@ -2,26 +2,17 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Копируем зависимости
-COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
+COPY package.json package-lock.json* ./
 RUN npm install
 
-# Копируем исходники
 COPY . .
-
-# Собираем проект
 RUN npm run build
 
 FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Копируем зависимости для продакшена
-COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
-RUN npm install --omit=dev
-
-# Копируем собранные файлы (.output - стандарт Nitro)
-COPY --from=builder /app/.output ./.output
+COPY --from=builder /app ./
 
 EXPOSE 3003
 ENV NODE_ENV=production
