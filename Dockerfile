@@ -12,7 +12,9 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
+# Копируем собранный проект
 COPY --from=builder /app/.output ./.output
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3003
 ENV NODE_ENV=production
