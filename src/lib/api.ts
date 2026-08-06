@@ -148,10 +148,6 @@ export function fileUrl(url: string) {
   return /^https?:\/\//.test(url) ? url : `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
-function authHeaders(): Record<string, string> {
-  const initData = getTelegramInitData();
-  return initData ? { "X-Telegram-Init-Data": initData } : { "X-Dev-User-Id": getDevUserId() };
-}
 
 export const EXPORT_LABELS: Record<ExportFormat, string> = {
   md: "Markdown (.md)",
