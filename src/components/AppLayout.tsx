@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { userLabel } from "@/lib/api";
+import { userHandle } from "@/lib/api";
 
 const navLink =
   "whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground";
@@ -38,15 +38,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </nav>
 
           {user ? (
-            <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3 lg:border-l lg:border-border lg:pl-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gradient text-sm font-semibold text-primary-foreground">
-                {(userLabel(user)[0] ?? "?").toUpperCase()}
+            <div className="order-2 flex min-w-0 shrink items-center gap-2 lg:order-3 lg:shrink-0 lg:border-l lg:border-border lg:pl-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-semibold text-primary-foreground">
+                {(userHandle(user).replace("@", "")[0] ?? "?").toUpperCase()}
               </div>
-              <div className="hidden leading-tight sm:block">
-                <div className="max-w-[9rem] truncate text-sm font-medium lg:max-w-none">
-                  {userLabel(user)}
+              <div className="min-w-0 leading-tight">
+                <div className="max-w-[7.5rem] truncate text-sm font-medium sm:max-w-[11rem] lg:max-w-none">
+                  {userHandle(user)}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="truncate text-xs text-muted-foreground">
                   {user.role === "manager" ? "Руководитель" : "Сотрудник"}
                 </div>
               </div>

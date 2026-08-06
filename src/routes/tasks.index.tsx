@@ -40,20 +40,23 @@ function TasksPage() {
   const userId = user?.id ?? 1;
 
   const query = useQuery({
-    queryKey: ["tasks", scope, status, userId],
+    queryKey: ["tasks", scope, status, assignment, userId],
     queryFn: async (): Promise<Task[]> => {
-      const qs = status ? `?status=${status}` : "";
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      if (assignment === "with") params.set("minAssignees", "1");
+      if (assignment === "without") {
+        params.set("minAssignees", "0");
+        params.set("maxAssignees", "0");
+      }
+      const qs = params.toString() ? `?${params.toString()}` : "";
       if (scope === "author") return api.tasksByAuthor(userId, qs);
       if (scope === "assigned") return api.tasksAssigned(userId, qs);
       return api.tasks(qs);
     },
   });
 
-  const tasks = (query.data ?? []).filter((t) => {
-    if (assignment === "with") return assigneeCount(t) >= 1;
-    if (assignment === "without") return assigneeCount(t) === 0;
-    return true;
-  });
+  const tasks = query.data ?? [];
 
   const scopes: { key: Scope; label: string }[] = [
     { key: "all", label: "Все" },

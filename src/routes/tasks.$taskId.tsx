@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { TaskAttachments } from "@/components/Attachments";
 import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TaskEditForm } from "@/components/TaskEditForm";
 import { Button } from "@/components/ui/button";
@@ -169,13 +170,17 @@ function TaskDetail() {
                   <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Описание
                   </th>
-                  <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.description}</td>
+                  <td className="px-4 py-3 sm:px-6">
+                    <ExpandableText text={task.description} />
+                  </td>
                 </tr>
                 <tr className="max-sm:block">
                   <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                     Критерии приёмки
                   </th>
-                  <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap">{task.acceptance_criteria}</td>
+                  <td className="px-4 py-3 sm:px-6">
+                    <ExpandableText text={task.acceptance_criteria} />
+                  </td>
                 </tr>
                 <tr className="max-sm:block">
                   <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">

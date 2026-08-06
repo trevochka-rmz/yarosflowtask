@@ -45,6 +45,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   assignees?: Assignee[];
+  assignee_count?: number;
 }
 
 export interface Comment {
@@ -299,7 +300,7 @@ export function nextStatuses(status: TaskStatus, role: Role): TaskStatus[] {
 
 /** Назначение — не статус: определяем по количеству исполнителей. */
 export function assigneeCount(task: Task): number {
-  return task.assignees?.length ?? 0;
+  return task.assignees?.length ?? task.assignee_count ?? 0;
 }
 
 export function isAssigned(task: Task): boolean {
@@ -308,6 +309,17 @@ export function isAssigned(task: Task): boolean {
 
 export function userLabel(u: { full_name?: string | null; username?: string | null; id: number }) {
   return u.full_name || (u.username ? `@${u.username}` : `#${u.id}`);
+}
+
+/** Отображаемое имя: username, иначе имя/фамилия. */
+export function userHandle(u: {
+  username?: string | null;
+  first_name?: string | null;
+  full_name?: string | null;
+  id: number;
+}) {
+  if (u.username) return `@${u.username}`;
+  return u.first_name || u.full_name || `#${u.id}`;
 }
 
 export function formatDate(value?: string | null) {
