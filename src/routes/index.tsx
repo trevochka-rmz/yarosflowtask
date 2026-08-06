@@ -41,7 +41,6 @@ const EXAMPLES = [
 function Index() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [task, setTask] = useState<Task | null>(null);
   const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -66,11 +65,11 @@ function Index() {
       return created;
     },
     onSuccess: (created) => {
-      setTask(created);
       setText("");
       setFiles([]);
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Техническое задание готово");
+      void navigate({ to: "/tasks/$taskId", params: { taskId: String(created.id) } });
     },
     onError: (error: Error) => toast.error(error.message),
   });
