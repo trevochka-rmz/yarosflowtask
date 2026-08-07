@@ -141,7 +141,7 @@ export const platform = {
   }) => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") q.set(k, String(v));
+      if (v !== undefined && v !== null && String(v) !== "") q.set(k, String(v));
     });
     const qs = q.toString();
     return apiFetch<ChangeRequest[]>(`/change-requests${qs ? `?${qs}` : ""}`);
@@ -162,7 +162,7 @@ export const platform = {
   audit: (params: { tenantId?: number; actorId?: number; action?: string; limit?: number }) => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") q.set(k, String(v));
+      if (v !== undefined && v !== null && String(v) !== "") q.set(k, String(v));
     });
     const qs = q.toString();
     return apiFetch<AuditEntry[]>(`/audit${qs ? `?${qs}` : ""}`);
