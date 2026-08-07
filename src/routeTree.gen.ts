@@ -20,6 +20,7 @@ import { Route as BotsIndexRouteImport } from './routes/bots.index'
 import { Route as BotsBotIdRouteImport } from './routes/bots.$botId'
 import { Route as BotsNewRouteImport } from './routes/bots.new'
 import { Route as ChangeRequestsIndexRouteImport } from './routes/change-requests.index'
+import { Route as ChangeRequestsNewRouteImport } from './routes/change-requests.new'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 
@@ -78,6 +79,11 @@ const ChangeRequestsIndexRoute = ChangeRequestsIndexRouteImport.update({
   path: '/change-requests/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangeRequestsNewRoute = ChangeRequestsNewRouteImport.update({
+  id: '/change-requests/new',
+  path: '/change-requests/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/tasks/',
   path: '/tasks/',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/api/transcribe': typeof ApiTranscribeRoute
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
+  '/change-requests/new': typeof ChangeRequestsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
   '/change-requests/': typeof ChangeRequestsIndexRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/api/transcribe': typeof ApiTranscribeRoute
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
+  '/change-requests/new': typeof ChangeRequestsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots': typeof BotsIndexRoute
   '/change-requests': typeof ChangeRequestsIndexRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/api/transcribe': typeof ApiTranscribeRoute
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
+  '/change-requests/new': typeof ChangeRequestsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
   '/change-requests/': typeof ChangeRequestsIndexRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/bots/$botId'
     | '/bots/new'
+    | '/change-requests/new'
     | '/tasks/$taskId'
     | '/bots/'
     | '/change-requests/'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/bots/$botId'
     | '/bots/new'
+    | '/change-requests/new'
     | '/tasks/$taskId'
     | '/bots'
     | '/change-requests'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/api/transcribe'
     | '/bots/$botId'
     | '/bots/new'
+    | '/change-requests/new'
     | '/tasks/$taskId'
     | '/bots/'
     | '/change-requests/'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   ApiTranscribeRoute: typeof ApiTranscribeRoute
   BotsBotIdRoute: typeof BotsBotIdRoute
   BotsNewRoute: typeof BotsNewRoute
+  ChangeRequestsNewRoute: typeof ChangeRequestsNewRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   BotsIndexRoute: typeof BotsIndexRoute
   ChangeRequestsIndexRoute: typeof ChangeRequestsIndexRoute
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangeRequestsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/change-requests/new': {
+      id: '/change-requests/new'
+      path: '/change-requests/new'
+      fullPath: '/change-requests/new'
+      preLoaderRoute: typeof ChangeRequestsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks/': {
       id: '/tasks/'
       path: '/tasks'
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTranscribeRoute: ApiTranscribeRoute,
   BotsBotIdRoute: BotsBotIdRoute,
   BotsNewRoute: BotsNewRoute,
+  ChangeRequestsNewRoute: ChangeRequestsNewRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   BotsIndexRoute: BotsIndexRoute,
   ChangeRequestsIndexRoute: ChangeRequestsIndexRoute,
