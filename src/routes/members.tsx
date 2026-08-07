@@ -39,6 +39,14 @@ function MembersPage() {
   });
   const users = useQuery({ queryKey: ["users"], queryFn: () => api.users(), enabled: !!tenantId });
 
+  const handleMutationError = (e: Error) => {
+    if (e.message.includes("403") || e.message.toLowerCase().includes("прав")) {
+      toast.error("Недостаточно прав — нужны роли manager или platform_admin");
+    } else {
+      toast.error(e.message);
+    }
+  };
+
   const add = useMutation({
     mutationFn: () => platform.addMember(tenantId!, { userId: Number(userId), role }),
     onSuccess: () => {
@@ -46,7 +54,7 @@ function MembersPage() {
       void queryClient.invalidateQueries({ queryKey: ["members", tenantId] });
       toast.success("Участник добавлен");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: handleMutationError,
   });
 
   const remove = useMutation({
@@ -55,7 +63,7 @@ function MembersPage() {
       void queryClient.invalidateQueries({ queryKey: ["members", tenantId] });
       toast.success("Участник удалён");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: handleMutationError,
   });
 
   if (!tenant) {

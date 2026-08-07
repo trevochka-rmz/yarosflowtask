@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, CheckCircle2, Loader2 } from "lucide-react";
+import { Bot, CheckCircle2, ExternalLink, Loader2, Plus } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/api";
 import {
   BOT_STATUS_LABELS,
@@ -33,12 +36,22 @@ function BotPage() {
   const { tenant } = useCurrentTenant();
   const queryClient = useQueryClient();
 
-  const bots = useQuery({
+  // Карточка бота: предпочитаем GET /tenants/bots/:botId
+  const botDetail = useQuery({
+    queryKey: ["bot-detail", id],
+    queryFn: () => platform.botDetail(id),
+    retry: false,
+  });
+
+  // Фоллбэк: ищем бота в общем списке если botDetail не работает
+  const botsQuery = useQuery({
     queryKey: ["bots", tenant?.id],
     queryFn: () => platform.bots(tenant!.id),
-    enabled: !!tenant?.id,
+    enabled: !!tenant?.id && botDetail.isError,
   });
-  const bot = bots.data?.find((b) => b.id === id);
+
+  const bot = botDetail.data ?? botsQuery.data?.find((b) => b.id === id);
+  const isTaskFlow = bot?.code === "TASKFLOW-001";
 
   const versions = useQuery({
     queryKey: ["bot-versions", id],
@@ -49,8 +62,31 @@ function BotPage() {
     mutationFn: (versionId: number) => platform.publishVersion(id, versionId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["bot-versions", id] });
+      void queryClient.invalidateQueries({ queryKey: ["bot-detail", id] });
       void queryClient.invalidateQueries({ queryKey: ["bots"] });
       toast.success("Версия опубликована");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Создание новой версии
+  const [showNewVersion, setShowNewVersion] = useState(false);
+  const [changelog, setChangelog] = useState("");
+  const [riskClass, setRiskClass] = useState("C2");
+
+  const createVersion = useMutation({
+    mutationFn: () => {
+      const body: { changelog?: string; riskClass?: string } = { riskClass };
+      if (changelog.trim()) body.changelog = changelog.trim();
+      return platform.createVersion(id, body);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["bot-versions", id] });
+      void queryClient.invalidateQueries({ queryKey: ["bot-detail", id] });
+      setChangelog("");
+      setRiskClass("C2");
+      setShowNewVersion(false);
+      toast.success("Новая версия создана (draft)");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -74,7 +110,14 @@ function BotPage() {
         ) : null}
       </header>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-4 flex flex-wrap gap-2">
+        {isTaskFlow && (
+          <Button asChild className="w-full sm:w-auto">
+            <Link to="/taskflow">
+              <ExternalLink className="h-4 w-4" /> Открыть TaskFlow
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link to="/change-requests/new" search={{ botId: id }}>
             Заявка на изменение
@@ -86,7 +129,61 @@ function BotPage() {
       </div>
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-soft">
-        <h2 className="text-lg font-semibold text-brand-deep">Версии настроек</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-brand-deep">Версии настроек</h2>
+          <Button size="sm" variant="outline" onClick={() => setShowNewVersion((v) => !v)}>
+            <Plus className="h-3.5 w-3.5" />
+            Новая версия
+          </Button>
+        </div>
+
+        {/* Форма создания версии */}
+        {showNewVersion && (
+          <form
+            className="mt-4 space-y-3 rounded-xl border border-border bg-muted/30 p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              createVersion.mutate();
+            }}
+          >
+            <h3 className="text-sm font-semibold">Новая версия (draft)</h3>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Изменения</label>
+              <Textarea
+                className="mt-1 min-h-20 text-sm"
+                value={changelog}
+                onChange={(e) => setChangelog(e.target.value)}
+                placeholder="Опишите, что меняется в этой версии"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Класс риска</label>
+                <Input
+                  className="mt-1 h-9 text-sm"
+                  value={riskClass}
+                  onChange={(e) => setRiskClass(e.target.value)}
+                  placeholder="C2"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" size="sm" disabled={createVersion.isPending}>
+                {createVersion.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                Создать
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowNewVersion(false)}
+              >
+                Отмена
+              </Button>
+            </div>
+          </form>
+        )}
+
         {versions.isPending ? (
           <p className="mt-3 text-sm text-muted-foreground">Загрузка…</p>
         ) : versions.isError ? (
@@ -123,7 +220,7 @@ function BotPage() {
                 {v.changelog ? (
                   <p className="mt-2 text-sm text-muted-foreground">{v.changelog}</p>
                 ) : null}
-                {v.spec ? (
+                {v.spec && Object.keys(v.spec as object).length > 0 ? (
                   <pre className="mt-2 overflow-x-auto rounded-xl bg-muted p-3 text-xs">
                     {JSON.stringify(v.spec, null, 2)}
                   </pre>

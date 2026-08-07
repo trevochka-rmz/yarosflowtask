@@ -25,7 +25,7 @@ function AuditPage() {
   const tenantId = tenant?.id;
   const query = useQuery({
     queryKey: ["audit", tenantId],
-    queryFn: () => platform.audit({ tenantId: tenantId!, limit: 100 }),
+    queryFn: () => platform.audit({ tenantId: tenantId!, limit: 50 }),
     enabled: !!tenantId,
   });
 
@@ -57,10 +57,7 @@ function AuditPage() {
       ) : query.data?.length ? (
         <ol className="mt-5 space-y-3">
           {query.data.map((e) => (
-            <li
-              key={e.id}
-              className="rounded-2xl border border-border bg-card p-4 shadow-soft"
-            >
+            <li key={e.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                 <span className="flex min-w-0 items-center gap-2">
                   <FileClock className="h-4 w-4 shrink-0 text-primary" />

@@ -12,6 +12,7 @@ import {
   Plus,
   Users,
 } from "lucide-react";
+// Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
 import { useCurrentUser } from "@/lib/use-current-user";
@@ -44,14 +45,8 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { title: "Центр организации", url: "/org", icon: LayoutDashboard },
       { title: "Флот ботов", url: "/bots", icon: Bot, exact: true },
       { title: "Создать бота", url: "/bots/new", icon: Plus },
-    ],
-  },
-  {
-    label: "TaskFlow",
-    items: [
-      { title: "Новое ТЗ", url: "/taskflow", icon: ClipboardList },
+      { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList },
       { title: "Задачи", url: "/tasks", icon: ListChecks },
-      { title: "Команда", url: "/team", icon: Users },
     ],
   },
   {
@@ -69,7 +64,9 @@ function AppSidebar() {
   const { tenant } = useCurrentTenant();
 
   const isActive = (item: NavItem) =>
-    item.exact ? pathname === item.url : pathname === item.url || pathname.startsWith(`${item.url}/`);
+    item.exact
+      ? pathname === item.url
+      : pathname === item.url || pathname.startsWith(`${item.url}/`);
 
   return (
     <Sidebar collapsible="offcanvas">

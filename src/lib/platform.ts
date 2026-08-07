@@ -2,6 +2,19 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 
+export type MemberRole =
+  | "manager"
+  | "employee"
+  | "bot_owner"
+  | "bot_user"
+  | "power_user"
+  | "integration_admin"
+  | "security_officer"
+  | "platform_admin"
+  | "director"
+  | "auditor"
+  | "group_participant";
+
 export interface Tenant {
   id: number;
   name: string;
@@ -9,6 +22,21 @@ export interface Tenant {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/** Tenant с ролями текущего пользователя (из /tenants/mine) */
+export interface TenantWithRoles extends Tenant {
+  roles: MemberRole[];
+}
+
+export interface BotTemplate {
+  code: string;
+  name: string;
+  category: string;
+  description: string;
+  defaultSpec: Record<string, unknown>;
+  riskClass: string;
+  implemented: boolean;
 }
 
 export type BotStatus = "draft" | "active" | "paused" | "archived";
@@ -26,19 +54,6 @@ export interface Bot {
   updated_at: string;
 }
 
-export type MemberRole =
-  | "manager"
-  | "employee"
-  | "bot_owner"
-  | "bot_user"
-  | "power_user"
-  | "integration_admin"
-  | "security_officer"
-  | "platform_admin"
-  | "director"
-  | "auditor"
-  | "group_participant";
-
 export interface Member {
   id: number;
   tenant_id: number;
@@ -52,12 +67,7 @@ export interface Member {
 }
 
 export type VersionStatus =
-  | "draft"
-  | "in_review"
-  | "approved"
-  | "published"
-  | "rolled_back"
-  | "rejected";
+  "draft" | "in_review" | "approved" | "published" | "rolled_back" | "rejected";
 
 export interface BotVersion {
   id: number;
@@ -71,15 +81,14 @@ export interface BotVersion {
   created_at: string;
 }
 
+/** Бот с вложенным массивом версий (из GET /tenants/bots/:botId) */
+export interface BotDetail extends Bot {
+  versions?: BotVersion[];
+}
+
 export type CrType = "personal_ui" | "shared_ui" | "bot_logic" | "integration" | "platform";
 export type CrStatus =
-  | "draft"
-  | "submitted"
-  | "in_review"
-  | "approved"
-  | "rejected"
-  | "published"
-  | "cancelled";
+  "draft" | "submitted" | "in_review" | "approved" | "rejected" | "published" | "cancelled";
 export type RiskClass = "C1" | "C2" | "C3" | "C4";
 
 export interface ChangeRequest {
@@ -111,14 +120,24 @@ export interface AuditEntry {
 }
 
 export const platform = {
+  /** Все орги (для суперадмина) */
   tenants: () => apiFetch<Tenant[]>("/tenants"),
+  /** Только орги текущего пользователя + его роли */
+  tenantsMine: () => apiFetch<TenantWithRoles[]>("/tenants/mine"),
   tenant: (id: number) => apiFetch<Tenant>(`/tenants/${id}`),
   createTenant: (body: { name: string; slug?: string }) =>
     apiFetch<Tenant>("/tenants", { method: "POST", body }),
 
+  /** Шаблоны ботов */
+  botTemplates: () => apiFetch<BotTemplate[]>("/tenants/bot-templates"),
+
   bots: (tenantId: number) => apiFetch<Bot[]>(`/tenants/${tenantId}/bots`),
-  createBot: (tenantId: number, body: { code: string; name: string; description?: string }) =>
-    apiFetch<Bot>(`/tenants/${tenantId}/bots`, { method: "POST", body }),
+  /** Карточка бота с версиями */
+  botDetail: (botId: number) => apiFetch<BotDetail>(`/tenants/bots/${botId}`),
+  createBot: (
+    tenantId: number,
+    body: { templateCode?: string; code?: string; name?: string; description?: string },
+  ) => apiFetch<Bot>(`/tenants/${tenantId}/bots`, { method: "POST", body }),
 
   members: (tenantId: number) => apiFetch<Member[]>(`/tenants/${tenantId}/members`),
   addMember: (tenantId: number, body: { userId: number; role: MemberRole }) =>
@@ -127,6 +146,11 @@ export const platform = {
     apiFetch<unknown>(`/tenants/${tenantId}/members/${membershipId}`, { method: "DELETE" }),
 
   versions: (botId: number) => apiFetch<BotVersion[]>(`/tenants/bots/${botId}/versions`),
+  /** Создать новую версию (статус draft, version назначает backend) */
+  createVersion: (
+    botId: number,
+    body: { changelog?: string; spec?: unknown; riskClass?: string },
+  ) => apiFetch<BotVersion>(`/tenants/bots/${botId}/versions`, { method: "POST", body }),
   publishVersion: (botId: number, versionId: number) =>
     apiFetch<BotVersion>(`/tenants/bots/${botId}/versions/${versionId}/publish`, {
       method: "POST",
@@ -236,9 +260,26 @@ export function useTenants() {
   return useQuery({ queryKey: ["tenants"], queryFn: () => platform.tenants(), retry: false });
 }
 
+/**
+ * Орги текущего пользователя через /tenants/mine.
+ * Фоллбэк на /tenants при ошибке (backward compat).
+ */
+export function useTenantsMine() {
+  return useQuery({
+    queryKey: ["tenants-mine"],
+    queryFn: () =>
+      platform
+        .tenantsMine()
+        .catch(() =>
+          platform.tenants().then((list) => list.map((t) => ({ ...t, roles: [] as MemberRole[] }))),
+        ),
+    retry: false,
+  });
+}
+
 /** Текущая организация: сохранённая в localStorage или первая доступная. */
 export function useCurrentTenant() {
-  const query = useTenants();
+  const query = useTenantsMine();
   const [stored, setStored] = useState<number | null>(() => readStoredTenant());
 
   useEffect(() => {
@@ -249,6 +290,22 @@ export function useCurrentTenant() {
 
   const tenants = query.data ?? [];
   const tenant = tenants.find((t) => t.id === stored) ?? tenants[0] ?? null;
+  const currentRoles: MemberRole[] = (tenant as TenantWithRoles | null)?.roles ?? [];
 
-  return { tenant, tenants, isLoading: query.isPending, isError: query.isError, query };
+  /** Тру если есть хотя бы одна из привилегированных ролей */
+  const canManage =
+    currentRoles.length === 0 || // если roles пусто — показываем (backward compat)
+    currentRoles.some((r) =>
+      (["manager", "bot_owner", "director", "platform_admin"] as MemberRole[]).includes(r),
+    );
+
+  return {
+    tenant,
+    tenants,
+    currentRoles,
+    canManage,
+    isLoading: query.isPending,
+    isError: query.isError,
+    query,
+  };
 }

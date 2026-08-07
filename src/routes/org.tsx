@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Bot, Building2, GitPullRequestArrow, Users } from "lucide-react";
+import { Bot, Building2, GitPullRequestArrow, ShieldAlert, Users } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
@@ -18,7 +18,8 @@ export const Route = createFileRoute("/org")({
       { title: "Центр организации — Yaya.Цифровой Бот" },
       {
         name: "description",
-        content: "Обзор организации: цифровые сотрудники, участники и активные заявки на изменения.",
+        content:
+          "Обзор организации: цифровые сотрудники, участники и активные заявки на изменения.",
       },
       { property: "og:title", content: "Центр организации — Yaya.Цифровой Бот" },
       {
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/org")({
 });
 
 function OrgPage() {
-  const { tenant, tenants, isLoading } = useCurrentTenant();
+  const { tenant, tenants, canManage, isLoading } = useCurrentTenant();
   const tenantId = tenant?.id;
 
   const bots = useQuery({
@@ -47,6 +48,21 @@ function OrgPage() {
   const crs = useQuery({
     queryKey: ["change-requests", tenantId],
     queryFn: () => platform.changeRequests({ tenantId: tenantId! }),
+    enabled: !!tenantId,
+  });
+
+  // Director Cockpit: заявки на решение (submitted + in_review)
+  const pendingCrs = useQuery({
+    queryKey: ["change-requests", tenantId, "pending"],
+    queryFn: async () => {
+      const [submitted, inReview] = await Promise.all([
+        platform.changeRequests({ tenantId: tenantId!, status: "submitted" }),
+        platform.changeRequests({ tenantId: tenantId!, status: "in_review" }),
+      ]);
+      return [...submitted, ...inReview].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    },
     enabled: !!tenantId,
   });
 
@@ -77,7 +93,12 @@ function OrgPage() {
 
   const stats = [
     { icon: Bot, label: "Ботов", value: bots.data?.length ?? "—", to: "/bots" as const },
-    { icon: Users, label: "Участников", value: members.data?.length ?? "—", to: "/members" as const },
+    {
+      icon: Users,
+      label: "Участников",
+      value: members.data?.length ?? "—",
+      to: "/members" as const,
+    },
     {
       icon: GitPullRequestArrow,
       label: "Заявок",
@@ -127,12 +148,50 @@ function OrgPage() {
         ))}
       </section>
 
+      {/* Director Cockpit — заявки на решение */}
+      {(pendingCrs.data?.length ?? 0) > 0 ? (
+        <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-soft dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-base font-semibold text-amber-900 dark:text-amber-200">
+              На решение — {pendingCrs.data!.length}
+            </h2>
+            <Link
+              to="/change-requests"
+              className="ml-auto text-xs text-amber-700 underline dark:text-amber-300"
+            >
+              Все заявки
+            </Link>
+          </div>
+          <ul className="mt-3 divide-y divide-amber-200 dark:divide-amber-800">
+            {pendingCrs.data!.slice(0, 5).map((cr) => (
+              <li key={cr.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 py-2.5 text-sm">
+                <span className="min-w-0 truncate text-amber-900 dark:text-amber-100">
+                  {cr.title}
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                    cr.status === "submitted"
+                      ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
+                      : "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                  }`}
+                >
+                  {CR_STATUS_LABELS[cr.status] ?? cr.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-soft">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
           <h2 className="truncate text-lg font-semibold text-brand-deep">Цифровые сотрудники</h2>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/bots/new">Создать</Link>
-          </Button>
+          {canManage ? (
+            <Button asChild size="sm" variant="outline">
+              <Link to="/bots/new">Создать</Link>
+            </Button>
+          ) : null}
         </div>
         {bots.isPending ? (
           <p className="mt-3 text-sm text-muted-foreground">Загрузка…</p>

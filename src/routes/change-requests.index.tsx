@@ -53,8 +53,7 @@ function ChangeRequestsPage() {
 
   const query = useQuery({
     queryKey: ["change-requests", tenantId, status],
-    queryFn: () =>
-      platform.changeRequests({ tenantId: tenantId!, ...(status ? { status } : {}) }),
+    queryFn: () => platform.changeRequests({ tenantId: tenantId!, ...(status ? { status } : {}) }),
     enabled: !!tenantId,
   });
 
@@ -65,7 +64,13 @@ function ChangeRequestsPage() {
       void queryClient.invalidateQueries({ queryKey: ["change-requests"] });
       toast.success("Статус заявки обновлён");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      if (e.message.includes("403") || e.message.toLowerCase().includes("прав")) {
+        toast.error("Недостаточно прав — нужны роли manager, director или platform_admin");
+      } else {
+        toast.error(e.message);
+      }
+    },
   });
 
   if (!tenant) {
