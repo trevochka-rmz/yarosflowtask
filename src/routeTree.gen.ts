@@ -19,6 +19,7 @@ import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as BotsIndexRouteImport } from './routes/bots.index'
 import { Route as BotsBotIdRouteImport } from './routes/bots.$botId'
 import { Route as BotsNewRouteImport } from './routes/bots.new'
+import { Route as ChangeRequestsIndexRouteImport } from './routes/change-requests.index'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 
@@ -72,6 +73,11 @@ const BotsNewRoute = BotsNewRouteImport.update({
   path: '/bots/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangeRequestsIndexRoute = ChangeRequestsIndexRouteImport.update({
+  id: '/change-requests/',
+  path: '/change-requests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/tasks/',
   path: '/tasks/',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/bots/new': typeof BotsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
+  '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/bots/new': typeof BotsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots': typeof BotsIndexRoute
+  '/change-requests': typeof ChangeRequestsIndexRoute
   '/tasks': typeof TasksIndexRoute
 }
 export interface FileRoutesById {
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/bots/new': typeof BotsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
+  '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/bots/new'
     | '/tasks/$taskId'
     | '/bots/'
+    | '/change-requests/'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/bots/new'
     | '/tasks/$taskId'
     | '/bots'
+    | '/change-requests'
     | '/tasks'
   id:
     | '__root__'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/bots/new'
     | '/tasks/$taskId'
     | '/bots/'
+    | '/change-requests/'
     | '/tasks/'
   fileRoutesById: FileRoutesById
 }
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   BotsNewRoute: typeof BotsNewRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   BotsIndexRoute: typeof BotsIndexRoute
+  ChangeRequestsIndexRoute: typeof ChangeRequestsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
 
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BotsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/change-requests/': {
+      id: '/change-requests/'
+      path: '/change-requests'
+      fullPath: '/change-requests/'
+      preLoaderRoute: typeof ChangeRequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks/': {
       id: '/tasks/'
       path: '/tasks'
@@ -287,6 +307,7 @@ const rootRouteChildren: RootRouteChildren = {
   BotsNewRoute: BotsNewRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   BotsIndexRoute: BotsIndexRoute,
+  ChangeRequestsIndexRoute: ChangeRequestsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
 }
 export const routeTree = rootRouteImport
