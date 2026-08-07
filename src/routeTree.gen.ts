@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrgRouteImport } from './routes/org'
 import { Route as TaskflowRouteImport } from './routes/taskflow'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
@@ -19,6 +20,11 @@ import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgRoute = OrgRouteImport.update({
+  id: '/org',
+  path: '/org',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TaskflowRoute = TaskflowRouteImport.update({
@@ -49,6 +55,7 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/org': typeof OrgRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/org': typeof OrgRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/org': typeof OrgRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/org'
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
@@ -84,6 +94,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/org'
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
@@ -92,6 +103,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/org'
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
@@ -101,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OrgRoute: typeof OrgRoute
   TaskflowRoute: typeof TaskflowRoute
   TeamRoute: typeof TeamRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
@@ -115,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/org': {
+      id: '/org'
+      path: '/org'
+      fullPath: '/org'
+      preLoaderRoute: typeof OrgRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/taskflow': {
@@ -157,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OrgRoute: OrgRoute,
   TaskflowRoute: TaskflowRoute,
   TeamRoute: TeamRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
