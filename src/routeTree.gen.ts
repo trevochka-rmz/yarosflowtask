@@ -15,6 +15,7 @@ import { Route as TaskflowRouteImport } from './routes/taskflow'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as BotsIndexRouteImport } from './routes/bots.index'
+import { Route as BotsBotIdRouteImport } from './routes/bots.$botId'
 import { Route as BotsNewRouteImport } from './routes/bots.new'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
@@ -49,6 +50,11 @@ const BotsIndexRoute = BotsIndexRouteImport.update({
   path: '/bots/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BotsBotIdRoute = BotsBotIdRouteImport.update({
+  id: '/bots/$botId',
+  path: '/bots/$botId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BotsNewRoute = BotsNewRouteImport.update({
   id: '/bots/new',
   path: '/bots/new',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots': typeof BotsIndexRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
+    | '/bots/$botId'
     | '/bots/new'
     | '/tasks/$taskId'
     | '/bots/'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
+    | '/bots/$botId'
     | '/bots/new'
     | '/tasks/$taskId'
     | '/bots'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
+    | '/bots/$botId'
     | '/bots/new'
     | '/tasks/$taskId'
     | '/bots/'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   TaskflowRoute: typeof TaskflowRoute
   TeamRoute: typeof TeamRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
+  BotsBotIdRoute: typeof BotsBotIdRoute
   BotsNewRoute: typeof BotsNewRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   BotsIndexRoute: typeof BotsIndexRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BotsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bots/$botId': {
+      id: '/bots/$botId'
+      path: '/bots/$botId'
+      fullPath: '/bots/$botId'
+      preLoaderRoute: typeof BotsBotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bots/new': {
       id: '/bots/new'
       path: '/bots/new'
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   TaskflowRoute: TaskflowRoute,
   TeamRoute: TeamRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
+  BotsBotIdRoute: BotsBotIdRoute,
   BotsNewRoute: BotsNewRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
   BotsIndexRoute: BotsIndexRoute,
