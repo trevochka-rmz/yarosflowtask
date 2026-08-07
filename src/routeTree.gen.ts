@@ -10,14 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as MembersRouteImport } from './routes/members'
+import { Route as OrgRouteImport } from './routes/org'
+import { Route as TaskflowRouteImport } from './routes/taskflow'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
+import { Route as BotsIndexRouteImport } from './routes/bots.index'
+import { Route as BotsBotIdRouteImport } from './routes/bots.$botId'
+import { Route as BotsNewRouteImport } from './routes/bots.new'
+import { Route as ChangeRequestsIndexRouteImport } from './routes/change-requests.index'
+import { Route as ChangeRequestsNewRouteImport } from './routes/change-requests.new'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembersRoute = MembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgRoute = OrgRouteImport.update({
+  id: '/org',
+  path: '/org',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TaskflowRoute = TaskflowRouteImport.update({
+  id: '/taskflow',
+  path: '/taskflow',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TeamRoute = TeamRouteImport.update({
@@ -28,6 +57,31 @@ const TeamRoute = TeamRouteImport.update({
 const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
   id: '/api/transcribe',
   path: '/api/transcribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsIndexRoute = BotsIndexRouteImport.update({
+  id: '/bots/',
+  path: '/bots/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsBotIdRoute = BotsBotIdRouteImport.update({
+  id: '/bots/$botId',
+  path: '/bots/$botId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BotsNewRoute = BotsNewRouteImport.update({
+  id: '/bots/new',
+  path: '/bots/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangeRequestsIndexRoute = ChangeRequestsIndexRouteImport.update({
+  id: '/change-requests/',
+  path: '/change-requests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangeRequestsNewRoute = ChangeRequestsNewRouteImport.update({
+  id: '/change-requests/new',
+  path: '/change-requests/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksIndexRoute = TasksIndexRouteImport.update({
@@ -43,45 +97,118 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/members': typeof MembersRoute
+  '/org': typeof OrgRoute
+  '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/bots/$botId': typeof BotsBotIdRoute
+  '/bots/new': typeof BotsNewRoute
+  '/change-requests/new': typeof ChangeRequestsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/bots/': typeof BotsIndexRoute
+  '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/members': typeof MembersRoute
+  '/org': typeof OrgRoute
+  '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/bots/$botId': typeof BotsBotIdRoute
+  '/bots/new': typeof BotsNewRoute
+  '/change-requests/new': typeof ChangeRequestsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/bots': typeof BotsIndexRoute
+  '/change-requests': typeof ChangeRequestsIndexRoute
   '/tasks': typeof TasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/audit': typeof AuditRoute
+  '/members': typeof MembersRoute
+  '/org': typeof OrgRoute
+  '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
+  '/bots/$botId': typeof BotsBotIdRoute
+  '/bots/new': typeof BotsNewRoute
+  '/change-requests/new': typeof ChangeRequestsNewRoute
   '/tasks/$taskId': typeof TasksTaskIdRoute
+  '/bots/': typeof BotsIndexRoute
+  '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/team' | '/api/transcribe' | '/tasks/$taskId' | '/tasks/'
+  fullPaths:
+    | '/'
+    | '/audit'
+    | '/members'
+    | '/org'
+    | '/taskflow'
+    | '/team'
+    | '/api/transcribe'
+    | '/bots/$botId'
+    | '/bots/new'
+    | '/change-requests/new'
+    | '/tasks/$taskId'
+    | '/bots/'
+    | '/change-requests/'
+    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/team' | '/api/transcribe' | '/tasks/$taskId' | '/tasks'
+  to:
+    | '/'
+    | '/audit'
+    | '/members'
+    | '/org'
+    | '/taskflow'
+    | '/team'
+    | '/api/transcribe'
+    | '/bots/$botId'
+    | '/bots/new'
+    | '/change-requests/new'
+    | '/tasks/$taskId'
+    | '/bots'
+    | '/change-requests'
+    | '/tasks'
   id:
     | '__root__'
     | '/'
+    | '/audit'
+    | '/members'
+    | '/org'
+    | '/taskflow'
     | '/team'
     | '/api/transcribe'
+    | '/bots/$botId'
+    | '/bots/new'
+    | '/change-requests/new'
     | '/tasks/$taskId'
+    | '/bots/'
+    | '/change-requests/'
     | '/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuditRoute: typeof AuditRoute
+  MembersRoute: typeof MembersRoute
+  OrgRoute: typeof OrgRoute
+  TaskflowRoute: typeof TaskflowRoute
   TeamRoute: typeof TeamRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
+  BotsBotIdRoute: typeof BotsBotIdRoute
+  BotsNewRoute: typeof BotsNewRoute
+  ChangeRequestsNewRoute: typeof ChangeRequestsNewRoute
   TasksTaskIdRoute: typeof TasksTaskIdRoute
+  BotsIndexRoute: typeof BotsIndexRoute
+  ChangeRequestsIndexRoute: typeof ChangeRequestsIndexRoute
   TasksIndexRoute: typeof TasksIndexRoute
 }
 
@@ -92,6 +219,34 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit': {
+      id: '/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/members': {
+      id: '/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/org': {
+      id: '/org'
+      path: '/org'
+      fullPath: '/org'
+      preLoaderRoute: typeof OrgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taskflow': {
+      id: '/taskflow'
+      path: '/taskflow'
+      fullPath: '/taskflow'
+      preLoaderRoute: typeof TaskflowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/team': {
@@ -106,6 +261,41 @@ declare module '@tanstack/react-router' {
       path: '/api/transcribe'
       fullPath: '/api/transcribe'
       preLoaderRoute: typeof ApiTranscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots/': {
+      id: '/bots/'
+      path: '/bots'
+      fullPath: '/bots/'
+      preLoaderRoute: typeof BotsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots/$botId': {
+      id: '/bots/$botId'
+      path: '/bots/$botId'
+      fullPath: '/bots/$botId'
+      preLoaderRoute: typeof BotsBotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bots/new': {
+      id: '/bots/new'
+      path: '/bots/new'
+      fullPath: '/bots/new'
+      preLoaderRoute: typeof BotsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/change-requests/': {
+      id: '/change-requests/'
+      path: '/change-requests'
+      fullPath: '/change-requests/'
+      preLoaderRoute: typeof ChangeRequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/change-requests/new': {
+      id: '/change-requests/new'
+      path: '/change-requests/new'
+      fullPath: '/change-requests/new'
+      preLoaderRoute: typeof ChangeRequestsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks/': {
@@ -127,21 +317,20 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuditRoute: AuditRoute,
+  MembersRoute: MembersRoute,
+  OrgRoute: OrgRoute,
+  TaskflowRoute: TaskflowRoute,
   TeamRoute: TeamRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
+  BotsBotIdRoute: BotsBotIdRoute,
+  BotsNewRoute: BotsNewRoute,
+  ChangeRequestsNewRoute: ChangeRequestsNewRoute,
   TasksTaskIdRoute: TasksTaskIdRoute,
+  BotsIndexRoute: BotsIndexRoute,
+  ChangeRequestsIndexRoute: ChangeRequestsIndexRoute,
   TasksIndexRoute: TasksIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

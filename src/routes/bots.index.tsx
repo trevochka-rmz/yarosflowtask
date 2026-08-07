@@ -1,0 +1,94 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Bot } from "lucide-react";
+import { AppLayout } from "@/components/AppLayout";
+import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/api";
+import { BOT_STATUS_LABELS, platform, useCurrentTenant } from "@/lib/platform";
+
+export const Route = createFileRoute("/bots/")({
+  head: () => ({
+    meta: [
+      { title: "Флот ботов — Yaya.Цифровой Бот" },
+      {
+        name: "description",
+        content: "Все цифровые сотрудники организации: статусы, коды и версии настроек.",
+      },
+      { property: "og:title", content: "Флот ботов — Yaya.Цифровой Бот" },
+      { property: "og:description", content: "Цифровые сотрудники организации и их статусы." },
+    ],
+  }),
+  component: BotsPage,
+});
+
+function BotsPage() {
+  const { tenant } = useCurrentTenant();
+  const tenantId = tenant?.id;
+  const query = useQuery({
+    queryKey: ["bots", tenantId],
+    queryFn: () => platform.bots(tenantId!),
+    enabled: !!tenantId,
+  });
+
+  return (
+    <AppLayout>
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
+            Флот ботов
+          </h1>
+          <p className="mt-1 truncate text-sm text-muted-foreground">
+            {tenant ? tenant.name : "Организация не выбрана"}
+          </p>
+        </div>
+        <Button asChild size="sm" className="shrink-0">
+          <Link to="/bots/new">Создать</Link>
+        </Button>
+      </header>
+
+      {!tenant ? (
+        <p className="mt-5 text-sm text-muted-foreground">
+          Сначала создайте организацию на <Link to="/" className="text-primary underline">главной</Link>.
+        </p>
+      ) : query.isPending ? (
+        <p className="mt-5 text-sm text-muted-foreground">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="mt-5 text-sm text-destructive">{(query.error as Error).message}</p>
+      ) : query.data?.length ? (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {query.data.map((b) => (
+            <Link
+              key={b.id}
+              to="/bots/$botId"
+              params={{ botId: String(b.id) }}
+              className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/40"
+            >
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <Bot className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="truncate font-medium">{b.name}</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">
+                  {BOT_STATUS_LABELS[b.status] ?? b.status}
+                </span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                {b.description || "Без описания"}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {b.code} · {formatDate(b.created_at)}
+              </p>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-border bg-card p-6 text-center shadow-soft">
+          <p className="text-sm text-muted-foreground">Пока ни одного цифрового сотрудника.</p>
+          <Button asChild className="mt-3">
+            <Link to="/bots/new">Создать первого бота</Link>
+          </Button>
+        </div>
+      )}
+    </AppLayout>
+  );
+}
