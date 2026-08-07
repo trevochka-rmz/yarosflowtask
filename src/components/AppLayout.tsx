@@ -1,15 +1,116 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import {
+  Bot,
+  ClipboardList,
+  FileClock,
+  GitPullRequestArrow,
+  Home,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  Plus,
+  Users,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { userHandle } from "@/lib/api";
 import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
+import { useCurrentTenant } from "@/lib/platform";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 
-const navLink =
-  "whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-accent-foreground";
+type NavItem = { title: string; url: string; icon: typeof Home; exact?: boolean };
+
+const GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Управление",
+    items: [
+      { title: "Главная", url: "/", icon: Home, exact: true },
+      { title: "Центр организации", url: "/org", icon: LayoutDashboard },
+      { title: "Флот ботов", url: "/bots", icon: Bot, exact: true },
+      { title: "Создать бота", url: "/bots/new", icon: Plus },
+    ],
+  },
+  {
+    label: "TaskFlow",
+    items: [
+      { title: "Новое ТЗ", url: "/taskflow", icon: ClipboardList },
+      { title: "Задачи", url: "/tasks", icon: ListChecks },
+      { title: "Команда", url: "/team", icon: Users },
+    ],
+  },
+  {
+    label: "Доверие",
+    items: [
+      { title: "Участники и роли", url: "/members", icon: Users },
+      { title: "Журнал аудита", url: "/audit", icon: FileClock },
+      { title: "Заявки на изменения", url: "/change-requests", icon: GitPullRequestArrow },
+    ],
+  },
+];
+
+function AppSidebar() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { tenant } = useCurrentTenant();
+
+  const isActive = (item: NavItem) =>
+    item.exact ? pathname === item.url : pathname === item.url || pathname.startsWith(`${item.url}/`);
+
+  return (
+    <Sidebar collapsible="offcanvas">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <Link to="/" className="flex min-w-0 items-center gap-2 px-2 py-1.5">
+          <img src={logo.url} alt="Yaya" className="h-9 w-9 shrink-0 rounded-full" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold tracking-tight text-brand-deep">
+              Yaya<span className="text-primary">.Цифровой Бот</span>
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {tenant ? tenant.name : "Организация не выбрана"}
+            </span>
+          </span>
+        </Link>
+      </SidebarHeader>
+
+      <SidebarContent className="overflow-y-auto">
+        {GROUPS.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item)}>
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+    </Sidebar>
+  );
+}
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError } = useCurrentUser();
@@ -34,66 +135,52 @@ export function AppLayout({ children }: { children: ReactNode }) {
     queryClient.clear();
   };
 
-
-
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/85 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 lg:h-16 lg:flex-nowrap lg:py-0">
-          <Link to="/" className="flex min-w-0 flex-1 items-center gap-2 lg:flex-none">
-            <img
-              src={logo.url}
-              alt="YAROS.TaskFlow"
-              className="h-8 w-8 shrink-0 rounded-full sm:h-10 sm:w-10"
-            />
-            <span className="truncate text-base font-semibold tracking-tight text-brand-deep sm:text-lg">
-              YAROS<span className="text-primary">.TaskFlow</span>
-            </span>
-          </Link>
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background">
+        <AppSidebar />
 
-          <nav className="order-3 -mx-1 flex w-full items-center gap-1 overflow-x-auto lg:order-2 lg:mx-0 lg:ml-auto lg:w-auto lg:overflow-visible">
-            <Link to="/" className={navLink} activeOptions={{ exact: true }}>
-              Новая задача
+        <SidebarInset className="min-w-0">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/85 px-3 backdrop-blur sm:px-4">
+            <SidebarTrigger className="shrink-0" />
+            <Link to="/" className="flex min-w-0 items-center gap-2 lg:hidden">
+              <img src={logo.url} alt="Yaya" className="h-7 w-7 shrink-0 rounded-full" />
+              <span className="truncate text-sm font-semibold tracking-tight text-brand-deep">
+                Yaya<span className="text-primary">.Цифровой Бот</span>
+              </span>
             </Link>
-            <Link to="/tasks" className={navLink}>
-              Задачи
-            </Link>
-            <Link to="/team" className={navLink}>
-              Команда
-            </Link>
-          </nav>
 
-          {user ? (
-            <div className="order-2 flex min-w-0 shrink items-center gap-2 lg:order-3 lg:shrink-0 lg:border-l lg:border-border lg:pl-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-sm font-semibold text-primary-foreground">
-                {(userHandle(user).replace("@", "")[0] ?? "?").toUpperCase()}
-              </div>
-              <div className="min-w-0 leading-tight">
-                <div className="max-w-[7.5rem] truncate text-sm font-medium sm:max-w-[11rem] lg:max-w-none">
-                  {userHandle(user)}
+            {user ? (
+              <div className="ml-auto flex min-w-0 items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xs font-semibold text-primary-foreground">
+                  {(userHandle(user).replace("@", "")[0] ?? "?").toUpperCase()}
                 </div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {user.role === "manager" ? "Руководитель" : "Сотрудник"}
+                <div className="hidden min-w-0 leading-tight sm:block">
+                  <div className="max-w-[11rem] truncate text-sm font-medium">
+                    {userHandle(user)}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {user.role === "manager" ? "Руководитель" : "Сотрудник"}
+                  </div>
                 </div>
+                {!inMiniApp ? (
+                  <button
+                    type="button"
+                    onClick={signOut}
+                    aria-label="Выйти"
+                    title="Выйти"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                ) : null}
               </div>
-              {!inMiniApp ? (
-                <button
-                  type="button"
-                  onClick={signOut}
-                  aria-label="Выйти"
-                  title="Выйти"
-                  className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              ) : null}
-            </div>
+            ) : null}
+          </header>
 
-          ) : null}
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">{children}</main>
-    </div>
+          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">{children}</main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
