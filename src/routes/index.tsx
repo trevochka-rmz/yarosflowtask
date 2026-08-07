@@ -1,217 +1,182 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Loader2, Sparkles, ArrowRight, Mic, Square } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  Building2,
+  FileClock,
+  GitPullRequestArrow,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { FilePicker, PickedFiles } from "@/components/Attachments";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
-import { useCurrentUser } from "@/lib/use-current-user";
-import { useVoiceInput } from "@/lib/use-voice-input";
+import { Input } from "@/components/ui/input";
+import { platform, setStoredTenant, useCurrentTenant } from "@/lib/platform";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "YAROS.TaskFlow — заметка превращается в ТЗ" },
+      { title: "Yaya.Цифровой Бот — организация, боты и контроль изменений" },
       {
         name: "description",
         content:
-          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+          "Yaya.Цифровой Бот следит за вашим проектом: организация, цифровые сотрудники, роли участников, заявки на изменения и журнал аудита.",
       },
-      { property: "og:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
+      { property: "og:title", content: "Yaya.Цифровой Бот — организация, боты и контроль" },
       {
         property: "og:description",
         content:
-          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+          "Создайте организацию, запустите цифрового сотрудника и держите изменения под контролем.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Index,
+  component: Landing,
 });
 
-const EXAMPLES = [
-  "Нужно сделать авторизацию через JWT и Telegram Login",
-  "Клиенты жалуются на медленную загрузку каталога, надо ускорить",
-  "Подготовить отчёт по продажам за квартал с графиками",
+const FEATURES = [
+  {
+    icon: Building2,
+    title: "Организация",
+    text: "Единое пространство компании: участники, роли и доступы к цифровым сотрудникам.",
+  },
+  {
+    icon: Bot,
+    title: "Флот ботов",
+    text: "Цифровые сотрудники вроде TaskFlow: версии настроек, публикация и статусы.",
+  },
+  {
+    icon: GitPullRequestArrow,
+    title: "Заявки на изменения",
+    text: "Любая правка логики бота проходит как change request с классом риска.",
+  },
+  {
+    icon: FileClock,
+    title: "Журнал аудита",
+    text: "Кто, что и когда изменил — прозрачная лента действий по всей организации.",
+  },
 ];
 
-function Index() {
-  const [text, setText] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
+function Landing() {
+  const { tenant, tenants, isLoading } = useCurrentTenant();
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const mutation = useMutation({
-    mutationFn: async (rawText: string) => {
-      if (!user?.id) {
-        throw new Error(
-          "Пользователь ещё не загружен. Откройте приложение из Telegram или обновите страницу.",
-        );
-      }
-      const userId = user.id;
-      const created = await api.createTask(userId, rawText);
-      if (files.length) {
-        try {
-          await api.uploadAttachments(created.id, userId, files);
-          toast.success("Файлы прикреплены");
-        } catch (e) {
-          toast.error((e as Error).message);
-        }
-      }
-      return created;
-    },
+  const create = useMutation({
+    mutationFn: () =>
+      platform.createTenant({ name: name.trim(), ...(slug.trim() ? { slug: slug.trim() } : {}) }),
     onSuccess: (created) => {
-      setText("");
-      setFiles([]);
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success("Техническое задание готово");
-      void navigate({ to: "/tasks/$taskId", params: { taskId: String(created.id) } });
+      setStoredTenant(created.id);
+      setName("");
+      setSlug("");
+      void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      toast.success("Организация создана");
+      void navigate({ to: "/org" });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (e: Error) => toast.error(e.message),
   });
-
-  const loading = mutation.isPending;
-
-  const voice = useVoiceInput({
-    onText: (spoken) => setText((prev) => (prev.trim() ? `${prev.trim()} ${spoken}` : spoken)),
-    onError: (message) => toast.error(message),
-  });
-
-  if (userLoading) {
-    return (
-      <AppLayout>
-        <p className="text-center text-sm text-muted-foreground">Вход…</p>
-      </AppLayout>
-    );
-  }
-
-  if (userError || !user) {
-    return (
-      <AppLayout>
-        <p className="text-center text-sm text-destructive">
-          Не удалось определить пользователя. Откройте Mini App из Telegram.
-        </p>
-      </AppLayout>
-    );
-  }
 
   return (
     <AppLayout>
-      <section className="mx-auto max-w-3xl text-center">
+      <section className="overflow-hidden rounded-3xl border border-border bg-surface-gradient p-6 shadow-soft sm:p-10">
         <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
-          <Sparkles className="h-3.5 w-3.5" /> AI-постановка задач
+          <Sparkles className="h-3.5 w-3.5" /> Пространство цифровых сотрудников
         </span>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-brand-deep sm:text-4xl md:text-5xl">
-          Заметка → готовое ТЗ
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-brand-deep sm:text-4xl">
+          Yaya<span className="text-primary">.Цифровой Бот</span> поможет следить за вашим проектом
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-          Напишите мысль в свободной форме. Система соберёт название, описание, критерии приёмки,
-          приоритет и категорию, а затем задачу можно назначить сотрудникам.
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
+          Создавайте ботов, которые работают вместо рутины: ставят задачи, готовят ТЗ, следят за
+          обещаниями и сроками. Всё живёт внутри вашей организации — с ролями участников, версиями
+          настроек, заявками на изменения и журналом аудита. Начните с создания организации.
         </p>
+
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          <Button asChild size="lg" className="w-full sm:w-auto">
+            <Link to="/org">
+              Центр организации <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+            <Link to="/taskflow">Открыть TaskFlow</Link>
+          </Button>
+        </div>
       </section>
 
-      <section className="mx-auto mt-6 max-w-3xl sm:mt-8">
-        <div className="rounded-3xl border border-border bg-card p-3 shadow-soft">
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Например: нужно переделать личный кабинет, добавить экспорт в Excel и уведомления..."
-            className="min-h-32 resize-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0 sm:min-h-36"
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && text.trim()) {
-                mutation.mutate(text.trim());
-              }
-            }}
-          />
-          <div className="flex flex-col gap-2 px-2 pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {voice.recording
-                ? "Идёт запись — нажмите «Стоп», текст появится в поле"
-                : voice.transcribing
-                  ? "Распознаём речь…"
-                  : "Ctrl / ⌘ + Enter — отправить"}
-            </span>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <FilePicker files={files} onChange={setFiles} disabled={loading} />
+      <section className="mt-6 grid gap-4 sm:grid-cols-2">
+        {FEATURES.map((f) => (
+          <div key={f.title} className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <f.icon className="h-5 w-5" />
+            </div>
+            <h2 className="mt-3 text-base font-semibold text-brand-deep">{f.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{f.text}</p>
+          </div>
+        ))}
+      </section>
 
-              <Button
-                type="button"
-                size="lg"
-                variant={voice.recording ? "destructive" : "outline"}
-                className="w-full sm:w-auto"
-                disabled={loading || userLoading || !user}
-                onClick={voice.toggle}
-              >
-                {voice.transcribing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Распознаём…
-                  </>
-                ) : voice.recording ? (
-                  <>
-                    <Square className="h-4 w-4" /> Стоп
-                  </>
-                ) : (
-                  <>
-                    <Mic className="h-4 w-4" /> Голосом
-                  </>
-                )}
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-brand-deep">
+            {tenant ? "Ваша организация" : "Шаг 1 — создайте организацию"}
+          </h2>
+        </div>
+
+        {isLoading ? (
+          <p className="mt-3 text-sm text-muted-foreground">Загружаем организации…</p>
+        ) : tenant ? (
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Активная организация: <span className="font-medium text-foreground">{tenant.name}</span>{" "}
+              ({tenant.slug}). Доступно организаций: {tenants.length}.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild className="w-full sm:w-auto">
+                <Link to="/bots/new">Создать бота</Link>
               </Button>
-              <Button
-                size="lg"
-                className="w-full sm:w-auto"
-                disabled={loading || !text.trim()}
-                onClick={() => mutation.mutate(text.trim())}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> AI формирует ТЗ…
-                  </>
-                ) : (
-                  <>
-                    Создать ТЗ <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link to="/members">Пригласить участников</Link>
               </Button>
             </div>
           </div>
-          <PickedFiles
-            files={files}
-            onRemove={(i) => setFiles((prev) => prev.filter((_, x) => x !== i))}
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Организация — это контур вашей компании. Внутри неё живут цифровые сотрудники,
+            участники с ролями и история изменений.
+          </p>
+        )}
+
+        <form
+          className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (name.trim()) create.mutate();
+          }}
+        >
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Название организации, например «Компания Ярос»"
           />
-
-          {voice.recording ? (
-            <div className="flex items-center gap-2 px-2 pb-2 text-xs text-destructive sm:hidden">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" /> Идёт запись…
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          {EXAMPLES.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => setText(example)}
-              className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-            >
-              {example}
-            </button>
-          ))}
-        </div>
+          <Input
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="slug (необязательно)"
+          />
+          <Button type="submit" disabled={!name.trim() || create.isPending}>
+            {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Создать организацию
+          </Button>
+        </form>
       </section>
-
-      {loading ? (
-        <section className="mx-auto mt-10 max-w-3xl animate-pulse space-y-3 rounded-2xl border border-border bg-card p-6">
-          <div className="h-5 w-2/3 rounded bg-muted" />
-          <div className="h-3 w-full rounded bg-muted" />
-          <div className="h-3 w-5/6 rounded bg-muted" />
-          <div className="h-3 w-4/6 rounded bg-muted" />
-        </section>
-      ) : null}
-
     </AppLayout>
   );
 }
