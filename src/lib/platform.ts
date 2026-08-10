@@ -15,6 +15,15 @@ export type MemberRole =
   | "auditor"
   | "group_participant";
 
+/** Элемент справочника GET /tenants/roles */
+export interface RoleInfo {
+  code: MemberRole | string;
+  name?: string;
+  title?: string;
+  description?: string | null;
+}
+
+
 export interface Tenant {
   id: number;
   name: string;
