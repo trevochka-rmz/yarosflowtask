@@ -10,6 +10,7 @@ import {
   ListChecks,
   LogOut,
   Plus,
+  UserCog,
   Users,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
@@ -20,6 +21,7 @@ import { userHandle } from "@/lib/api";
 import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
 import { useCurrentTenant } from "@/lib/platform";
+import { NoTenantScreen } from "@/components/NoTenantScreen";
 import {
   Sidebar,
   SidebarContent,
@@ -50,9 +52,14 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: "Организация",
+    items: [
+      { title: "Сотрудники и роли", url: "/members", icon: UserCog },
+    ],
+  },
+  {
     label: "Доверие",
     items: [
-      { title: "Участники и роли", url: "/members", icon: Users },
       { title: "Журнал аудита", url: "/audit", icon: FileClock },
       { title: "Заявки на изменения", url: "/change-requests", icon: GitPullRequestArrow },
     ],
