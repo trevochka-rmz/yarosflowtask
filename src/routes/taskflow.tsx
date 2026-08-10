@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { useCurrentTenant } from "@/lib/platform";
 import { useVoiceInput } from "@/lib/use-voice-input";
 
 export const Route = createFileRoute("/taskflow")({
@@ -40,6 +41,7 @@ function Index() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
+  const { tenant } = useCurrentTenant();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -51,7 +53,7 @@ function Index() {
         );
       }
       const userId = user.id;
-      const created = await api.createTask(userId, rawText);
+      const created = await api.createTask(userId, rawText, tenant?.id ?? 0);
       if (files.length) {
         try {
           await api.uploadAttachments(created.id, userId, files);

@@ -2,7 +2,16 @@ export const API_BASE_URL =
   (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:3000/api";
 
 export type Role = "manager" | "employee";
-export type TaskStatus = "draft" | "in_progress" | "review" | "done" | "cancelled";
+export type TaskStatus =
+  | "NEW"
+  | "ASSIGNED"
+  | "ACCEPTED"
+  | "IN_PROGRESS"
+  | "WAITING"
+  | "COMPLETED"
+  | "CLOSED"
+  | "OVERDUE"
+  | "CANCELLED";
 export type Priority = "low" | "medium" | "high" | "critical";
 
 export interface User {
@@ -123,7 +132,6 @@ export async function telegramLogin(widgetUser: TelegramWidgetUser) {
   return data;
 }
 
-
 export interface Attachment {
   id: number;
   task_id: number;
@@ -147,7 +155,6 @@ export const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 export function fileUrl(url: string) {
   return /^https?:\/\//.test(url) ? url : `${API_ORIGIN}${url.startsWith("/") ? "" : "/"}${url}`;
 }
-
 
 export const EXPORT_LABELS: Record<ExportFormat, string> = {
   md: "Markdown (.md)",
@@ -240,21 +247,48 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
 
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
-  employees: () => apiFetch<User[]>("/users/employees"),
-  users: () => apiFetch<User[]>("/users"),
-  tasks: (query = "") => apiFetch<Task[]>(`/tasks${query}`),
-  tasksByAuthor: (id: number, query = "") => apiFetch<Task[]>(`/tasks/author/${id}${query}`),
-  tasksAssigned: (id: number, query = "") => apiFetch<Task[]>(`/tasks/assigned/${id}${query}`),
-  task: (id: number) => apiFetch<Task>(`/tasks/${id}`),
-  createTask: (authorId: number, rawText: string) =>
-    apiFetch<Task>("/tasks", { method: "POST", body: { authorId, rawText } }),
-  assign: (id: number, userIds: number[], assignedBy: number) =>
-    apiFetch<Task>(`/tasks/${id}/assign`, { method: "PATCH", body: { userIds, assignedBy } }),
-  setStatus: (id: number, status: TaskStatus, changedBy: number) =>
-    apiFetch<Task>(`/tasks/${id}/status`, { method: "PATCH", body: { status, changedBy } }),
-  updateTask: (id: number, patch: Record<string, unknown>) =>
-    apiFetch<Task>(`/tasks/${id}`, { method: "PATCH", body: patch }),
-  deleteTask: (id: number) => apiFetch<unknown>(`/tasks/${id}`, { method: "DELETE" }),
+  employees: (tenantId: number) => apiFetch<User[]>(`/users/employees?tenantId=${tenantId}`),
+  users: (tenantId?: number) =>
+    apiFetch<User[]>(`/users${tenantId ? `?tenantId=${tenantId}` : ""}`),
+  tasks: (tenantId: number, query = "") => {
+    const sep = query.startsWith("?") ? "&" : "?";
+    return apiFetch<Task[]>(
+      `/tasks?tenantId=${tenantId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+    );
+  },
+  tasksByAuthor: (id: number, tenantId: number, query = "") => {
+    const sep = query.startsWith("?") ? "&" : "?";
+    return apiFetch<Task[]>(
+      `/tasks/author/${id}?tenantId=${tenantId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+    );
+  },
+  tasksAssigned: (id: number, tenantId: number, query = "") => {
+    const sep = query.startsWith("?") ? "&" : "?";
+    return apiFetch<Task[]>(
+      `/tasks/assigned/${id}?tenantId=${tenantId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+    );
+  },
+  task: (id: number, tenantId?: number) =>
+    apiFetch<Task>(`/tasks/${id}${tenantId ? `?tenantId=${tenantId}` : ""}`),
+  createTask: (authorId: number, rawText: string, tenantId: number, departmentId?: number) =>
+    apiFetch<Task>("/tasks", {
+      method: "POST",
+      body: { authorId, rawText, tenantId, ...(departmentId ? { departmentId } : {}) },
+    }),
+  assign: (id: number, userIds: number[], assignedBy: number, tenantId: number) =>
+    apiFetch<Task>(`/tasks/${id}/assign?tenantId=${tenantId}`, {
+      method: "PATCH",
+      body: { userIds, assignedBy },
+    }),
+  setStatus: (id: number, status: TaskStatus, tenantId: number) =>
+    apiFetch<Task>(`/tasks/${id}/status?tenantId=${tenantId}`, {
+      method: "PATCH",
+      body: { status },
+    }),
+  updateTask: (id: number, tenantId: number, patch: Record<string, unknown>) =>
+    apiFetch<Task>(`/tasks/${id}?tenantId=${tenantId}`, { method: "PATCH", body: patch }),
+  deleteTask: (id: number, tenantId: number) =>
+    apiFetch<unknown>(`/tasks/${id}?tenantId=${tenantId}`, { method: "DELETE" }),
   comments: (taskId: number) => apiFetch<Comment[]>(`/comments/task/${taskId}`),
   addComment: (taskId: number, authorId: number, body: string) =>
     apiFetch<Comment>("/comments", { method: "POST", body: { taskId, authorId, body } }),
@@ -266,11 +300,15 @@ export const api = {
 };
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  draft: "Черновик",
-  in_progress: "В работе",
-  review: "На проверке",
-  done: "Выполнена",
-  cancelled: "Отменена",
+  NEW: "Новая",
+  ASSIGNED: "Назначена",
+  ACCEPTED: "Принята",
+  IN_PROGRESS: "В работе",
+  WAITING: "Ожидание",
+  COMPLETED: "Выполнена",
+  CLOSED: "Закрыта",
+  OVERDUE: "Просрочена",
+  CANCELLED: "Отменена",
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
@@ -282,14 +320,20 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 
 export function nextStatuses(status: TaskStatus, role: Role): TaskStatus[] {
   if (role === "employee") {
-    if (status === "draft") return ["in_progress"];
-    if (status === "in_progress") return ["review"];
+    if (status === "ASSIGNED") return ["ACCEPTED"];
+    if (status === "ACCEPTED") return ["IN_PROGRESS"];
+    if (status === "IN_PROGRESS") return ["WAITING", "COMPLETED"];
+    if (status === "WAITING") return ["IN_PROGRESS"];
     return [];
   }
-  if (status === "review") return ["done", "in_progress"];
-  if (status === "draft") return ["in_progress", "cancelled"];
-  if (status === "in_progress") return ["review", "cancelled"];
-  if (status === "done") return ["in_progress"];
+  // manager
+  if (status === "NEW") return ["ASSIGNED", "CANCELLED"];
+  if (status === "ASSIGNED") return ["ACCEPTED", "CANCELLED"];
+  if (status === "ACCEPTED") return ["IN_PROGRESS", "CANCELLED"];
+  if (status === "IN_PROGRESS") return ["WAITING", "COMPLETED", "CANCELLED"];
+  if (status === "WAITING") return ["IN_PROGRESS", "CANCELLED"];
+  if (status === "COMPLETED") return ["CLOSED"];
+  if (status === "OVERDUE") return ["IN_PROGRESS", "CANCELLED"];
   return [];
 }
 

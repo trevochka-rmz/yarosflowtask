@@ -20,6 +20,7 @@ import {
   type TaskStatus,
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { useCurrentTenant } from "@/lib/platform";
 
 
 export const Route = createFileRoute("/tasks/$taskId")({
@@ -41,16 +42,18 @@ function TaskDetail() {
   const { taskId } = Route.useParams();
   const id = Number(taskId);
   const { data: user } = useCurrentUser();
+  const { tenant } = useCurrentTenant();
   const currentId = user?.id ?? 0;
   const role = user?.role ?? "manager";
+  const tenantId = tenant?.id;
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
   const [editing, setEditing] = useState(false);
 
 
-  const taskQuery = useQuery({ queryKey: ["task", id], queryFn: () => api.task(id) });
-  const employees = useQuery({ queryKey: ["employees"], queryFn: () => api.employees() });
+  const taskQuery = useQuery({ queryKey: ["task", id, tenantId], queryFn: () => api.task(id, tenantId) });
+  const employees = useQuery({ queryKey: ["employees", tenantId], enabled: !!tenantId, queryFn: () => tenantId ? api.employees(tenantId) : Promise.resolve([]) });
   const comments = useQuery({ queryKey: ["comments", id], queryFn: () => api.comments(id) });
   const history = useQuery({ queryKey: ["history", id], queryFn: () => api.history(id) });
 
@@ -67,7 +70,7 @@ function TaskDetail() {
   };
 
   const statusMutation = useMutation({
-    mutationFn: (status: TaskStatus) => api.setStatus(id, status, currentId),
+    mutationFn: (status: TaskStatus) => api.setStatus(id, status, tenantId ?? 0),
     onSuccess: () => {
       invalidate();
       toast.success("Статус обновлён");
@@ -76,7 +79,7 @@ function TaskDetail() {
   });
 
   const assignMutation = useMutation({
-    mutationFn: (userIds: number[]) => api.assign(id, userIds, currentId),
+    mutationFn: (userIds: number[]) => api.assign(id, userIds, currentId, tenantId ?? 0),
     onSuccess: () => {
       invalidate();
       toast.success("Исполнители обновлены");
@@ -142,7 +145,7 @@ function TaskDetail() {
               </div>
             </div>
             {editing ? (
-              <TaskEditForm task={task} userId={currentId} onDone={() => setEditing(false)} />
+              <TaskEditForm task={task} userId={currentId} tenantId={tenantId ?? 0} onDone={() => setEditing(false)} />
             ) : (
               <>
             <table className="w-full text-sm max-sm:block">
@@ -203,7 +206,7 @@ function TaskDetail() {
                 {transitions.map((s) => (
                   <Button
                     key={s}
-                    variant={s === "done" ? "default" : "outline"}
+                    variant={s === "COMPLETED" || s === "CLOSED" ? "default" : "outline"}
                     className="w-full sm:w-auto"
                     disabled={statusMutation.isPending}
                     onClick={() => statusMutation.mutate(s)}

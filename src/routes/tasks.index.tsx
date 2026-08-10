@@ -15,6 +15,7 @@ import {
   type TaskStatus,
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
+import { useCurrentTenant } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks/")({
@@ -34,14 +35,18 @@ type Assignment = "any" | "with" | "without";
 
 function TasksPage() {
   const { data: user } = useCurrentUser();
+  const { tenant } = useCurrentTenant();
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<TaskStatus | "">("");
   const [assignment, setAssignment] = useState<Assignment>("any");
   const userId = user?.id ?? 0;
+  const tenantId = tenant?.id;
 
   const query = useQuery({
-    queryKey: ["tasks", scope, status, assignment, userId],
+    queryKey: ["tasks", scope, status, assignment, userId, tenantId],
+    enabled: !!tenantId,
     queryFn: async (): Promise<Task[]> => {
+      if (!tenantId) return [];
       const params = new URLSearchParams();
       if (status) params.set("status", status);
       if (assignment === "with") params.set("minAssignees", "1");
@@ -50,9 +55,9 @@ function TasksPage() {
         params.set("maxAssignees", "0");
       }
       const qs = params.toString() ? `?${params.toString()}` : "";
-      if (scope === "author") return api.tasksByAuthor(userId, qs);
-      if (scope === "assigned") return api.tasksAssigned(userId, qs);
-      return api.tasks(qs);
+      if (scope === "author") return api.tasksByAuthor(userId, tenantId, qs);
+      if (scope === "assigned") return api.tasksAssigned(userId, tenantId, qs);
+      return api.tasks(tenantId, qs);
     },
   });
 
@@ -133,7 +138,11 @@ function TasksPage() {
       </div>
 
       <div className="mt-5">
-        {query.isPending ? (
+        {!tenantId ? (
+          <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Выберите организацию для просмотра задач.
+          </p>
+        ) : query.isPending ? (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-6">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-6 animate-pulse rounded bg-muted" />
@@ -166,7 +175,7 @@ function TasksPage() {
                     </Link>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <ExportMenu taskId={task.id} />
-                      <DeleteTaskButton taskId={task.id} title={task.title} />
+                      <DeleteTaskButton taskId={task.id} title={task.title} tenantId={tenantId} />
                     </div>
                   </div>
                   <Link to="/tasks/$taskId" params={{ taskId: String(task.id) }} className="block">
@@ -228,7 +237,7 @@ function TasksPage() {
                         <td className="px-2 py-2">
                           <div className="flex items-center justify-end gap-0.5">
                             <ExportMenu taskId={task.id} />
-                            <DeleteTaskButton taskId={task.id} title={task.title} />
+                            <DeleteTaskButton taskId={task.id} title={task.title} tenantId={tenantId} />
                           </div>
                         </td>
 

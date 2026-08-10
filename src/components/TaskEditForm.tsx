@@ -23,10 +23,12 @@ function toDateInput(value?: string | null) {
 export function TaskEditForm({
   task,
   userId,
+  tenantId,
   onDone,
 }: {
   task: Task;
   userId: number;
+  tenantId: number;
   onDone: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -42,7 +44,7 @@ export function TaskEditForm({
 
   const mutation = useMutation({
     mutationFn: () =>
-      api.updateTask(task.id, {
+      api.updateTask(task.id, tenantId, {
         title: form.title,
         description: form.description,
         acceptance_criteria: form.acceptance_criteria,

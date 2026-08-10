@@ -18,15 +18,17 @@ import { api } from "@/lib/api";
 export function DeleteTaskButton({
   taskId,
   title,
+  tenantId,
   onDeleted,
 }: {
   taskId: number;
   title: string;
+  tenantId?: number;
   onDeleted?: () => void;
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => api.deleteTask(taskId),
+    mutationFn: () => api.deleteTask(taskId, tenantId ?? 0),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Задача удалена");
