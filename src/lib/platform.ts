@@ -144,6 +144,29 @@ export const platform = {
     apiFetch<Member>(`/tenants/${tenantId}/members`, { method: "POST", body }),
   removeMember: (tenantId: number, membershipId: number) =>
     apiFetch<unknown>(`/tenants/${tenantId}/members/${membershipId}`, { method: "DELETE" }),
+  /** Обновление роли: PATCH, с фоллбэком «удалить + добавить заново». */
+  updateMemberRole: async (
+    tenantId: number,
+    member: { id: number; user_id: number },
+    role: MemberRole,
+  ) => {
+    try {
+      return await apiFetch<Member>(`/tenants/${tenantId}/members/${member.id}`, {
+        method: "PATCH",
+        body: { role },
+      });
+    } catch {
+      await apiFetch<unknown>(`/tenants/${tenantId}/members/${member.id}`, { method: "DELETE" });
+      return apiFetch<Member>(`/tenants/${tenantId}/members`, {
+        method: "POST",
+        body: { userId: member.user_id, role },
+      });
+    }
+  },
+
+  /** Справочник ролей организации */
+  roles: () => apiFetch<RoleInfo[]>("/tenants/roles"),
+
 
   versions: (botId: number) => apiFetch<BotVersion[]>(`/tenants/bots/${botId}/versions`),
   /** Создать новую версию (статус draft, version назначает backend) */
