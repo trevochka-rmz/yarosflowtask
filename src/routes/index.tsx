@@ -63,7 +63,7 @@ const FEATURES = [
 ];
 
 function Landing() {
-  const { tenant, tenants, isLoading } = useCurrentTenant();
+  const { tenant, tenants, isLoading, canCreateTenant } = useCurrentTenant();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const navigate = useNavigate();
@@ -77,6 +77,7 @@ function Landing() {
       setName("");
       setSlug("");
       void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      void queryClient.invalidateQueries({ queryKey: ["tenants-mine"] });
       toast.success("Организация создана");
       void navigate({ to: "/org" });
     },
@@ -126,7 +127,7 @@ function Landing() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold text-brand-deep">
-            {tenant ? "Ваша организация" : "Шаг 1 — создайте организацию"}
+            {tenant ? "Ваша организация" : canCreateTenant ? "Шаг 1 — создайте организацию" : "Организация"}
           </h2>
         </div>
 
@@ -154,6 +155,7 @@ function Landing() {
           </p>
         )}
 
+        {canCreateTenant ? (
         <form
           className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto]"
           onSubmit={(e) => {
@@ -176,6 +178,11 @@ function Landing() {
             Создать организацию
           </Button>
         </form>
+        ) : (
+          <p className="mt-4 text-xs text-muted-foreground">
+            Создавать новые организации может только администратор платформы (platform_admin).
+          </p>
+        )}
       </section>
     </AppLayout>
   );
