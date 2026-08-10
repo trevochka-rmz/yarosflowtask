@@ -15,6 +15,15 @@ export type MemberRole =
   | "auditor"
   | "group_participant";
 
+/** Элемент справочника GET /tenants/roles */
+export interface RoleInfo {
+  code: MemberRole | string;
+  name?: string;
+  title?: string;
+  description?: string | null;
+}
+
+
 export interface Tenant {
   id: number;
   name: string;
@@ -144,6 +153,29 @@ export const platform = {
     apiFetch<Member>(`/tenants/${tenantId}/members`, { method: "POST", body }),
   removeMember: (tenantId: number, membershipId: number) =>
     apiFetch<unknown>(`/tenants/${tenantId}/members/${membershipId}`, { method: "DELETE" }),
+  /** Обновление роли: PATCH, с фоллбэком «удалить + добавить заново». */
+  updateMemberRole: async (
+    tenantId: number,
+    member: { id: number; user_id: number },
+    role: MemberRole,
+  ) => {
+    try {
+      return await apiFetch<Member>(`/tenants/${tenantId}/members/${member.id}`, {
+        method: "PATCH",
+        body: { role },
+      });
+    } catch {
+      await apiFetch<unknown>(`/tenants/${tenantId}/members/${member.id}`, { method: "DELETE" });
+      return apiFetch<Member>(`/tenants/${tenantId}/members`, {
+        method: "POST",
+        body: { userId: member.user_id, role },
+      });
+    }
+  },
+
+  /** Справочник ролей организации */
+  roles: () => apiFetch<RoleInfo[]>("/tenants/roles"),
+
 
   versions: (botId: number) => apiFetch<BotVersion[]>(`/tenants/bots/${botId}/versions`),
   /** Создать новую версию (статус draft, version назначает backend) */
@@ -299,13 +331,49 @@ export function useCurrentTenant() {
       (["manager", "bot_owner", "director", "platform_admin"] as MemberRole[]).includes(r),
     );
 
+  /** Управление участниками организации */
+  const canManageMembers =
+    currentRoles.length === 0 ||
+    currentRoles.some((r) =>
+      (["director", "bot_owner", "platform_admin"] as MemberRole[]).includes(r),
+    );
+
+  /** Создание организаций — только platform_admin */
+  const canCreateTenant =
+    currentRoles.length === 0 || currentRoles.includes("platform_admin");
+
   return {
     tenant,
     tenants,
     currentRoles,
     canManage,
+    canManageMembers,
+    canCreateTenant,
+    hasNoTenant: !query.isPending && !query.isError && tenants.length === 0,
     isLoading: query.isPending,
     isError: query.isError,
     query,
   };
 }
+
+/** Справочник ролей с фоллбэком на локальные подписи. */
+export function useRoles() {
+  return useQuery({
+    queryKey: ["tenant-roles"],
+    retry: false,
+    staleTime: 10 * 60_000,
+    queryFn: () =>
+      platform.roles().catch(() =>
+        (Object.keys(MEMBER_ROLE_LABELS) as MemberRole[]).map((code) => ({
+          code,
+          name: MEMBER_ROLE_LABELS[code],
+        })),
+      ),
+  });
+}
+
+export function roleLabel(role: string, roles?: RoleInfo[]) {
+  const found = roles?.find((r) => r.code === role);
+  return found?.name ?? found?.title ?? MEMBER_ROLE_LABELS[role as MemberRole] ?? role;
+}
+

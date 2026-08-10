@@ -10,7 +10,7 @@ import {
   ListChecks,
   LogOut,
   Plus,
-  Users,
+  UserCog,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -20,6 +20,7 @@ import { userHandle } from "@/lib/api";
 import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
 import { useCurrentTenant } from "@/lib/platform";
+import { NoTenantScreen } from "@/components/NoTenantScreen";
 import {
   Sidebar,
   SidebarContent,
@@ -50,9 +51,14 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: "Организация",
+    items: [
+      { title: "Сотрудники и роли", url: "/members", icon: UserCog },
+    ],
+  },
+  {
     label: "Доверие",
     items: [
-      { title: "Участники и роли", url: "/members", icon: Users },
       { title: "Журнал аудита", url: "/audit", icon: FileClock },
       { title: "Заявки на изменения", url: "/change-requests", icon: GitPullRequestArrow },
     ],
@@ -111,6 +117,7 @@ function AppSidebar() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError } = useCurrentUser();
+  const { hasNoTenant } = useCurrentTenant();
   const queryClient = useQueryClient();
   const inMiniApp = getTelegramInitData() !== null;
   const canUseSite = inMiniApp || getToken() !== null || import.meta.env.DEV;
@@ -175,7 +182,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
             ) : null}
           </header>
 
-          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">{children}</main>
+          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">
+            {hasNoTenant ? <NoTenantScreen /> : children}
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>
