@@ -331,13 +331,49 @@ export function useCurrentTenant() {
       (["manager", "bot_owner", "director", "platform_admin"] as MemberRole[]).includes(r),
     );
 
+  /** Управление участниками организации */
+  const canManageMembers =
+    currentRoles.length === 0 ||
+    currentRoles.some((r) =>
+      (["director", "bot_owner", "platform_admin"] as MemberRole[]).includes(r),
+    );
+
+  /** Создание организаций — только platform_admin */
+  const canCreateTenant =
+    currentRoles.length === 0 || currentRoles.includes("platform_admin");
+
   return {
     tenant,
     tenants,
     currentRoles,
     canManage,
+    canManageMembers,
+    canCreateTenant,
+    hasNoTenant: !query.isPending && !query.isError && tenants.length === 0,
     isLoading: query.isPending,
     isError: query.isError,
     query,
   };
 }
+
+/** Справочник ролей с фоллбэком на локальные подписи. */
+export function useRoles() {
+  return useQuery({
+    queryKey: ["tenant-roles"],
+    retry: false,
+    staleTime: 10 * 60_000,
+    queryFn: () =>
+      platform.roles().catch(() =>
+        (Object.keys(MEMBER_ROLE_LABELS) as MemberRole[]).map((code) => ({
+          code,
+          name: MEMBER_ROLE_LABELS[code],
+        })),
+      ),
+  });
+}
+
+export function roleLabel(role: string, roles?: RoleInfo[]) {
+  const found = roles?.find((r) => r.code === role);
+  return found?.name ?? found?.title ?? MEMBER_ROLE_LABELS[role as MemberRole] ?? role;
+}
+
