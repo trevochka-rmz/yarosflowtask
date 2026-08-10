@@ -11,7 +11,6 @@ import {
   LogOut,
   Plus,
   UserCog,
-  Users,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -118,6 +117,7 @@ function AppSidebar() {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError } = useCurrentUser();
+  const { hasNoTenant } = useCurrentTenant();
   const queryClient = useQueryClient();
   const inMiniApp = getTelegramInitData() !== null;
   const canUseSite = inMiniApp || getToken() !== null || import.meta.env.DEV;
@@ -182,7 +182,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
             ) : null}
           </header>
 
-          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">{children}</main>
+          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">
+            {hasNoTenant ? <NoTenantScreen /> : children}
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>
