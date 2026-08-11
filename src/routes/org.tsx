@@ -4,6 +4,7 @@ import { Bot, Building2, GitPullRequestArrow, ShieldAlert, Users } from "lucide-
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
+import { orgApi } from "@/lib/org";
 import {
   BOT_STATUS_LABELS,
   CR_STATUS_LABELS,
@@ -41,8 +42,8 @@ function OrgPage() {
     enabled: !!tenantId,
   });
   const members = useQuery({
-    queryKey: ["members", tenantId],
-    queryFn: () => platform.members(tenantId!),
+    queryKey: ["org-members", tenantId],
+    queryFn: () => orgApi.members(tenantId!),
     enabled: !!tenantId,
   });
   const crs = useQuery({

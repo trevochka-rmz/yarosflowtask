@@ -1,0 +1,274 @@
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "./api";
+
+/* ---------------------------------- типы --------------------------------- */
+
+export interface Organization {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  is_active: boolean;
+  created_by?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Организация текущего пользователя + его роль и права. */
+export interface MyOrganization extends Organization {
+  membership_id: number;
+  role_id: number;
+  role_name: string;
+  department_id: number | null;
+  permissions: string[];
+}
+
+export interface OrgMember {
+  id: number;
+  user_id: number;
+  organization_id: number;
+  role_id: number;
+  department_id: number | null;
+  is_active: boolean;
+  created_at: string;
+  full_name: string | null;
+  username: string | null;
+  tg_id: number | string | null;
+  role_name: string | null;
+  role_is_system?: boolean;
+  department_name: string | null;
+}
+
+export interface PermissionInfo {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export interface RoleTemplate {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+export interface OrgRole {
+  id: number;
+  organization_id: number;
+  template_id: number | null;
+  name: string;
+  description: string | null;
+  is_system: boolean;
+  permissions: string[];
+}
+
+export interface Department {
+  id: number;
+  organization_id: number;
+  code: string | null;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface DepartmentTemplate {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface PlatformUser {
+  id: number;
+  tg_id: number | string | null;
+  username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  is_active: boolean;
+  is_platform_admin?: boolean;
+  last_activity: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ----------------------------------- API ---------------------------------- */
+
+export const orgApi = {
+  mine: () => apiFetch<MyOrganization[]>("/organizations/mine"),
+  all: () => apiFetch<Organization[]>("/organizations"),
+  create: (body: { name: string; slug?: string; description?: string }) =>
+    apiFetch<Organization>("/organizations", { method: "POST", body }),
+  update: (id: number, body: { name?: string; description?: string }) =>
+    apiFetch<Organization>(`/organizations/${id}`, { method: "PATCH", body }),
+  deactivate: (id: number) =>
+    apiFetch<Organization>(`/organizations/${id}`, { method: "DELETE" }),
+
+  members: (id: number) => apiFetch<OrgMember[]>(`/organizations/${id}/members`),
+  addMember: (id: number, body: { userId: number; roleId: number; departmentId?: number }) =>
+    apiFetch<OrgMember>(`/organizations/${id}/members`, { method: "POST", body }),
+  updateMember: (
+    id: number,
+    memberId: number,
+    body: { roleId?: number; departmentId?: number | null; is_active?: boolean },
+  ) => apiFetch<OrgMember>(`/organizations/${id}/members/${memberId}`, { method: "PATCH", body }),
+  removeMember: (id: number, memberId: number) =>
+    apiFetch<unknown>(`/organizations/${id}/members/${memberId}`, { method: "DELETE" }),
+
+  permissions: () => apiFetch<PermissionInfo[]>("/organizations/permissions"),
+  roleTemplates: () => apiFetch<RoleTemplate[]>("/organizations/role-templates"),
+  roles: (id: number) => apiFetch<OrgRole[]>(`/organizations/${id}/roles`),
+  createRole: (id: number, body: { name: string; description?: string; permissions: string[] }) =>
+    apiFetch<OrgRole>(`/organizations/${id}/roles`, { method: "POST", body }),
+  updateRole: (
+    id: number,
+    roleId: number,
+    body: { name?: string; description?: string; permissions?: string[] },
+  ) => apiFetch<OrgRole>(`/organizations/${id}/roles/${roleId}`, { method: "PATCH", body }),
+  deleteRole: (id: number, roleId: number) =>
+    apiFetch<unknown>(`/organizations/${id}/roles/${roleId}`, { method: "DELETE" }),
+
+  departmentTemplates: () => apiFetch<DepartmentTemplate[]>("/organizations/department-templates"),
+  departments: (id: number) => apiFetch<Department[]>(`/organizations/${id}/departments`),
+  createDepartment: (id: number, body: { name: string; code?: string; description?: string }) =>
+    apiFetch<Department>(`/organizations/${id}/departments`, { method: "POST", body }),
+  updateDepartment: (
+    id: number,
+    departmentId: number,
+    body: { name?: string; description?: string; is_active?: boolean },
+  ) =>
+    apiFetch<Department>(`/organizations/${id}/departments/${departmentId}`, {
+      method: "PATCH",
+      body,
+    }),
+  deleteDepartment: (id: number, departmentId: number) =>
+    apiFetch<unknown>(`/organizations/${id}/departments/${departmentId}`, { method: "DELETE" }),
+
+  usersMe: () => apiFetch<PlatformUser>("/users/me"),
+  users: () => apiFetch<PlatformUser[]>("/users"),
+  usersWithoutOrganization: () => apiFetch<PlatformUser[]>("/users/without-organization"),
+};
+
+/* --------------------------- выбранная организация ------------------------- */
+
+const ORG_KEY = "yaya.tenant";
+
+function readStoredOrg(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(ORG_KEY);
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+export function setStoredOrg(id: number) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ORG_KEY, String(id));
+  window.dispatchEvent(new Event("yaya:tenant-changed"));
+}
+
+/* ---------------------------------- хуки ---------------------------------- */
+
+/** Профиль из /users/me — содержит is_platform_admin. */
+export function usePlatformUser() {
+  return useQuery({
+    queryKey: ["users-me"],
+    queryFn: () => orgApi.usersMe(),
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
+export function useIsPlatformAdmin() {
+  const q = usePlatformUser();
+  return { isPlatformAdmin: q.data?.is_platform_admin === true, isLoading: q.isPending };
+}
+
+export function useMyOrgs() {
+  return useQuery({
+    queryKey: ["orgs-mine"],
+    queryFn: () => orgApi.mine(),
+    retry: false,
+  });
+}
+
+/** Текущая организация + права текущего пользователя в ней. */
+export function useCurrentOrg() {
+  const query = useMyOrgs();
+  const admin = usePlatformUser();
+  const [stored, setStored] = useState<number | null>(() => readStoredOrg());
+
+  useEffect(() => {
+    const sync = () => setStored(readStoredOrg());
+    window.addEventListener("yaya:tenant-changed", sync);
+    return () => window.removeEventListener("yaya:tenant-changed", sync);
+  }, []);
+
+  const orgs = query.data ?? [];
+  const org = orgs.find((o) => o.id === stored) ?? orgs[0] ?? null;
+  const permissions = org?.permissions ?? [];
+  const isPlatformAdmin = admin.data?.is_platform_admin === true;
+
+  /** Проверка права; platform admin видит всё. */
+  const can = (perm: string) => isPlatformAdmin || permissions.includes(perm);
+
+  return {
+    org,
+    orgs,
+    permissions,
+    can,
+    isPlatformAdmin,
+    hasNoOrg: !query.isPending && !query.isError && orgs.length === 0,
+    isLoading: query.isPending,
+    isError: query.isError,
+    query,
+  };
+}
+
+/* --------------------------------- утилиты -------------------------------- */
+
+export const PERMISSION_GROUP_LABELS: Record<string, string> = {
+  organization: "Организация",
+  employee: "Сотрудники",
+  role: "Роли",
+  department: "Отделы",
+  task: "Задачи",
+  bot: "Боты",
+  audit: "Журнал",
+  integration: "Интеграции",
+};
+
+export function permissionGroup(code: string) {
+  return code.split(".")[0] ?? "other";
+}
+
+export function groupPermissions(list: PermissionInfo[]) {
+  const map = new Map<string, PermissionInfo[]>();
+  list.forEach((p) => {
+    const g = permissionGroup(p.code);
+    map.set(g, [...(map.get(g) ?? []), p]);
+  });
+  return [...map.entries()].map(([group, items]) => ({
+    group,
+    label: PERMISSION_GROUP_LABELS[group] ?? group,
+    items,
+  }));
+}
+
+export function personLabel(u: {
+  full_name?: string | null;
+  username?: string | null;
+  first_name?: string | null;
+  id?: number;
+  user_id?: number;
+}) {
+  return (
+    u.full_name?.trim() ||
+    (u.username ? `@${u.username}` : "") ||
+    u.first_name ||
+    `#${u.user_id ?? u.id ?? "?"}`
+  );
+}

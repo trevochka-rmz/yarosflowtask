@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "./api";
+import { useCurrentOrg, useMyOrgs } from "./org";
+
 
 export type MemberRole =
   | "manager"
@@ -273,88 +274,51 @@ export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
   group_participant: "Участник группы",
 };
 
-const TENANT_KEY = "yaya.tenant";
-
-function readStoredTenant(): number | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(TENANT_KEY);
-  const n = raw ? Number(raw) : NaN;
-  return Number.isFinite(n) ? n : null;
-}
-
-export function setStoredTenant(id: number) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(TENANT_KEY, String(id));
-  window.dispatchEvent(new Event("yaya:tenant-changed"));
-}
+export { setStoredOrg as setStoredTenant } from "./org";
 
 export function useTenants() {
   return useQuery({ queryKey: ["tenants"], queryFn: () => platform.tenants(), retry: false });
 }
 
-/**
- * Орги текущего пользователя через /tenants/mine.
- * Фоллбэк на /tenants при ошибке (backward compat).
- */
+/** Организации текущего пользователя (новый контур /organizations/mine). */
 export function useTenantsMine() {
-  return useQuery({
-    queryKey: ["tenants-mine"],
-    queryFn: () =>
-      platform
-        .tenantsMine()
-        .catch(() =>
-          platform.tenants().then((list) => list.map((t) => ({ ...t, roles: [] as MemberRole[] }))),
-        ),
-    retry: false,
-  });
+  return useMyOrgs();
 }
 
-/** Текущая организация: сохранённая в localStorage или первая доступная. */
+/**
+ * Текущая организация + права.
+ * Источник — GET /organizations/mine (роль и permissions пользователя).
+ */
 export function useCurrentTenant() {
-  const query = useTenantsMine();
-  const [stored, setStored] = useState<number | null>(() => readStoredTenant());
-
-  useEffect(() => {
-    const sync = () => setStored(readStoredTenant());
-    window.addEventListener("yaya:tenant-changed", sync);
-    return () => window.removeEventListener("yaya:tenant-changed", sync);
-  }, []);
-
-  const tenants = query.data ?? [];
-  const tenant = tenants.find((t) => t.id === stored) ?? tenants[0] ?? null;
-  const currentRoles: MemberRole[] = (tenant as TenantWithRoles | null)?.roles ?? [];
-
-  /** Тру если есть хотя бы одна из привилегированных ролей */
-  const canManage =
-    currentRoles.length === 0 || // если roles пусто — показываем (backward compat)
-    currentRoles.some((r) =>
-      (["manager", "bot_owner", "director", "platform_admin"] as MemberRole[]).includes(r),
-    );
-
-  /** Управление участниками организации */
-  const canManageMembers =
-    currentRoles.length === 0 ||
-    currentRoles.some((r) =>
-      (["director", "bot_owner", "platform_admin"] as MemberRole[]).includes(r),
-    );
-
-  /** Создание организаций — только platform_admin */
-  const canCreateTenant =
-    currentRoles.length === 0 || currentRoles.includes("platform_admin");
+  const {
+    org,
+    orgs,
+    permissions,
+    can,
+    isPlatformAdmin,
+    hasNoOrg,
+    isLoading,
+    isError,
+    query,
+  } = useCurrentOrg();
 
   return {
-    tenant,
-    tenants,
-    currentRoles,
-    canManage,
-    canManageMembers,
-    canCreateTenant,
-    hasNoTenant: !query.isPending && !query.isError && tenants.length === 0,
-    isLoading: query.isPending,
-    isError: query.isError,
+    tenant: org,
+    tenants: orgs,
+    permissions,
+    can,
+    isPlatformAdmin,
+    currentRoles: org?.role_name ? [org.role_name] : [],
+    canManage: can("organization.update") || can("bot.create") || can("task.create"),
+    canManageMembers: can("employee.create") || can("employee.update"),
+    canCreateTenant: isPlatformAdmin,
+    hasNoTenant: hasNoOrg && !isPlatformAdmin,
+    isLoading,
+    isError,
     query,
   };
 }
+
 
 /** Справочник ролей с фоллбэком на локальные подписи. */
 export function useRoles() {

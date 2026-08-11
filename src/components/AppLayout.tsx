@@ -10,6 +10,9 @@ import {
   ListChecks,
   LogOut,
   Plus,
+  Shield,
+  Building,
+  KeyRound,
   UserCog,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
@@ -19,7 +22,7 @@ import { useCurrentUser } from "@/lib/use-current-user";
 import { userHandle } from "@/lib/api";
 import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
-import { useCurrentTenant } from "@/lib/platform";
+import { useCurrentOrg } from "@/lib/org";
 import { NoTenantScreen } from "@/components/NoTenantScreen";
 import {
   Sidebar,
@@ -36,38 +39,53 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-type NavItem = { title: string; url: string; icon: typeof Home; exact?: boolean };
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof Home;
+  exact?: boolean;
+  perm?: string;
+};
 
-const GROUPS: { label: string; items: NavItem[] }[] = [
+type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean };
+
+const GROUPS: NavGroup[] = [
   {
     label: "Управление",
     items: [
       { title: "Главная", url: "/", icon: Home, exact: true },
       { title: "Центр организации", url: "/org", icon: LayoutDashboard },
-      { title: "Флот ботов", url: "/bots", icon: Bot, exact: true },
-      { title: "Создать бота", url: "/bots/new", icon: Plus },
-      { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList },
-      { title: "Задачи", url: "/tasks", icon: ListChecks },
+      { title: "Флот ботов", url: "/bots", icon: Bot, exact: true, perm: "bot.read" },
+      { title: "Создать бота", url: "/bots/new", icon: Plus, perm: "bot.create" },
+      { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList, perm: "task.create" },
+      { title: "Задачи", url: "/tasks", icon: ListChecks, perm: "task.read" },
     ],
   },
   {
     label: "Организация",
     items: [
-      { title: "Сотрудники и роли", url: "/members", icon: UserCog },
+      { title: "Сотрудники", url: "/members", icon: UserCog, perm: "employee.read" },
+      { title: "Роли и права", url: "/roles", icon: KeyRound, perm: "role.read" },
+      { title: "Отделы", url: "/departments", icon: Building },
     ],
   },
   {
     label: "Доверие",
     items: [
-      { title: "Журнал аудита", url: "/audit", icon: FileClock },
+      { title: "Журнал аудита", url: "/audit", icon: FileClock, perm: "audit.read" },
       { title: "Заявки на изменения", url: "/change-requests", icon: GitPullRequestArrow },
     ],
+  },
+  {
+    label: "Платформа",
+    adminOnly: true,
+    items: [{ title: "Администрирование", url: "/admin", icon: Shield }],
   },
 ];
 
 function AppSidebar({ locked }: { locked?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { tenant } = useCurrentTenant();
+  const { org, can, isPlatformAdmin } = useCurrentOrg();
 
   const isActive = (item: NavItem) =>
     item.exact
@@ -84,7 +102,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
               Yaya<span className="text-primary">.Цифровой Бот</span>
             </span>
             <span className="block truncate text-xs text-muted-foreground">
-              {tenant ? tenant.name : "Организация не выбрана"}
+              {org ? org.name : isPlatformAdmin ? "Администратор платформы" : "Организация не выбрана"}
             </span>
           </span>
         </Link>
@@ -96,7 +114,13 @@ function AppSidebar({ locked }: { locked?: boolean }) {
             Навигация недоступна — вас ещё не добавили в организацию.
           </div>
         ) : (
-          GROUPS.map((group) => (
+          GROUPS.filter((g) => (g.adminOnly ? isPlatformAdmin : true))
+            .map((group) => ({
+              ...group,
+              items: group.items.filter((i) => (i.perm ? can(i.perm) : true)),
+            }))
+            .filter((g) => g.items.length > 0)
+            .map((group) => (
             <SidebarGroup key={group.label}>
               <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
               <SidebarGroupContent>
@@ -123,7 +147,8 @@ function AppSidebar({ locked }: { locked?: boolean }) {
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError } = useCurrentUser();
-  const { hasNoTenant } = useCurrentTenant();
+  const { hasNoOrg, isPlatformAdmin } = useCurrentOrg();
+  const locked = hasNoOrg && !isPlatformAdmin;
   const queryClient = useQueryClient();
   const inMiniApp = getTelegramInitData() !== null;
   const canUseSite = inMiniApp || getToken() !== null || import.meta.env.DEV;
@@ -148,7 +173,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar locked={hasNoTenant} />
+        <AppSidebar locked={locked} />
 
         <SidebarInset className="min-w-0">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/85 px-3 backdrop-blur sm:px-4">
@@ -189,7 +214,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </header>
 
           <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">
-            {hasNoTenant ? <NoTenantScreen /> : children}
+            {locked ? <NoTenantScreen /> : children}
           </main>
         </SidebarInset>
       </div>

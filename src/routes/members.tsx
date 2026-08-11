@@ -1,149 +1,187 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Loader2, Lock, Trash2 } from "lucide-react";
+import { Loader2, Lock, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
-import { api, formatDate, userHandle } from "@/lib/api";
-import {
-  MEMBER_ROLE_LABELS,
-  platform,
-  roleLabel,
-  useCurrentTenant,
-  useRoles,
-  type Member,
-  type MemberRole,
-} from "@/lib/platform";
+import { formatDate } from "@/lib/api";
+import { orgApi, personLabel, useCurrentOrg, type OrgMember } from "@/lib/org";
 
 export const Route = createFileRoute("/members")({
   head: () => ({
     meta: [
-      { title: "Управление организацией — Yaya.Цифровой Бот" },
+      { title: "Сотрудники организации — Yaya.Цифровой Бот" },
       {
         name: "description",
-        content: "Сотрудники организации: добавление, изменение ролей и отзыв доступа.",
+        content: "Участники организации: добавление, роли, отделы и отзыв доступа.",
       },
-      { property: "og:title", content: "Управление организацией — Yaya.Цифровой Бот" },
-      { property: "og:description", content: "Роли и доступы участников организации." },
+      { property: "og:title", content: "Сотрудники организации — Yaya.Цифровой Бот" },
+      { property: "og:description", content: "Роли, отделы и доступы участников организации." },
     ],
   }),
   component: MembersPage,
 });
 
-function MembersPage() {
-  const { tenant, canManageMembers } = useCurrentTenant();
-  const tenantId = tenant?.id;
-  const queryClient = useQueryClient();
-  const [userId, setUserId] = useState("");
-  const [role, setRole] = useState<MemberRole>("bot_user");
+const selectClass =
+  "h-9 w-full rounded-md border border-input bg-card px-2 text-sm disabled:opacity-60";
 
-  const rolesQuery = useRoles();
-  const roleOptions = rolesQuery.data ?? [];
+function MembersPage() {
+  const { org, can } = useCurrentOrg();
+  const orgId = org?.id;
+  const queryClient = useQueryClient();
+
+  const canRead = can("employee.read");
+  const canCreate = can("employee.create");
+  const canUpdate = can("employee.update");
+  const canDelete = can("employee.delete");
+
+  const [userId, setUserId] = useState("");
+  const [roleId, setRoleId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
 
   const members = useQuery({
-    queryKey: ["members", tenantId],
-    queryFn: () => platform.members(tenantId!),
-    enabled: !!tenantId,
+    queryKey: ["org-members", orgId],
+    queryFn: () => orgApi.members(orgId!),
+    enabled: !!orgId && canRead,
   });
-  const users = useQuery({
-    queryKey: ["users"],
-    queryFn: () => api.users(),
-    enabled: !!tenantId && canManageMembers,
+  const roles = useQuery({
+    queryKey: ["org-roles", orgId],
+    queryFn: () => orgApi.roles(orgId!),
+    enabled: !!orgId && canRead,
+  });
+  const departments = useQuery({
+    queryKey: ["org-departments", orgId],
+    queryFn: () => orgApi.departments(orgId!),
+    enabled: !!orgId,
+  });
+  const candidates = useQuery({
+    queryKey: ["users-without-org"],
+    queryFn: () => orgApi.usersWithoutOrganization(),
+    enabled: !!orgId && canCreate,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["members", tenantId] });
-
-  const handleMutationError = (e: Error) => {
-    if (e.message.includes("403") || e.message.toLowerCase().includes("прав")) {
-      toast.error("Недостаточно прав — нужна роль director, bot_owner или platform_admin");
-    } else {
-      toast.error(e.message);
-    }
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["org-members", orgId] });
+    void queryClient.invalidateQueries({ queryKey: ["users-without-org"] });
   };
+  const onError = (e: Error) => toast.error(e.message);
 
   const add = useMutation({
-    mutationFn: () => platform.addMember(tenantId!, { userId: Number(userId), role }),
+    mutationFn: () =>
+      orgApi.addMember(orgId!, {
+        userId: Number(userId),
+        roleId: Number(roleId),
+        ...(departmentId ? { departmentId: Number(departmentId) } : {}),
+      }),
     onSuccess: () => {
       setUserId("");
-      void invalidate();
-      toast.success("Участник добавлен");
+      setDepartmentId("");
+      invalidate();
+      toast.success("Сотрудник добавлен");
     },
-    onError: handleMutationError,
+    onError,
   });
 
-  const changeRole = useMutation({
-    mutationFn: (v: { member: Member; role: MemberRole }) =>
-      platform.updateMemberRole(tenantId!, v.member, v.role),
+  const patch = useMutation({
+    mutationFn: (v: {
+      member: OrgMember;
+      body: { roleId?: number; departmentId?: number | null; is_active?: boolean };
+    }) => orgApi.updateMember(orgId!, v.member.id, v.body),
     onSuccess: () => {
-      void invalidate();
-      toast.success("Роль обновлена");
+      invalidate();
+      toast.success("Участник обновлён");
     },
-    onError: handleMutationError,
+    onError,
   });
 
   const remove = useMutation({
-    mutationFn: (membershipId: number) => platform.removeMember(tenantId!, membershipId),
+    mutationFn: (memberId: number) => orgApi.removeMember(orgId!, memberId),
     onSuccess: () => {
-      void invalidate();
-      toast.success("Участник удалён");
+      invalidate();
+      toast.success("Сотрудник убран из организации");
     },
-    onError: handleMutationError,
+    onError,
   });
 
-  if (!tenant) {
+  if (!org) {
     return (
       <AppLayout>
-        <p className="text-sm text-muted-foreground">
-          Сначала выберите организацию на{" "}
-          <Link to="/org" className="text-primary underline">
-            странице организации
-          </Link>
-          .
+        <p className="text-sm text-muted-foreground">Организация не выбрана.</p>
+      </AppLayout>
+    );
+  }
+
+  if (!canRead) {
+    return (
+      <AppLayout>
+        <h1 className="text-2xl font-semibold tracking-tight text-brand-deep">Сотрудники</h1>
+        <p className="mt-4 flex items-start gap-2 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+          <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+          У вашей роли «{org.role_name}» нет права <code>employee.read</code>. Попросите
+          администратора организации выдать доступ.
         </p>
       </AppLayout>
     );
   }
 
-  const memberName = (m: Member) =>
-    m.full_name || (m.username ? `@${m.username}` : `#${m.user_id}`);
+  const roleList = roles.data ?? [];
+  const deptList = departments.data ?? [];
 
-  const RoleSelect = ({ m }: { m: Member }) => (
+  const RoleSelect = ({ m }: { m: OrgMember }) => (
     <select
-      value={m.role}
-      disabled={!canManageMembers || changeRole.isPending}
-      onChange={(e) => changeRole.mutate({ member: m, role: e.target.value as MemberRole })}
-      className="h-9 w-full max-w-[14rem] rounded-md border border-input bg-card px-2 text-sm disabled:opacity-60"
+      value={m.role_id ?? ""}
+      disabled={!canUpdate || patch.isPending}
+      onChange={(e) => patch.mutate({ member: m, body: { roleId: Number(e.target.value) } })}
+      className={selectClass}
     >
-      {(roleOptions.length
-        ? roleOptions
-        : (Object.keys(MEMBER_ROLE_LABELS) as MemberRole[]).map((c) => ({ code: c }))
-      ).map((r) => (
-        <option key={r.code} value={r.code}>
-          {roleLabel(String(r.code), roleOptions)}
+      {roleList.map((r) => (
+        <option key={r.id} value={r.id}>
+          {r.name}
         </option>
       ))}
-      {roleOptions.some((r) => r.code === m.role) ? null : (
-        <option value={m.role}>{roleLabel(m.role, roleOptions)}</option>
+      {roleList.some((r) => r.id === m.role_id) ? null : (
+        <option value={m.role_id}>{m.role_name ?? "—"}</option>
       )}
+    </select>
+  );
+
+  const DeptSelect = ({ m }: { m: OrgMember }) => (
+    <select
+      value={m.department_id ?? ""}
+      disabled={!canUpdate || patch.isPending}
+      onChange={(e) =>
+        patch.mutate({
+          member: m,
+          body: { departmentId: e.target.value ? Number(e.target.value) : null },
+        })
+      }
+      className={selectClass}
+    >
+      <option value="">Без отдела</option>
+      {deptList.map((d) => (
+        <option key={d.id} value={d.id}>
+          {d.name}
+        </option>
+      ))}
     </select>
   );
 
   return (
     <AppLayout>
       <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
-        Управление организацией
+        Сотрудники организации
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        {tenant.name} · сотрудники, роли и доступы
+        {org.name} · ваша роль: {org.role_name}
       </p>
 
-      {canManageMembers ? (
+      {canCreate ? (
         <form
-          className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-4 shadow-soft sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto]"
+          className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-4 shadow-soft sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_minmax(0,12rem)_auto]"
           onSubmit={(e) => {
             e.preventDefault();
-            if (userId) add.mutate();
+            if (userId && roleId) add.mutate();
           }}
         >
           <select
@@ -151,39 +189,52 @@ function MembersPage() {
             onChange={(e) => setUserId(e.target.value)}
             className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
           >
-            <option value="">Выберите сотрудника…</option>
-            {(users.data ?? []).map((u) => (
+            <option value="">Выберите пользователя…</option>
+            {(candidates.data ?? []).map((u) => (
               <option key={u.id} value={u.id}>
-                {userHandle(u)}
+                {personLabel(u)}
               </option>
             ))}
           </select>
           <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as MemberRole)}
+            value={roleId}
+            onChange={(e) => setRoleId(e.target.value)}
             className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
           >
-            {(roleOptions.length
-              ? roleOptions
-              : (Object.keys(MEMBER_ROLE_LABELS) as MemberRole[]).map((c) => ({ code: c }))
-            ).map((r) => (
-              <option key={r.code} value={r.code}>
-                {roleLabel(String(r.code), roleOptions)}
+            <option value="">Роль…</option>
+            {roleList.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
               </option>
             ))}
           </select>
-          <Button type="submit" disabled={!userId || add.isPending}>
-            {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          <select
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+          >
+            <option value="">Без отдела</option>
+            {deptList.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" disabled={!userId || !roleId || add.isPending}>
+            {add.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <UserPlus className="h-4 w-4" />
+            )}
             Добавить
           </Button>
+          {candidates.data && candidates.data.length === 0 ? (
+            <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-4">
+              Свободных пользователей нет — все уже состоят в организациях.
+            </p>
+          ) : null}
         </form>
-      ) : (
-        <p className="mt-5 flex items-start gap-2 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-          Управлять составом организации могут только роли «Директор», «Bot Owner» и «Админ
-          платформы». Список ниже доступен только для просмотра.
-        </p>
-      )}
+      ) : null}
 
       {members.isPending ? (
         <p className="mt-5 text-sm text-muted-foreground">Загрузка…</p>
@@ -191,14 +242,14 @@ function MembersPage() {
         <p className="mt-5 text-sm text-destructive">{(members.error as Error).message}</p>
       ) : members.data?.length ? (
         <>
-          <div className="mt-5 hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft sm:block">
+          <div className="mt-5 hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft lg:block">
             <table className="w-full text-sm">
               <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Сотрудник</th>
                   <th className="px-4 py-3">Telegram</th>
                   <th className="px-4 py-3">Роль</th>
-                  <th className="px-4 py-3">Статус</th>
+                  <th className="px-4 py-3">Отдел</th>
                   <th className="px-4 py-3">Добавлен</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -206,24 +257,24 @@ function MembersPage() {
               <tbody className="divide-y divide-border">
                 {members.data.map((m) => (
                   <tr key={m.id}>
-                    <td className="px-4 py-3 font-medium">{memberName(m)}</td>
+                    <td className="px-4 py-3 font-medium">{personLabel(m)}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {m.username ? `@${m.username}` : (m.tg_id ?? "—")}
                     </td>
                     <td className="px-4 py-3">
                       <RoleSelect m={m} />
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {m.is_active ? "Активен" : "Отключён"}
+                    <td className="px-4 py-3">
+                      <DeptSelect m={m} />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{formatDate(m.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      {canManageMembers ? (
+                      {canDelete ? (
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => remove.mutate(m.id)}
-                          aria-label="Удалить сотрудника"
+                          aria-label="Убрать из организации"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -235,34 +286,32 @@ function MembersPage() {
             </table>
           </div>
 
-          <ul className="mt-5 space-y-3 sm:hidden">
+          <ul className="mt-5 space-y-3 lg:hidden">
             {members.data.map((m) => (
-              <li
-                key={m.id}
-                className="rounded-2xl border border-border bg-card p-4 shadow-soft"
-              >
+              <li key={m.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{memberName(m)}</span>
+                    <span className="block truncate font-medium">{personLabel(m)}</span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {m.username ? `@${m.username}` : (m.tg_id ?? "—")} ·{" "}
                       {m.is_active ? "активен" : "отключён"}
                     </span>
                   </span>
-                  {canManageMembers ? (
+                  {canDelete ? (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="shrink-0"
                       onClick={() => remove.mutate(m.id)}
-                      aria-label="Удалить сотрудника"
+                      aria-label="Убрать из организации"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   ) : null}
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 grid gap-2">
                   <RoleSelect m={m} />
+                  <DeptSelect m={m} />
                 </div>
               </li>
             ))}
