@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
+import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as OrgRouteImport } from './routes/org'
 import { Route as RolesRouteImport } from './routes/roles'
@@ -33,6 +34,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DepartmentsRoute = DepartmentsRouteImport.update({
+  id: '/departments',
+  path: '/departments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MembersRoute = MembersRouteImport.update({
@@ -104,6 +110,7 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/departments': typeof DepartmentsRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/roles': typeof RolesRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/departments': typeof DepartmentsRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/roles': typeof RolesRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/audit': typeof AuditRoute
+  '/departments': typeof DepartmentsRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/roles': typeof RolesRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/audit'
+    | '/departments'
     | '/members'
     | '/org'
     | '/roles'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/audit'
+    | '/departments'
     | '/members'
     | '/org'
     | '/roles'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/audit'
+    | '/departments'
     | '/members'
     | '/org'
     | '/roles'
@@ -210,6 +222,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuditRoute: typeof AuditRoute
+  DepartmentsRoute: typeof DepartmentsRoute
   MembersRoute: typeof MembersRoute
   OrgRoute: typeof OrgRoute
   RolesRoute: typeof RolesRoute
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       path: '/audit'
       fullPath: '/audit'
       preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/departments': {
+      id: '/departments'
+      path: '/departments'
+      fullPath: '/departments'
+      preLoaderRoute: typeof DepartmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/members': {
@@ -338,6 +358,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuditRoute: AuditRoute,
+  DepartmentsRoute: DepartmentsRoute,
   MembersRoute: MembersRoute,
   OrgRoute: OrgRoute,
   RolesRoute: RolesRoute,
