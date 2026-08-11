@@ -21,9 +21,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/tasks/")({
   head: () => ({
     meta: [
-      { title: "Задачи — YAROS.TaskFlow" },
-      { name: "description", content: "Все технические задания: статусы, приоритеты и исполнители." },
-      { property: "og:title", content: "Задачи — YAROS.TaskFlow" },
+      { title: "Задачи — Yaya.ЦифровойБот" },
+      {
+        name: "description",
+        content: "Все технические задания: статусы, приоритеты и исполнители.",
+      },
+      { property: "og:title", content: "Задачи — Yaya.ЦифровойБот" },
       { property: "og:description", content: "Список задач со статусами, приоритетами и сроками." },
     ],
   }),
@@ -78,7 +81,9 @@ function TasksPage() {
   return (
     <AppLayout>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">Задачи</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
+          Задачи
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Отслеживайте прогресс от постановки ТЗ до выполнения.
         </p>
@@ -185,13 +190,13 @@ function TasksPage() {
                       <AssignmentBadge count={assigneeCount(task)} />
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground">
-                      #{task.id} · {task.category ?? "Без категории"} · {formatDate(task.created_at)}
+                      #{task.id} · {task.category ?? "Без категории"} ·{" "}
+                      {formatDate(task.created_at)}
                     </div>
                   </Link>
                 </li>
               ))}
             </ul>
-
 
             {/* Таблица для больших экранов */}
             <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft md:block">
@@ -207,7 +212,6 @@ function TasksPage() {
                       <th className="px-4 py-3 font-medium">Категория</th>
                       <th className="px-4 py-3 font-medium">Создана</th>
                       <th className="px-4 py-3 font-medium text-right">Действия</th>
-
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -233,14 +237,19 @@ function TasksPage() {
                           <PriorityBadge priority={task.priority} />
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{task.category ?? "—"}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDate(task.created_at)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {formatDate(task.created_at)}
+                        </td>
                         <td className="px-2 py-2">
                           <div className="flex items-center justify-end gap-0.5">
                             <ExportMenu taskId={task.id} />
-                            <DeleteTaskButton taskId={task.id} title={task.title} tenantId={tenantId} />
+                            <DeleteTaskButton
+                              taskId={task.id}
+                              title={task.title}
+                              tenantId={tenantId}
+                            />
                           </div>
                         </td>
-
                       </tr>
                     ))}
                   </tbody>

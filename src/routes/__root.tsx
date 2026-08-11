@@ -78,13 +78,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "YAROS.TaskFlow — заметка превращается в ТЗ" },
+      { title: "Yaya.ЦифровойБот — заметка превращается в ТЗ" },
       {
         name: "description",
         content:
           "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
-      { property: "og:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
+      { property: "og:title", content: "Yaya.ЦифровойБот — заметка превращается в ТЗ" },
       {
         property: "og:description",
         content:
@@ -92,7 +92,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "YAROS.TaskFlow — заметка превращается в ТЗ" },
+      { name: "twitter:title", content: "Yaya.ЦифровойБот — заметка превращается в ТЗ" },
       {
         name: "twitter:description",
         content:
@@ -100,13 +100,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620",
+        content: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
       },
       {
         name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/59e59855-c0d0-4cde-8e0b-3ffbd2b63620",
+        content: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
       },
     ],
     links: [
@@ -114,7 +112,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      {
+        rel: "icon",
+        type: "image/svg+xml",
+        href: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
+      },
     ],
     scripts: [
       {

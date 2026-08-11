@@ -22,16 +22,15 @@ import {
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useCurrentTenant } from "@/lib/platform";
 
-
 export const Route = createFileRoute("/tasks/$taskId")({
   head: () => ({
     meta: [
-      { title: "Карточка задачи — YAROS.TaskFlow" },
+      { title: "Карточка задачи — Yaya.ЦифровойБот" },
       {
         name: "description",
         content: "Техническое задание, исполнители, статусы, комментарии и история изменений.",
       },
-      { property: "og:title", content: "Карточка задачи — YAROS.TaskFlow" },
+      { property: "og:title", content: "Карточка задачи — Yaya.ЦифровойБот" },
       { property: "og:description", content: "Полный цикл работы над задачей в одном месте." },
     ],
   }),
@@ -51,9 +50,15 @@ function TaskDetail() {
   const [selected, setSelected] = useState<number[]>([]);
   const [editing, setEditing] = useState(false);
 
-
-  const taskQuery = useQuery({ queryKey: ["task", id, tenantId], queryFn: () => api.task(id, tenantId) });
-  const employees = useQuery({ queryKey: ["employees", tenantId], enabled: !!tenantId, queryFn: () => tenantId ? api.employees(tenantId) : Promise.resolve([]) });
+  const taskQuery = useQuery({
+    queryKey: ["task", id, tenantId],
+    queryFn: () => api.task(id, tenantId),
+  });
+  const employees = useQuery({
+    queryKey: ["employees", tenantId],
+    enabled: !!tenantId,
+    queryFn: () => (tenantId ? api.employees(tenantId) : Promise.resolve([])),
+  });
   const comments = useQuery({ queryKey: ["comments", id], queryFn: () => api.comments(id) });
   const history = useQuery({ queryKey: ["history", id], queryFn: () => api.history(id) });
 
@@ -110,7 +115,9 @@ function TaskDetail() {
   if (taskQuery.isError || !task) {
     return (
       <AppLayout>
-        <p className="text-sm text-destructive">{(taskQuery.error as Error)?.message ?? "Задача не найдена"}</p>
+        <p className="text-sm text-destructive">
+          {(taskQuery.error as Error)?.message ?? "Задача не найдена"}
+        </p>
       </AppLayout>
     );
   }
@@ -119,7 +126,10 @@ function TaskDetail() {
 
   return (
     <AppLayout>
-      <Link to="/tasks" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/tasks"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> К списку задач
       </Link>
 
@@ -130,7 +140,9 @@ function TaskDetail() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-xs opacity-80">Задача #{task.id}</div>
-                  <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">{task.title}</h1>
+                  <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">
+                    {task.title}
+                  </h1>
                 </div>
                 <Button
                   size="icon"
@@ -145,81 +157,86 @@ function TaskDetail() {
               </div>
             </div>
             {editing ? (
-              <TaskEditForm task={task} userId={currentId} tenantId={tenantId ?? 0} onDone={() => setEditing(false)} />
+              <TaskEditForm
+                task={task}
+                userId={currentId}
+                tenantId={tenantId ?? 0}
+                onDone={() => setEditing(false)}
+              />
             ) : (
               <>
-            <table className="w-full text-sm max-sm:block">
-
-              <tbody className="divide-y divide-border max-sm:block">
-                <tr className="max-sm:block">
-                  <th className="bg-muted/40 px-4 py-2 sm:w-48 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                    Статус / приоритет
-                  </th>
-                  <td className="px-4 py-3 sm:px-6">
-                    <div className="flex flex-wrap gap-2">
-                      <StatusBadge status={task.status} />
-                      <PriorityBadge priority={task.priority} />
-                      <AssignmentBadge count={task.assignees?.length ?? 0} />
-                    </div>
-                  </td>
-                </tr>
-                <tr className="max-sm:block">
-                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                    Категория
-                  </th>
-                  <td className="px-4 py-3 sm:px-6">{task.category ?? "—"}</td>
-                </tr>
-                <tr className="max-sm:block">
-                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                    Описание
-                  </th>
-                  <td className="px-4 py-3 sm:px-6">
-                    <ExpandableText text={task.description} />
-                  </td>
-                </tr>
-                <tr className="max-sm:block">
-                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                    Критерии приёмки
-                  </th>
-                  <td className="px-4 py-3 sm:px-6">
-                    <ExpandableText text={task.acceptance_criteria} />
-                  </td>
-                </tr>
-                <tr className="max-sm:block">
-                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                    Дедлайн
-                  </th>
-                  <td className="px-4 py-3 sm:px-6">
-                    {formatDate(task.deadline ?? task.ai_suggested_deadline)}
-                  </td>
-                </tr>
-                <tr className="max-sm:block">
-                  <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                    Исходная заметка
-                  </th>
-                  <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap text-muted-foreground">{task.raw_text}</td>
-                </tr>
-              </tbody>
-            </table>
-            {transitions.length > 0 ? (
-              <div className="grid grid-cols-1 gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex sm:flex-wrap sm:px-6">
-                {transitions.map((s) => (
-                  <Button
-                    key={s}
-                    variant={s === "COMPLETED" || s === "CLOSED" ? "default" : "outline"}
-                    className="w-full sm:w-auto"
-                    disabled={statusMutation.isPending}
-                    onClick={() => statusMutation.mutate(s)}
-                  >
-                    {STATUS_LABELS[s]}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
+                <table className="w-full text-sm max-sm:block">
+                  <tbody className="divide-y divide-border max-sm:block">
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 sm:w-48 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
+                        Статус / приоритет
+                      </th>
+                      <td className="px-4 py-3 sm:px-6">
+                        <div className="flex flex-wrap gap-2">
+                          <StatusBadge status={task.status} />
+                          <PriorityBadge priority={task.priority} />
+                          <AssignmentBadge count={task.assignees?.length ?? 0} />
+                        </div>
+                      </td>
+                    </tr>
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
+                        Категория
+                      </th>
+                      <td className="px-4 py-3 sm:px-6">{task.category ?? "—"}</td>
+                    </tr>
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
+                        Описание
+                      </th>
+                      <td className="px-4 py-3 sm:px-6">
+                        <ExpandableText text={task.description} />
+                      </td>
+                    </tr>
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
+                        Критерии приёмки
+                      </th>
+                      <td className="px-4 py-3 sm:px-6">
+                        <ExpandableText text={task.acceptance_criteria} />
+                      </td>
+                    </tr>
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
+                        Дедлайн
+                      </th>
+                      <td className="px-4 py-3 sm:px-6">
+                        {formatDate(task.deadline ?? task.ai_suggested_deadline)}
+                      </td>
+                    </tr>
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
+                        Исходная заметка
+                      </th>
+                      <td className="px-4 py-3 sm:px-6 whitespace-pre-wrap text-muted-foreground">
+                        {task.raw_text}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                {transitions.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 border-t border-border bg-muted/30 px-4 py-4 sm:flex sm:flex-wrap sm:px-6">
+                    {transitions.map((s) => (
+                      <Button
+                        key={s}
+                        variant={s === "COMPLETED" || s === "CLOSED" ? "default" : "outline"}
+                        className="w-full sm:w-auto"
+                        disabled={statusMutation.isPending}
+                        onClick={() => statusMutation.mutate(s)}
+                      >
+                        {STATUS_LABELS[s]}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
               </>
             )}
           </section>
-
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">Комментарии</h2>
@@ -229,7 +246,8 @@ function TaskDetail() {
                   <div key={c.id} className="rounded-xl border border-border bg-muted/30 p-4">
                     <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">
-                        {c.author_name || (c.author_username ? `@${c.author_username}` : `#${c.author_id}`)}
+                        {c.author_name ||
+                          (c.author_username ? `@${c.author_username}` : `#${c.author_id}`)}
                       </span>
                       <span>{formatDate(c.created_at)}</span>
                     </div>
@@ -270,7 +288,9 @@ function TaskDetail() {
                 {task.assignees.map((a) => (
                   <li key={a.id} className="flex items-center justify-between gap-2">
                     <span>{userLabel(a)}</span>
-                    <span className="text-xs text-muted-foreground">{formatDate(a.assigned_at)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(a.assigned_at)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -309,7 +329,11 @@ function TaskDetail() {
                   disabled={assignMutation.isPending}
                   onClick={() => assignMutation.mutate(selected)}
                 >
-                  {assignMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Сохранить назначение"}
+                  {assignMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Сохранить назначение"
+                  )}
                 </Button>
               </div>
             ) : null}

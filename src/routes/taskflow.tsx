@@ -15,13 +15,13 @@ import { useVoiceInput } from "@/lib/use-voice-input";
 export const Route = createFileRoute("/taskflow")({
   head: () => ({
     meta: [
-      { title: "Yaya.Цифрой Бот · TaskFlow — заметка в ТЗ" },
+      { title: "Yaya.ЦифровойБот · TaskFlow — заметка в ТЗ" },
       {
         name: "description",
         content:
           "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
       },
-      { property: "og:title", content: "Yaya.Цифрой Бот · TaskFlow — заметка в ТЗ" },
+      { property: "og:title", content: "Yaya.ЦифровойБот · TaskFlow — заметка в ТЗ" },
       {
         property: "og:description",
         content: "Цифровой сотрудник TaskFlow: заметка превращается в готовое ТЗ.",

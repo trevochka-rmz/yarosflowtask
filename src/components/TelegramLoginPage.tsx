@@ -47,11 +47,11 @@ export function TelegramLoginPage() {
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-center shadow-sm sm:p-8">
         <img
           src={logo.url}
-          alt="YAROS.TaskFlow"
+          alt="Yaya.ЦифровойБот"
           className="mx-auto h-16 w-16 rounded-full sm:h-20 sm:w-20"
         />
         <h1 className="mt-4 text-xl font-semibold tracking-tight text-brand-deep sm:text-2xl">
-          YAROS<span className="text-primary">.TaskFlow</span>
+          Yaya<span className="text-primary">.ЦифровойБот</span>
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Вход только через Telegram — тот же аккаунт, что и в Mini App.
