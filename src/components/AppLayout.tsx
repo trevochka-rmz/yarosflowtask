@@ -14,6 +14,7 @@ import {
   Building,
   KeyRound,
   UserCog,
+  Plug,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -70,6 +71,14 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Интеграции",
+    items: [
+      { title: "Битрикс24", url: "/integrations/bitrix24", icon: Plug },
+      { title: "1С", url: "/integrations/1c", icon: Plug },
+      { title: "Jira", url: "/integrations/jira", icon: Plug },
+    ],
+  },
+  {
     label: "Доверие",
     items: [
       { title: "Журнал аудита", url: "/audit", icon: FileClock, perm: "audit.read" },
@@ -87,10 +96,12 @@ function AppSidebar({ locked }: { locked?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { org, can, isPlatformAdmin } = useCurrentOrg();
 
-  const isActive = (item: NavItem) =>
-    item.exact
-      ? pathname === item.url
-      : pathname === item.url || pathname.startsWith(`${item.url}/`);
+  const isActive = (item: NavItem) => {
+    if (item.exact) return pathname === item.url;
+    // Для интеграций: /integrations/bitrix24 должна быть активна и на /integrations/bitrix24/123
+    // Но не должна совпадать с /integrations/1c при проверке /integrations/bitrix
+    return pathname === item.url || pathname.startsWith(`${item.url}/`);
+  };
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -102,7 +113,11 @@ function AppSidebar({ locked }: { locked?: boolean }) {
               Yaya<span className="text-primary">.Цифровой Бот</span>
             </span>
             <span className="block truncate text-xs text-muted-foreground">
-              {org ? org.name : isPlatformAdmin ? "Администратор платформы" : "Организация не выбрана"}
+              {org
+                ? org.name
+                : isPlatformAdmin
+                  ? "Администратор платформы"
+                  : "Организация не выбрана"}
             </span>
           </span>
         </Link>
@@ -121,24 +136,24 @@ function AppSidebar({ locked }: { locked?: boolean }) {
             }))
             .filter((g) => g.items.length > 0)
             .map((group) => (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton asChild isActive={isActive(item)}>
-                        <Link to={item.url} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          <span className="truncate">{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={item.url}>
+                        <SidebarMenuButton asChild isActive={isActive(item)}>
+                          <Link to={item.url} className="flex items-center gap-2">
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))
         )}
       </SidebarContent>
     </Sidebar>

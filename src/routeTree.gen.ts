@@ -24,8 +24,10 @@ import { Route as BotsBotIdRouteImport } from './routes/bots.$botId'
 import { Route as BotsNewRouteImport } from './routes/bots.new'
 import { Route as ChangeRequestsIndexRouteImport } from './routes/change-requests.index'
 import { Route as ChangeRequestsNewRouteImport } from './routes/change-requests.new'
+import { Route as IntegrationsProviderRouteImport } from './routes/integrations.$provider'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
+import { Route as IntegrationsProviderIntegrationIdRouteImport } from './routes/integrations.$provider.$integrationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -102,6 +104,11 @@ const ChangeRequestsNewRoute = ChangeRequestsNewRouteImport.update({
   path: '/change-requests/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationsProviderRoute = IntegrationsProviderRouteImport.update({
+  id: '/integrations/$provider',
+  path: '/integrations/$provider',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/tasks/',
   path: '/tasks/',
@@ -112,6 +119,12 @@ const TasksTaskIdRoute = TasksTaskIdRouteImport.update({
   path: '/tasks/$taskId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationsProviderIntegrationIdRoute =
+  IntegrationsProviderIntegrationIdRouteImport.update({
+    id: '/$integrationId',
+    path: '/$integrationId',
+    getParentRoute: () => IntegrationsProviderRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,10 +140,12 @@ export interface FileRoutesByFullPath {
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
   '/change-requests/new': typeof ChangeRequestsNewRoute
+  '/integrations/$provider': typeof IntegrationsProviderRouteWithChildren
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
   '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/integrations/$provider/$integrationId': typeof IntegrationsProviderIntegrationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -146,10 +161,12 @@ export interface FileRoutesByTo {
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
   '/change-requests/new': typeof ChangeRequestsNewRoute
+  '/integrations/$provider': typeof IntegrationsProviderRouteWithChildren
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots': typeof BotsIndexRoute
   '/change-requests': typeof ChangeRequestsIndexRoute
   '/tasks': typeof TasksIndexRoute
+  '/integrations/$provider/$integrationId': typeof IntegrationsProviderIntegrationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -166,10 +183,12 @@ export interface FileRoutesById {
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
   '/change-requests/new': typeof ChangeRequestsNewRoute
+  '/integrations/$provider': typeof IntegrationsProviderRouteWithChildren
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
   '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
+  '/integrations/$provider/$integrationId': typeof IntegrationsProviderIntegrationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -187,10 +206,12 @@ export interface FileRouteTypes {
     | '/bots/$botId'
     | '/bots/new'
     | '/change-requests/new'
+    | '/integrations/$provider'
     | '/tasks/$taskId'
     | '/bots/'
     | '/change-requests/'
     | '/tasks/'
+    | '/integrations/$provider/$integrationId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -206,10 +227,12 @@ export interface FileRouteTypes {
     | '/bots/$botId'
     | '/bots/new'
     | '/change-requests/new'
+    | '/integrations/$provider'
     | '/tasks/$taskId'
     | '/bots'
     | '/change-requests'
     | '/tasks'
+    | '/integrations/$provider/$integrationId'
   id:
     | '__root__'
     | '/'
@@ -225,10 +248,12 @@ export interface FileRouteTypes {
     | '/bots/$botId'
     | '/bots/new'
     | '/change-requests/new'
+    | '/integrations/$provider'
     | '/tasks/$taskId'
     | '/bots/'
     | '/change-requests/'
     | '/tasks/'
+    | '/integrations/$provider/$integrationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -245,6 +270,7 @@ export interface RootRouteChildren {
   BotsBotIdRoute: typeof BotsBotIdRoute
   BotsNewRoute: typeof BotsNewRoute
   ChangeRequestsNewRoute: typeof ChangeRequestsNewRoute
+  IntegrationsProviderRoute: typeof IntegrationsProviderRouteWithChildren
   TasksTaskIdRoute: typeof TasksTaskIdRoute
   BotsIndexRoute: typeof BotsIndexRoute
   ChangeRequestsIndexRoute: typeof ChangeRequestsIndexRoute
@@ -358,6 +384,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangeRequestsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integrations/$provider': {
+      id: '/integrations/$provider'
+      path: '/integrations/$provider'
+      fullPath: '/integrations/$provider'
+      preLoaderRoute: typeof IntegrationsProviderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks/': {
       id: '/tasks/'
       path: '/tasks'
@@ -372,8 +405,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TasksTaskIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integrations/$provider/$integrationId': {
+      id: '/integrations/$provider/$integrationId'
+      path: '/$integrationId'
+      fullPath: '/integrations/$provider/$integrationId'
+      preLoaderRoute: typeof IntegrationsProviderIntegrationIdRouteImport
+      parentRoute: typeof IntegrationsProviderRoute
+    }
   }
 }
+
+interface IntegrationsProviderRouteChildren {
+  IntegrationsProviderIntegrationIdRoute: typeof IntegrationsProviderIntegrationIdRoute
+}
+
+const IntegrationsProviderRouteChildren: IntegrationsProviderRouteChildren = {
+  IntegrationsProviderIntegrationIdRoute:
+    IntegrationsProviderIntegrationIdRoute,
+}
+
+const IntegrationsProviderRouteWithChildren =
+  IntegrationsProviderRoute._addFileChildren(IntegrationsProviderRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -389,6 +441,7 @@ const rootRouteChildren: RootRouteChildren = {
   BotsBotIdRoute: BotsBotIdRoute,
   BotsNewRoute: BotsNewRoute,
   ChangeRequestsNewRoute: ChangeRequestsNewRoute,
+  IntegrationsProviderRoute: IntegrationsProviderRouteWithChildren,
   TasksTaskIdRoute: TasksTaskIdRoute,
   BotsIndexRoute: BotsIndexRoute,
   ChangeRequestsIndexRoute: ChangeRequestsIndexRoute,
@@ -397,3 +450,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

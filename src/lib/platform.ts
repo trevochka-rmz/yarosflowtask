@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "./api";
 import { useCurrentOrg, useMyOrgs } from "./org";
 
-
 export type MemberRole =
   | "manager"
   | "employee"
@@ -23,7 +22,6 @@ export interface RoleInfo {
   title?: string;
   description?: string | null;
 }
-
 
 export interface Tenant {
   id: number;
@@ -129,6 +127,113 @@ export interface AuditEntry {
   created_at: string;
 }
 
+/* ============================= Integrations ============================= */
+
+export type IntegrationProvider = "BITRIX24" | "ONE_C" | "JIRA" | "TELEGRAM";
+export type IntegrationStatus = "ACTIVE" | "ERROR" | "DISABLED";
+
+export interface Integration {
+  id: number;
+  organization_id: number;
+  provider: IntegrationProvider;
+  name: string;
+  status: IntegrationStatus;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IntegrationCredentials {
+  base_url?: string | null;
+  has_access_token?: boolean;
+  has_refresh_token?: boolean;
+  has_username?: boolean;
+  has_password?: boolean;
+  expires_at?: string | null;
+  extra?: Record<string, unknown>;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  username?: string | null;
+  password?: string | null;
+}
+
+export interface IntegrationSetting {
+  id: number;
+  integration_id: number;
+  key: string;
+  value: string;
+}
+
+export interface IntegrationDetail extends Integration {
+  credentials?: IntegrationCredentials;
+  settings?: IntegrationSetting[];
+}
+
+export interface IntegrationLog {
+  id: number;
+  integration_id: number;
+  operation: string;
+  status: "SUCCESS" | "ERROR" | string;
+  message: string | null;
+  error: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+}
+
+export const INTEGRATION_PROVIDER_LABELS: Record<IntegrationProvider, string> = {
+  BITRIX24: "Битрикс24",
+  ONE_C: "1С",
+  JIRA: "Jira",
+  TELEGRAM: "Telegram",
+};
+
+export const INTEGRATION_STATUS_LABELS: Record<IntegrationStatus, string> = {
+  ACTIVE: "Активна",
+  ERROR: "Ошибка",
+  DISABLED: "Отключена",
+};
+
+export const integrationApi = {
+  list: (orgId: number) => apiFetch<Integration[]>(`/organizations/${orgId}/integrations`),
+  get: (orgId: number, integrationId: number) =>
+    apiFetch<IntegrationDetail>(`/organizations/${orgId}/integrations/${integrationId}`),
+  create: (
+    orgId: number,
+    body: {
+      provider: IntegrationProvider;
+      name: string;
+      status?: IntegrationStatus;
+      credentials?: Partial<IntegrationCredentials>;
+      settings?: Record<string, string>;
+    },
+  ) =>
+    apiFetch<IntegrationDetail>(`/organizations/${orgId}/integrations`, { method: "POST", body }),
+  update: (
+    orgId: number,
+    integrationId: number,
+    body: {
+      name?: string;
+      status?: IntegrationStatus;
+      credentials?: Partial<IntegrationCredentials>;
+      settings?: Record<string, string>;
+    },
+  ) =>
+    apiFetch<IntegrationDetail>(`/organizations/${orgId}/integrations/${integrationId}`, {
+      method: "PATCH",
+      body,
+    }),
+  delete: (orgId: number, integrationId: number) =>
+    apiFetch<{ success: boolean }>(`/organizations/${orgId}/integrations/${integrationId}`, {
+      method: "DELETE",
+    }),
+  logs: (orgId: number, integrationId: number, limit = 50) =>
+    apiFetch<IntegrationLog[]>(
+      `/organizations/${orgId}/integrations/${integrationId}/logs?limit=${limit}`,
+    ),
+};
+
+/* ======================================================================== */
+
 export const platform = {
   /** Все орги (для суперадмина) */
   tenants: () => apiFetch<Tenant[]>("/tenants"),
@@ -176,7 +281,6 @@ export const platform = {
 
   /** Справочник ролей организации */
   roles: () => apiFetch<RoleInfo[]>("/tenants/roles"),
-
 
   versions: (botId: number) => apiFetch<BotVersion[]>(`/tenants/bots/${botId}/versions`),
   /** Создать новую версию (статус draft, version назначает backend) */
@@ -290,17 +394,8 @@ export function useTenantsMine() {
  * Источник — GET /organizations/mine (роль и permissions пользователя).
  */
 export function useCurrentTenant() {
-  const {
-    org,
-    orgs,
-    permissions,
-    can,
-    isPlatformAdmin,
-    hasNoOrg,
-    isLoading,
-    isError,
-    query,
-  } = useCurrentOrg();
+  const { org, orgs, permissions, can, isPlatformAdmin, hasNoOrg, isLoading, isError, query } =
+    useCurrentOrg();
 
   return {
     tenant: org,
@@ -318,7 +413,6 @@ export function useCurrentTenant() {
     query,
   };
 }
-
 
 /** Справочник ролей с фоллбэком на локальные подписи. */
 export function useRoles() {
@@ -340,4 +434,3 @@ export function roleLabel(role: string, roles?: RoleInfo[]) {
   const found = roles?.find((r) => r.code === role);
   return found?.name ?? found?.title ?? MEMBER_ROLE_LABELS[role as MemberRole] ?? role;
 }
-
