@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as OrgRouteImport } from './routes/org'
+import { Route as RolesRouteImport } from './routes/roles'
 import { Route as TaskflowRouteImport } from './routes/taskflow'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
@@ -42,6 +43,11 @@ const MembersRoute = MembersRouteImport.update({
 const OrgRoute = OrgRouteImport.update({
   id: '/org',
   path: '/org',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesRoute = RolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TaskflowRoute = TaskflowRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuditRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
+  '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/audit': typeof AuditRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
+  '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/audit': typeof AuditRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
+  '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
   '/api/transcribe': typeof ApiTranscribeRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/members'
     | '/org'
+    | '/roles'
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/members'
     | '/org'
+    | '/roles'
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/members'
     | '/org'
+    | '/roles'
     | '/taskflow'
     | '/team'
     | '/api/transcribe'
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   AuditRoute: typeof AuditRoute
   MembersRoute: typeof MembersRoute
   OrgRoute: typeof OrgRoute
+  RolesRoute: typeof RolesRoute
   TaskflowRoute: typeof TaskflowRoute
   TeamRoute: typeof TeamRoute
   ApiTranscribeRoute: typeof ApiTranscribeRoute
@@ -240,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/org'
       fullPath: '/org'
       preLoaderRoute: typeof OrgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles': {
+      id: '/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof RolesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/taskflow': {
@@ -320,6 +340,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuditRoute: AuditRoute,
   MembersRoute: MembersRoute,
   OrgRoute: OrgRoute,
+  RolesRoute: RolesRoute,
   TaskflowRoute: TaskflowRoute,
   TeamRoute: TeamRoute,
   ApiTranscribeRoute: ApiTranscribeRoute,
