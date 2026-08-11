@@ -5,10 +5,11 @@ import { Building2, Loader2, ShieldQuestion } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { platform, setStoredTenant } from "@/lib/platform";
+import { orgApi, setStoredOrg, useIsPlatformAdmin } from "@/lib/org";
 
 /** Экран для пользователя, которого ещё не добавили ни в одну организацию. */
 export function NoTenantScreen() {
+  const { isPlatformAdmin } = useIsPlatformAdmin();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -17,10 +18,10 @@ export function NoTenantScreen() {
 
   const create = useMutation({
     mutationFn: () =>
-      platform.createTenant({ name: name.trim(), ...(slug.trim() ? { slug: slug.trim() } : {}) }),
+      orgApi.create({ name: name.trim(), ...(slug.trim() ? { slug: slug.trim() } : {}) }),
     onSuccess: (created) => {
-      setStoredTenant(created.id);
-      void queryClient.invalidateQueries({ queryKey: ["tenants-mine"] });
+      setStoredOrg(created.id);
+      void queryClient.invalidateQueries({ queryKey: ["orgs-mine"] });
       toast.success("Организация создана");
       void navigate({ to: "/org" });
     },
@@ -54,12 +55,14 @@ export function NoTenantScreen() {
           <Button variant="outline" onClick={() => window.location.reload()}>
             Обновить
           </Button>
-          <Button variant="ghost" onClick={() => setOpen((v) => !v)}>
-            <Building2 className="h-4 w-4" /> Я администратор платформы
-          </Button>
+          {isPlatformAdmin ? (
+            <Button variant="ghost" onClick={() => setOpen((v) => !v)}>
+              <Building2 className="h-4 w-4" /> Создать организацию
+            </Button>
+          ) : null}
         </div>
 
-        {open ? (
+        {open && isPlatformAdmin ? (
           <form
             className="mt-5 grid gap-2 text-left"
             onSubmit={(e) => {
@@ -82,7 +85,7 @@ export function NoTenantScreen() {
               Создать организацию
             </Button>
             <p className="text-xs text-muted-foreground">
-              Доступно только роли platform_admin — иначе сервер вернёт отказ.
+              Доступно только администратору платформы.
             </p>
           </form>
         ) : null}
