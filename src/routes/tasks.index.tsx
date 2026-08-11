@@ -89,11 +89,12 @@ function TasksPage() {
         </p>
       </div>
 
-      <div className="mt-4 space-y-3">
+      {/* Фильтры — мобильные: столбцом, десктоп: одна строка */}
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
-          className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm sm:w-56"
+          className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:w-44"
         >
           <option value="">Все статусы</option>
           {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -103,7 +104,7 @@ function TasksPage() {
           ))}
         </select>
 
-        <div className="-mx-4 overflow-x-auto px-4">
+        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
           <div className="inline-flex rounded-lg border border-border bg-card p-1">
             {scopes.map((s) => (
               <button
@@ -122,7 +123,7 @@ function TasksPage() {
           </div>
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4">
+        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
           <div className="inline-flex rounded-lg border border-border bg-card p-1">
             {assignments.map((a) => (
               <button

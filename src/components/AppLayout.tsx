@@ -123,7 +123,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-y-auto">
+      <SidebarContent className="overflow-y-auto [&>[data-sidebar=group]]:py-2">
         {locked ? (
           <div className="px-4 py-6 text-center text-xs text-muted-foreground">
             Навигация недоступна — вас ещё не добавили в организацию.
@@ -207,10 +207,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </div>
                 <div className="hidden min-w-0 leading-tight sm:block">
                   <div className="max-w-[11rem] truncate text-sm font-medium">
-                    {userHandle(user)}
+                    {user.full_name || userHandle(user)}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {user.role === "manager" ? "Руководитель" : "Сотрудник"}
+                    {user.username ? `@${user.username}` : ""}
                   </div>
                 </div>
                 {!inMiniApp ? (
