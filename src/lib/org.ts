@@ -248,19 +248,42 @@ export interface ChatMessage {
     proposal_id?: number;
     actions?: string[];
     automation_id?: number;
+    task_id?: number;
+    bot_code?: string;
+    ai_action_id?: number;
   };
   author_name: string | null;
   created_at: string;
 }
 
+export interface TaskPreview {
+  title: string;
+  description?: string | null;
+  acceptance_criteria?: string | null;
+  priority: string;
+  deadline?: string | null;
+}
+
+export interface ChatProposalParsed {
+  action?: string;
+  source?: string;
+  schedule?: { kind: string; time: string | null; tz?: string };
+  result?: string;
+  recipient?: string;
+  output_mode?: string;
+  ai_action_id?: number;
+  task_preview?: TaskPreview;
+}
+
 export interface ChatProposal {
   id: number;
+  chat_id?: number;
   status: "pending" | "accepted" | "rejected";
   intent: string | null;
   suggested_bot_code: string | null;
   suggested_bot_id: number | null;
   suggested_integration_provider: string | null;
-  parsed: Record<string, unknown>;
+  parsed: ChatProposalParsed;
 }
 
 export interface SendMessageResponse {
@@ -269,8 +292,24 @@ export interface SendMessageResponse {
   proposal: ChatProposal | null;
 }
 
+export interface AcceptedTask {
+  id: number;
+  organization_id: number;
+  title: string;
+  description?: string | null;
+  acceptance_criteria?: string | null;
+  priority: string;
+  status: string;
+  deadline?: string | null;
+  bot_id?: number | null;
+  ai_action_id?: number | null;
+  assignees: unknown[];
+}
+
 export interface AcceptProposalResponse {
-  automation: Automation;
+  task: AcceptedTask | null;
+  automation: Automation | null;
+  execution?: { kind: string; summary: string } | null;
   message: ChatMessage;
   proposal_id: number;
 }
@@ -288,6 +327,9 @@ export interface Automation {
   status: AutomationStatus;
   bot_name: string | null;
   bot_code: string | null;
+  result_task_id?: number | null;
+  result_task_title?: string | null;
+  result_task_status?: string | null;
   created_at: string;
 }
 
