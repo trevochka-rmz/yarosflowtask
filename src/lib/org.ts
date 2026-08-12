@@ -193,7 +193,103 @@ export const orgApi = {
 
   /** Директорский дашборд */
   dashboard: (orgId: number) => apiFetch<OrgDashboard>(`/organizations/${orgId}/dashboard`),
+
+  /* ---- Chat ---- */
+  chats: (orgId: number) => apiFetch<OrgChat[]>(`/organizations/${orgId}/chats`),
+  openOrgChat: (orgId: number) =>
+    apiFetch<OrgChat>(`/organizations/${orgId}/chats/org`, { method: "POST", body: {} }),
+  openBotChat: (orgId: number, botId: number) =>
+    apiFetch<OrgChat>(`/organizations/${orgId}/bots/${botId}/chat`, { method: "POST", body: {} }),
+  chatMessages: (orgId: number, chatId: number, limit = 50) =>
+    apiFetch<ChatMessage[]>(`/organizations/${orgId}/chats/${chatId}/messages?limit=${limit}`),
+  sendMessage: (orgId: number, chatId: number, body: string) =>
+    apiFetch<SendMessageResponse>(`/organizations/${orgId}/chats/${chatId}/messages`, {
+      method: "POST",
+      body: { body },
+    }),
+  acceptProposal: (orgId: number, proposalId: number) =>
+    apiFetch<AcceptProposalResponse>(`/organizations/${orgId}/proposals/${proposalId}/accept`, {
+      method: "POST",
+      body: {},
+    }),
+  rejectProposal: (orgId: number, proposalId: number) =>
+    apiFetch<{ success: boolean }>(`/organizations/${orgId}/proposals/${proposalId}/reject`, {
+      method: "POST",
+      body: {},
+    }),
+  automations: (orgId: number) => apiFetch<Automation[]>(`/organizations/${orgId}/automations`),
+  updateAutomation: (orgId: number, id: number, status: AutomationStatus) =>
+    apiFetch<Automation>(`/organizations/${orgId}/automations/${id}`, {
+      method: "PATCH",
+      body: { status },
+    }),
 };
+
+/* ----------------------------- Chat types ----------------------------- */
+
+export interface OrgChat {
+  id: number;
+  organization_id: number;
+  type: "org" | "bot";
+  bot_id: number | null;
+  title: string;
+  bot_name: string | null;
+  bot_code: string | null;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  chat_id: number;
+  author_id: number | null;
+  role: "user" | "assistant" | "system";
+  body: string;
+  meta: {
+    proposal_id?: number;
+    actions?: string[];
+    automation_id?: number;
+  };
+  author_name: string | null;
+  created_at: string;
+}
+
+export interface ChatProposal {
+  id: number;
+  status: "pending" | "accepted" | "rejected";
+  intent: string | null;
+  suggested_bot_code: string | null;
+  suggested_bot_id: number | null;
+  suggested_integration_provider: string | null;
+  parsed: Record<string, unknown>;
+}
+
+export interface SendMessageResponse {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage | null;
+  proposal: ChatProposal | null;
+}
+
+export interface AcceptProposalResponse {
+  automation: Automation;
+  message: ChatMessage;
+  proposal_id: number;
+}
+
+export type AutomationStatus = "ACTIVE" | "PAUSED" | "ARCHIVED";
+
+export interface Automation {
+  id: number;
+  organization_id: number;
+  bot_id: number | null;
+  title: string;
+  instruction: string | null;
+  schedule: Record<string, unknown> | null;
+  schedule_cron: string | null;
+  status: AutomationStatus;
+  bot_name: string | null;
+  bot_code: string | null;
+  created_at: string;
+}
 
 /* ----------------------------- Dashboard types ----------------------------- */
 

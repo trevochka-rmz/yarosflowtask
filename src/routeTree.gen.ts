@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuditRouteImport } from './routes/audit'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as DirectorRouteImport } from './routes/director'
 import { Route as MembersRouteImport } from './routes/members'
@@ -43,6 +44,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuditRoute = AuditRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DepartmentsRoute = DepartmentsRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
+  '/chat': typeof ChatRoute
   '/departments': typeof DepartmentsRoute
   '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
+  '/chat': typeof ChatRoute
   '/departments': typeof DepartmentsRoute
   '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
+  '/chat': typeof ChatRoute
   '/departments': typeof DepartmentsRoute
   '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/audit'
+    | '/chat'
     | '/departments'
     | '/director'
     | '/members'
@@ -227,6 +237,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/audit'
+    | '/chat'
     | '/departments'
     | '/director'
     | '/members'
@@ -249,6 +260,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/audit'
+    | '/chat'
     | '/departments'
     | '/director'
     | '/members'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuditRoute: typeof AuditRoute
+  ChatRoute: typeof ChatRoute
   DepartmentsRoute: typeof DepartmentsRoute
   DirectorRoute: typeof DirectorRoute
   MembersRoute: typeof MembersRoute
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       path: '/audit'
       fullPath: '/audit'
       preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/departments': {
@@ -451,6 +471,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuditRoute: AuditRoute,
+  ChatRoute: ChatRoute,
   DepartmentsRoute: DepartmentsRoute,
   DirectorRoute: DirectorRoute,
   MembersRoute: MembersRoute,

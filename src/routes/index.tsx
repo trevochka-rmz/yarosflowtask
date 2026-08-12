@@ -7,7 +7,10 @@ import {
   Building2,
   FileClock,
   GitPullRequestArrow,
+  LayoutGrid,
+  ListChecks,
   Loader2,
+  MessageSquare,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -16,6 +19,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { platform, setStoredTenant, useCurrentTenant } from "@/lib/platform";
+import { useCurrentOrg } from "@/lib/org";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -64,6 +68,7 @@ const FEATURES = [
 
 function Landing() {
   const { tenant, tenants, isLoading, canCreateTenant } = useCurrentTenant();
+  const { can } = useCurrentOrg();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const navigate = useNavigate();
@@ -100,14 +105,27 @@ function Landing() {
         </p>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link to="/org">
-              Центр организации <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-            <Link to="/taskflow">Открыть TaskFlow</Link>
-          </Button>
+          {can("organization.update") ? (
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link to="/director">
+                <LayoutGrid className="h-4 w-4" /> Директорский центр{" "}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link to="/tasks">
+                <ListChecks className="h-4 w-4" /> Просмотр задач <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+          {can("chat.read") && (
+            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+              <Link to="/chat">
+                <MessageSquare className="h-4 w-4" /> Чат ассистента
+              </Link>
+            </Button>
+          )}
         </div>
       </section>
 
@@ -127,7 +145,11 @@ function Landing() {
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold text-brand-deep">
-            {tenant ? "Ваша организация" : canCreateTenant ? "Шаг 1 — создайте организацию" : "Организация"}
+            {tenant
+              ? "Ваша организация"
+              : canCreateTenant
+                ? "Шаг 1 — создайте организацию"
+                : "Организация"}
           </h2>
         </div>
 
@@ -136,8 +158,9 @@ function Landing() {
         ) : tenant ? (
           <div className="mt-3 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Активная организация: <span className="font-medium text-foreground">{tenant.name}</span>{" "}
-              ({tenant.slug}). Доступно организаций: {tenants.length}.
+              Активная организация:{" "}
+              <span className="font-medium text-foreground">{tenant.name}</span> ({tenant.slug}).
+              Доступно организаций: {tenants.length}.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild className="w-full sm:w-auto">
@@ -150,34 +173,34 @@ function Landing() {
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
-            Организация — это контур вашей компании. Внутри неё живут цифровые сотрудники,
-            участники с ролями и история изменений.
+            Организация — это контур вашей компании. Внутри неё живут цифровые сотрудники, участники
+            с ролями и история изменений.
           </p>
         )}
 
         {canCreateTenant ? (
-        <form
-          className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto]"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (name.trim()) create.mutate();
-          }}
-        >
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Название организации, например «Компания Ярос»"
-          />
-          <Input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="slug (необязательно)"
-          />
-          <Button type="submit" disabled={!name.trim() || create.isPending}>
-            {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Создать организацию
-          </Button>
-        </form>
+          <form
+            className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto]"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (name.trim()) create.mutate();
+            }}
+          >
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Название организации, например «Компания Ярос»"
+            />
+            <Input
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="slug (необязательно)"
+            />
+            <Button type="submit" disabled={!name.trim() || create.isPending}>
+              {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Создать организацию
+            </Button>
+          </form>
         ) : (
           <p className="mt-4 text-xs text-muted-foreground">
             Создавать новые организации может только администратор платформы (platform_admin).

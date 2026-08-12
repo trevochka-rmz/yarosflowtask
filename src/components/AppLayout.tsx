@@ -18,6 +18,7 @@ import {
   Plug,
   ChevronDown,
   LayoutGrid,
+  MessageSquare,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -343,7 +344,7 @@ const GROUPS: NavGroup[] = [
     label: "Управление",
     items: [
       { title: "Главная", url: "/", icon: Home, exact: true },
-      { title: "Центр организации", url: "/org", icon: LayoutDashboard },
+      { title: "Чат", url: "/chat", icon: MessageSquare, perm: "chat.read" },
       {
         title: "Директорский центр",
         url: "/director",

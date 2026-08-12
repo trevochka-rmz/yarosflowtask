@@ -1,10 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Bot } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bot, MessageSquare, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
 import { BOT_STATUS_LABELS, platform, useCurrentTenant } from "@/lib/platform";
+import { orgApi } from "@/lib/org";
 
 export const Route = createFileRoute("/bots/")({
   head: () => ({
@@ -20,6 +22,38 @@ export const Route = createFileRoute("/bots/")({
   }),
   component: BotsPage,
 });
+
+function OpenBotChatButton({ orgId, botId }: { orgId: number; botId: number }) {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const open = useMutation({
+    mutationFn: () => orgApi.openBotChat(orgId, botId),
+    onSuccess: (chat) => {
+      void qc.invalidateQueries({ queryKey: ["chats", orgId] });
+      void navigate({ to: "/chat", search: { chatId: chat.id } });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={open.isPending}
+      onClick={(e) => {
+        e.preventDefault();
+        open.mutate();
+      }}
+      className="shrink-0 gap-1.5"
+    >
+      {open.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <MessageSquare className="h-3.5 w-3.5" />
+      )}
+      Чат
+    </Button>
+  );
+}
 
 function BotsPage() {
   const { tenant } = useCurrentTenant();
@@ -48,7 +82,11 @@ function BotsPage() {
 
       {!tenant ? (
         <p className="mt-5 text-sm text-muted-foreground">
-          Сначала создайте организацию на <Link to="/" className="text-primary underline">главной</Link>.
+          Сначала создайте организацию на{" "}
+          <Link to="/" className="text-primary underline">
+            главной
+          </Link>
+          .
         </p>
       ) : query.isPending ? (
         <p className="mt-5 text-sm text-muted-foreground">Загрузка…</p>
@@ -57,28 +95,34 @@ function BotsPage() {
       ) : query.data?.length ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {query.data.map((b) => (
-            <Link
+            <div
               key={b.id}
-              to="/bots/$botId"
-              params={{ botId: String(b.id) }}
-              className="rounded-2xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/40"
+              className="rounded-2xl border border-border bg-card shadow-soft transition-colors hover:border-primary/40"
             >
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                <span className="flex min-w-0 items-center gap-2">
-                  <Bot className="h-4 w-4 shrink-0 text-primary" />
-                  <span className="truncate font-medium">{b.name}</span>
-                </span>
-                <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">
-                  {BOT_STATUS_LABELS[b.status] ?? b.status}
-                </span>
-              </div>
-              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                {b.description || "Без описания"}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {b.code} · {formatDate(b.created_at)}
-              </p>
-            </Link>
+              <Link to="/bots/$botId" params={{ botId: String(b.id) }} className="block p-5">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Bot className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate font-medium">{b.name}</span>
+                  </span>
+                  <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">
+                    {BOT_STATUS_LABELS[b.status] ?? b.status}
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                  {b.description || "Без описания"}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {b.code} · {formatDate(b.created_at)}
+                </p>
+              </Link>
+              {/* Кнопка Чат бота */}
+              {tenantId && (
+                <div className="border-t border-border px-5 py-2.5">
+                  <OpenBotChatButton orgId={tenantId} botId={b.id} />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ) : (
