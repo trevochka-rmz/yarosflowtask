@@ -1,12 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Loader2, Lock, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Lock, Trash2, UserPlus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
-import { orgApi, personLabel, useCurrentOrg, type OrgMember } from "@/lib/org";
+import {
+  orgApi,
+  personLabel,
+  useCurrentOrg,
+  AVAILABILITY_LABELS,
+  SELF_STATUSES,
+  MANAGER_STATUSES,
+  type OrgMember,
+  type AvailabilityStatus,
+} from "@/lib/org";
+import { useCurrentUser } from "@/lib/use-current-user";
 
 export const Route = createFileRoute("/members")({
   head: () => ({
@@ -26,8 +36,85 @@ export const Route = createFileRoute("/members")({
 const selectClass =
   "h-9 w-full rounded-md border border-input bg-card px-2 text-sm disabled:opacity-60";
 
+/** Цвет и пункт фона по статусу */
+function availabilityColor(status?: AvailabilityStatus | null) {
+  switch (status) {
+    case "AVAILABLE":
+      return "bg-emerald-500";
+    case "BUSY":
+      return "bg-amber-500";
+    case "AWAY":
+      return "bg-yellow-400";
+    case "VACATION":
+      return "bg-sky-400";
+    case "SICK_LEAVE":
+      return "bg-rose-400";
+    case "OFFLINE":
+      return "bg-slate-400";
+    default:
+      return "bg-slate-300";
+  }
+}
+
+function AvailabilityBadge({ status }: { status?: AvailabilityStatus | null | undefined }) {
+  const label = status ? (AVAILABILITY_LABELS[status] ?? status) : "Неизвестно";
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`h-2 w-2 shrink-0 rounded-full ${availabilityColor(status)}`} />
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </span>
+  );
+}
+
+function StatusSelect({
+  member,
+  orgId,
+  canAll,
+  isSelf,
+}: {
+  member: OrgMember;
+  orgId: number;
+  canAll: boolean;
+  isSelf: boolean;
+}) {
+  const qc = useQueryClient();
+  const statuses = canAll ? MANAGER_STATUSES : isSelf ? SELF_STATUSES : null;
+  if (!statuses) {
+    return <AvailabilityBadge status={member.availability_status} />;
+  }
+
+  const set = useMutation({
+    mutationFn: (s: AvailabilityStatus) => orgApi.setMemberStatus(orgId, member.id, s),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["org-members", orgId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="relative inline-flex items-center gap-1">
+      <span
+        className={`h-2 w-2 shrink-0 rounded-full ${availabilityColor(member.availability_status)}`}
+      />
+      <select
+        value={member.availability_status ?? ""}
+        disabled={set.isPending}
+        onChange={(e) => set.mutate(e.target.value as AvailabilityStatus)}
+        className="appearance-none bg-transparent pr-4 text-xs text-muted-foreground focus:outline-none disabled:opacity-60 cursor-pointer hover:text-foreground"
+      >
+        {!member.availability_status && <option value="">—</option>}
+        {statuses.map((s) => (
+          <option key={s} value={s}>
+            {AVAILABILITY_LABELS[s]}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-0 h-3 w-3 text-muted-foreground" />
+    </div>
+  );
+}
+
 function MembersPage() {
   const { org, can } = useCurrentOrg();
+  const { data: currentUser } = useCurrentUser();
   const orgId = org?.id;
   const queryClient = useQueryClient();
 
@@ -35,6 +122,8 @@ function MembersPage() {
   const canCreate = can("employee.create");
   const canUpdate = can("employee.update");
   const canDelete = can("employee.delete");
+  /** Право на все статусы включая VACATION/SICK */
+  const canSetAllStatuses = canUpdate;
 
   const [userId, setUserId] = useState("");
   const [roleId, setRoleId] = useState("");
@@ -117,9 +206,8 @@ function MembersPage() {
       <AppLayout>
         <h1 className="text-2xl font-semibold tracking-tight text-brand-deep">Сотрудники</h1>
         <p className="mt-4 flex items-start gap-2 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-          У вашей роли «{org.role_name}» нет права <code>employee.read</code>. Попросите
-          администратора организации выдать доступ.
+          <Lock className="mt-0.5 h-4 w-4 shrink-0" />У вашей роли «{org.role_name}» нет права{" "}
+          <code>employee.read</code>. Попросите администратора организации выдать доступ.
         </p>
       </AppLayout>
     );
@@ -247,6 +335,7 @@ function MembersPage() {
               <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Сотрудник</th>
+                  <th className="px-4 py-3">Статус</th>
                   <th className="px-4 py-3">Telegram</th>
                   <th className="px-4 py-3">Роль</th>
                   <th className="px-4 py-3">Отдел</th>
@@ -255,66 +344,97 @@ function MembersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {members.data.map((m) => (
-                  <tr key={m.id}>
-                    <td className="px-4 py-3 font-medium">{personLabel(m)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {m.username ? `@${m.username}` : (m.tg_id ?? "—")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <RoleSelect m={m} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <DeptSelect m={m} />
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(m.created_at)}</td>
-                    <td className="px-4 py-3 text-right">
-                      {canDelete ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => remove.mutate(m.id)}
-                          aria-label="Убрать из организации"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
+                {members.data.map((m) => {
+                  const isSelf = currentUser?.id === m.user_id;
+                  return (
+                    <tr key={m.id}>
+                      <td className="px-4 py-3 font-medium">{personLabel(m)}</td>
+                      <td className="px-4 py-3">
+                        {orgId ? (
+                          <StatusSelect
+                            member={m}
+                            orgId={orgId}
+                            canAll={canSetAllStatuses}
+                            isSelf={isSelf}
+                          />
+                        ) : (
+                          <AvailabilityBadge status={m.availability_status} />
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {m.username ? `@${m.username}` : (m.tg_id ?? "—")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <RoleSelect m={m} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <DeptSelect m={m} />
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(m.created_at)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {canDelete ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => remove.mutate(m.id)}
+                            aria-label="Убрать из организации"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           <ul className="mt-5 space-y-3 lg:hidden">
-            {members.data.map((m) => (
-              <li key={m.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{personLabel(m)}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {m.username ? `@${m.username}` : (m.tg_id ?? "—")} ·{" "}
-                      {m.is_active ? "активен" : "отключён"}
+            {members.data.map((m) => {
+              const isSelf = currentUser?.id === m.user_id;
+              return (
+                <li key={m.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{personLabel(m)}</span>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        {orgId ? (
+                          <StatusSelect
+                            member={m}
+                            orgId={orgId}
+                            canAll={canSetAllStatuses}
+                            isSelf={isSelf}
+                          />
+                        ) : (
+                          <AvailabilityBadge status={m.availability_status} />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {m.username ? `@${m.username}` : (m.tg_id ?? "")}
+                        </span>
+                      </div>
                     </span>
-                  </span>
-                  {canDelete ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="shrink-0"
-                      onClick={() => remove.mutate(m.id)}
-                      aria-label="Убрать из организации"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="mt-2 grid gap-2">
-                  <RoleSelect m={m} />
-                  <DeptSelect m={m} />
-                </div>
-              </li>
-            ))}
+                    {canDelete ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0"
+                        onClick={() => remove.mutate(m.id)}
+                        aria-label="Убрать из организации"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 grid gap-2">
+                    <RoleSelect m={m} />
+                    <DeptSelect m={m} />
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </>
       ) : (

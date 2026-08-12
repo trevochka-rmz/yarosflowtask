@@ -47,14 +47,15 @@ const NEXT: Partial<Record<CrStatus, CrStatus[]>> = {
 
 function ChangeRequestsPage() {
   const { tenant } = useCurrentTenant();
-  const tenantId = tenant?.id;
+  const organizationId = tenant?.id;
   const [status, setStatus] = useState<"" | CrStatus>("");
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["change-requests", tenantId, status],
-    queryFn: () => platform.changeRequests({ tenantId: tenantId!, ...(status ? { status } : {}) }),
-    enabled: !!tenantId,
+    queryKey: ["change-requests", organizationId, status],
+    queryFn: () =>
+      platform.changeRequests({ organizationId: organizationId!, ...(status ? { status } : {}) }),
+    enabled: !!organizationId,
   });
 
   const setStatusMutation = useMutation({

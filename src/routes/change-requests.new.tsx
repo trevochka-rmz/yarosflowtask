@@ -23,7 +23,8 @@ export const Route = createFileRoute("/change-requests/new")({
       { title: "Новая заявка на изменение — Yaya.Цифровой Бот" },
       {
         name: "description",
-        content: "Опишите изменение логики бота, укажите тип и класс риска — заявка уйдёт на ревью.",
+        content:
+          "Опишите изменение логики бота, укажите тип и класс риска — заявка уйдёт на ревью.",
       },
       { property: "og:title", content: "Новая заявка на изменение — Yaya.Цифровой Бот" },
       { property: "og:description", content: "Заявка на изменение цифрового сотрудника." },
@@ -56,7 +57,7 @@ function NewChangeRequestPage() {
   const create = useMutation({
     mutationFn: () =>
       platform.createChangeRequest({
-        tenantId: tenant!.id,
+        organizationId: tenant!.id,
         botId: bot ? Number(bot) : null,
         type,
         title: title.trim(),

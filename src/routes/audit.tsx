@@ -22,11 +22,11 @@ export const Route = createFileRoute("/audit")({
 
 function AuditPage() {
   const { tenant } = useCurrentTenant();
-  const tenantId = tenant?.id;
+  const organizationId = tenant?.id;
   const query = useQuery({
-    queryKey: ["audit", tenantId],
-    queryFn: () => platform.audit({ tenantId: tenantId!, limit: 50 }),
-    enabled: !!tenantId,
+    queryKey: ["audit", organizationId],
+    queryFn: () => platform.audit({ organizationId: organizationId!, limit: 50 }),
+    enabled: !!organizationId,
   });
 
   if (!tenant) {

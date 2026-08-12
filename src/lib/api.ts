@@ -273,7 +273,18 @@ export const api = {
   createTask: (authorId: number, rawText: string, tenantId: number, departmentId?: number) =>
     apiFetch<Task>("/tasks", {
       method: "POST",
-      body: { authorId, rawText, tenantId, ...(departmentId ? { departmentId } : {}) },
+      body: {
+        authorId,
+        rawText,
+        organizationId: tenantId,
+        ...(departmentId ? { departmentId } : {}),
+      },
+    }),
+  /** Создать задачу из AI-превью (шаг 2 TaskFlow) */
+  createTaskFromAi: (organizationId: number, aiActionId: number) =>
+    apiFetch<Task>("/tasks", {
+      method: "POST",
+      body: { organizationId, aiActionId },
     }),
   assign: (id: number, userIds: number[], assignedBy: number, tenantId: number) =>
     apiFetch<Task>(`/tasks/${id}/assign?tenantId=${tenantId}`, {

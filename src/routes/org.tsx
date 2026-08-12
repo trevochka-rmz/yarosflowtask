@@ -34,37 +34,37 @@ export const Route = createFileRoute("/org")({
 
 function OrgPage() {
   const { tenant, tenants, canManage, isLoading } = useCurrentTenant();
-  const tenantId = tenant?.id;
+  const organizationId = tenant?.id;
 
   const bots = useQuery({
-    queryKey: ["bots", tenantId],
-    queryFn: () => platform.bots(tenantId!),
-    enabled: !!tenantId,
+    queryKey: ["bots", organizationId],
+    queryFn: () => platform.bots(organizationId!),
+    enabled: !!organizationId,
   });
   const members = useQuery({
-    queryKey: ["org-members", tenantId],
-    queryFn: () => orgApi.members(tenantId!),
-    enabled: !!tenantId,
+    queryKey: ["org-members", organizationId],
+    queryFn: () => orgApi.members(organizationId!),
+    enabled: !!organizationId,
   });
   const crs = useQuery({
-    queryKey: ["change-requests", tenantId],
-    queryFn: () => platform.changeRequests({ tenantId: tenantId! }),
-    enabled: !!tenantId,
+    queryKey: ["change-requests", organizationId],
+    queryFn: () => platform.changeRequests({ organizationId: organizationId! }),
+    enabled: !!organizationId,
   });
 
   // Director Cockpit: заявки на решение (submitted + in_review)
   const pendingCrs = useQuery({
-    queryKey: ["change-requests", tenantId, "pending"],
+    queryKey: ["change-requests", organizationId, "pending"],
     queryFn: async () => {
       const [submitted, inReview] = await Promise.all([
-        platform.changeRequests({ tenantId: tenantId!, status: "submitted" }),
-        platform.changeRequests({ tenantId: tenantId!, status: "in_review" }),
+        platform.changeRequests({ organizationId: organizationId!, status: "submitted" }),
+        platform.changeRequests({ organizationId: organizationId!, status: "in_review" }),
       ]);
       return [...submitted, ...inReview].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
     },
-    enabled: !!tenantId,
+    enabled: !!organizationId,
   });
 
   if (isLoading) {

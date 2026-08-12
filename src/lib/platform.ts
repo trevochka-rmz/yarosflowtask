@@ -234,45 +234,72 @@ export const integrationApi = {
 
 /* ======================================================================== */
 
+/* ============================= AI Tasks ============================= */
+export interface AiTaskPreview {
+  ai_action_id: number;
+  title: string;
+  description: string;
+  acceptance_criteria: string;
+  priority: string;
+  category: string;
+  suggested_deadline: string | null;
+  input_text: string;
+  ai_model: string | null;
+}
+
+export const aiApi = {
+  generateTask: (organizationId: number, rawText: string) =>
+    apiFetch<AiTaskPreview>(`/organizations/${organizationId}/ai/generate-task`, {
+      method: "POST",
+      body: { rawText },
+    }),
+};
+/* ==================================================================== */
+
 export const platform = {
   /** Все орги (для суперадмина) */
-  tenants: () => apiFetch<Tenant[]>("/tenants"),
+  tenants: () => apiFetch<Tenant[]>("/organizations"),
   /** Только орги текущего пользователя + его роли */
-  tenantsMine: () => apiFetch<TenantWithRoles[]>("/tenants/mine"),
-  tenant: (id: number) => apiFetch<Tenant>(`/tenants/${id}`),
+  tenantsMine: () => apiFetch<TenantWithRoles[]>("/organizations/mine"),
+  tenant: (id: number) => apiFetch<Tenant>(`/organizations/${id}`),
   createTenant: (body: { name: string; slug?: string }) =>
-    apiFetch<Tenant>("/tenants", { method: "POST", body }),
+    apiFetch<Tenant>("/organizations", { method: "POST", body }),
 
   /** Шаблоны ботов */
-  botTemplates: () => apiFetch<BotTemplate[]>("/tenants/bot-templates"),
+  botTemplates: () => apiFetch<BotTemplate[]>("/organizations/bot-templates"),
 
-  bots: (tenantId: number) => apiFetch<Bot[]>(`/tenants/${tenantId}/bots`),
+  bots: (organizationId: number) => apiFetch<Bot[]>(`/organizations/${organizationId}/bots`),
   /** Карточка бота с версиями */
-  botDetail: (botId: number) => apiFetch<BotDetail>(`/tenants/bots/${botId}`),
+  botDetail: (botId: number) => apiFetch<BotDetail>(`/organizations/bots/${botId}`),
   createBot: (
-    tenantId: number,
+    organizationId: number,
     body: { templateCode?: string; code?: string; name?: string; description?: string },
-  ) => apiFetch<Bot>(`/tenants/${tenantId}/bots`, { method: "POST", body }),
+  ) => apiFetch<Bot>(`/organizations/${organizationId}/bots`, { method: "POST", body }),
 
-  members: (tenantId: number) => apiFetch<Member[]>(`/tenants/${tenantId}/members`),
-  addMember: (tenantId: number, body: { userId: number; role: MemberRole }) =>
-    apiFetch<Member>(`/tenants/${tenantId}/members`, { method: "POST", body }),
-  removeMember: (tenantId: number, membershipId: number) =>
-    apiFetch<unknown>(`/tenants/${tenantId}/members/${membershipId}`, { method: "DELETE" }),
+  members: (organizationId: number) =>
+    apiFetch<Member[]>(`/organizations/${organizationId}/members`),
+  addMember: (organizationId: number, body: { userId: number; role: MemberRole }) =>
+    apiFetch<Member>(`/organizations/${organizationId}/members`, { method: "POST", body }),
+  removeMember: (organizationId: number, membershipId: number) =>
+    apiFetch<unknown>(`/organizations/${organizationId}/members/${membershipId}`, {
+      method: "DELETE",
+    }),
   /** Обновление роли: PATCH, с фоллбэком «удалить + добавить заново». */
   updateMemberRole: async (
-    tenantId: number,
+    organizationId: number,
     member: { id: number; user_id: number },
     role: MemberRole,
   ) => {
     try {
-      return await apiFetch<Member>(`/tenants/${tenantId}/members/${member.id}`, {
+      return await apiFetch<Member>(`/organizations/${organizationId}/members/${member.id}`, {
         method: "PATCH",
         body: { role },
       });
     } catch {
-      await apiFetch<unknown>(`/tenants/${tenantId}/members/${member.id}`, { method: "DELETE" });
-      return apiFetch<Member>(`/tenants/${tenantId}/members`, {
+      await apiFetch<unknown>(`/organizations/${organizationId}/members/${member.id}`, {
+        method: "DELETE",
+      });
+      return apiFetch<Member>(`/organizations/${organizationId}/members`, {
         method: "POST",
         body: { userId: member.user_id, role },
       });
@@ -280,22 +307,22 @@ export const platform = {
   },
 
   /** Справочник ролей организации */
-  roles: () => apiFetch<RoleInfo[]>("/tenants/roles"),
+  roles: () => apiFetch<RoleInfo[]>("/organizations/roles"),
 
-  versions: (botId: number) => apiFetch<BotVersion[]>(`/tenants/bots/${botId}/versions`),
+  versions: (botId: number) => apiFetch<BotVersion[]>(`/organizations/bots/${botId}/versions`),
   /** Создать новую версию (статус draft, version назначает backend) */
   createVersion: (
     botId: number,
     body: { changelog?: string; spec?: unknown; riskClass?: string },
-  ) => apiFetch<BotVersion>(`/tenants/bots/${botId}/versions`, { method: "POST", body }),
+  ) => apiFetch<BotVersion>(`/organizations/bots/${botId}/versions`, { method: "POST", body }),
   publishVersion: (botId: number, versionId: number) =>
-    apiFetch<BotVersion>(`/tenants/bots/${botId}/versions/${versionId}/publish`, {
+    apiFetch<BotVersion>(`/organizations/bots/${botId}/versions/${versionId}/publish`, {
       method: "POST",
       body: {},
     }),
 
   changeRequests: (params: {
-    tenantId?: number;
+    organizationId?: number;
     botId?: number;
     status?: CrStatus;
     type?: CrType;
@@ -309,7 +336,7 @@ export const platform = {
   },
   changeRequest: (id: number) => apiFetch<ChangeRequest>(`/change-requests/${id}`),
   createChangeRequest: (body: {
-    tenantId: number;
+    organizationId: number;
     botId?: number | null;
     type: CrType;
     title: string;
@@ -320,7 +347,12 @@ export const platform = {
   setChangeRequestStatus: (id: number, status: CrStatus) =>
     apiFetch<ChangeRequest>(`/change-requests/${id}/status`, { method: "PATCH", body: { status } }),
 
-  audit: (params: { tenantId?: number; actorId?: number; action?: string; limit?: number }) => {
+  audit: (params: {
+    organizationId?: number;
+    actorId?: number;
+    action?: string;
+    limit?: number;
+  }) => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && String(v) !== "") q.set(k, String(v));

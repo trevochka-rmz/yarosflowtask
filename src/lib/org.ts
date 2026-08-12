@@ -24,6 +24,30 @@ export interface MyOrganization extends Organization {
   permissions: string[];
 }
 
+export type AvailabilityStatus =
+  "AVAILABLE" | "BUSY" | "AWAY" | "VACATION" | "SICK_LEAVE" | "OFFLINE";
+
+export const AVAILABILITY_LABELS: Record<AvailabilityStatus, string> = {
+  AVAILABLE: "Доступен",
+  BUSY: "Занят",
+  AWAY: "Отошёл",
+  VACATION: "В отпуске",
+  SICK_LEAVE: "На больничном",
+  OFFLINE: "Не в сети",
+};
+
+/** Права на смену статуса: self может только AVAILABLE/BUSY/AWAY */
+export const SELF_STATUSES: AvailabilityStatus[] = ["AVAILABLE", "BUSY", "AWAY"];
+/** manager / employee.update может все статусы */
+export const MANAGER_STATUSES: AvailabilityStatus[] = [
+  "AVAILABLE",
+  "BUSY",
+  "AWAY",
+  "VACATION",
+  "SICK_LEAVE",
+  "OFFLINE",
+];
+
 export interface OrgMember {
   id: number;
   user_id: number;
@@ -31,9 +55,13 @@ export interface OrgMember {
   role_id: number;
   department_id: number | null;
   is_active: boolean;
+  availability_status?: AvailabilityStatus | null;
   created_at: string;
+  updated_at?: string;
   full_name: string | null;
   username: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   tg_id: number | string | null;
   role_name: string | null;
   role_is_system?: boolean;
@@ -105,8 +133,7 @@ export const orgApi = {
     apiFetch<Organization>("/organizations", { method: "POST", body }),
   update: (id: number, body: { name?: string; description?: string }) =>
     apiFetch<Organization>(`/organizations/${id}`, { method: "PATCH", body }),
-  deactivate: (id: number) =>
-    apiFetch<Organization>(`/organizations/${id}`, { method: "DELETE" }),
+  deactivate: (id: number) => apiFetch<Organization>(`/organizations/${id}`, { method: "DELETE" }),
 
   members: (id: number) => apiFetch<OrgMember[]>(`/organizations/${id}/members`),
   addMember: (id: number, body: { userId: number; roleId: number; departmentId?: number }) =>
@@ -151,6 +178,18 @@ export const orgApi = {
   usersMe: () => apiFetch<PlatformUser>("/users/me"),
   users: () => apiFetch<PlatformUser[]>("/users"),
   usersWithoutOrganization: () => apiFetch<PlatformUser[]>("/users/without-organization"),
+
+  /** Получить текущий статус сотрудника */
+  getMemberStatus: (orgId: number, memberId: number) =>
+    apiFetch<{ status: AvailabilityStatus; note?: string | null }>(
+      `/organizations/${orgId}/members/${memberId}/status`,
+    ),
+  /** Обновить статус (self или employee.update) */
+  setMemberStatus: (orgId: number, memberId: number, status: AvailabilityStatus, note?: string) =>
+    apiFetch<{ status: AvailabilityStatus; note?: string | null }>(
+      `/organizations/${orgId}/members/${memberId}/status`,
+      { method: "PATCH", body: { status, ...(note ? { note } : {}) } },
+    ),
 };
 
 /* --------------------------- выбранная организация ------------------------- */
