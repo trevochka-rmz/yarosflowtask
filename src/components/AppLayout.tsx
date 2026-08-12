@@ -236,7 +236,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-y-auto pt-1">
+      <SidebarContent className="overflow-y-auto">
         {locked ? (
           <div className="px-4 py-6 text-center text-xs text-muted-foreground">
             Навигация недоступна — вас ещё не добавили в организацию.
