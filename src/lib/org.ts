@@ -190,7 +190,60 @@ export const orgApi = {
       `/organizations/${orgId}/members/${memberId}/status`,
       { method: "PATCH", body: { status, ...(note ? { note } : {}) } },
     ),
+
+  /** Директорский дашборд */
+  dashboard: (orgId: number) => apiFetch<OrgDashboard>(`/organizations/${orgId}/dashboard`),
 };
+
+/* ----------------------------- Dashboard types ----------------------------- */
+
+export interface DashboardCounters {
+  total: number;
+  new: number;
+  in_progress: number;
+  waiting: number;
+  overdue: number;
+  unassigned: number;
+  completed: number;
+  by_status: Record<string, number>;
+}
+
+export interface DashboardTask {
+  id: number;
+  title: string;
+  priority: string;
+  status: string;
+  deadline?: string | null;
+  assignees?: { id: number; full_name?: string | null; username?: string | null }[];
+  assignee_count?: number;
+}
+
+export interface DashboardActivity {
+  task_id: number;
+  task_title: string;
+  field_changed: string;
+  old_value: string | null;
+  new_value: string | null;
+  changed_at: string;
+  actor_name: string | null;
+}
+
+export interface DashboardEmployee {
+  user_id: number;
+  full_name: string | null;
+  username?: string | null;
+  availability_status: AvailabilityStatus | null;
+  role_name: string | null;
+}
+
+export interface OrgDashboard {
+  counters: DashboardCounters;
+  overdue_tasks: DashboardTask[];
+  unassigned_tasks: DashboardTask[];
+  waiting_tasks: DashboardTask[];
+  recent_activity: DashboardActivity[];
+  employees: DashboardEmployee[];
+}
 
 /* --------------------------- выбранная организация ------------------------- */
 

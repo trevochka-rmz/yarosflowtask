@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as DepartmentsRouteImport } from './routes/departments'
+import { Route as DirectorRouteImport } from './routes/director'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as OrgRouteImport } from './routes/org'
 import { Route as RolesRouteImport } from './routes/roles'
@@ -47,6 +48,11 @@ const AuditRoute = AuditRouteImport.update({
 const DepartmentsRoute = DepartmentsRouteImport.update({
   id: '/departments',
   path: '/departments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DirectorRoute = DirectorRouteImport.update({
+  id: '/director',
+  path: '/director',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MembersRoute = MembersRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
   '/departments': typeof DepartmentsRoute
+  '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/roles': typeof RolesRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
   '/departments': typeof DepartmentsRoute
+  '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/roles': typeof RolesRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
   '/departments': typeof DepartmentsRoute
+  '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/roles': typeof RolesRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/audit'
     | '/departments'
+    | '/director'
     | '/members'
     | '/org'
     | '/roles'
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/audit'
     | '/departments'
+    | '/director'
     | '/members'
     | '/org'
     | '/roles'
@@ -239,6 +250,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/audit'
     | '/departments'
+    | '/director'
     | '/members'
     | '/org'
     | '/roles'
@@ -261,6 +273,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuditRoute: typeof AuditRoute
   DepartmentsRoute: typeof DepartmentsRoute
+  DirectorRoute: typeof DirectorRoute
   MembersRoute: typeof MembersRoute
   OrgRoute: typeof OrgRoute
   RolesRoute: typeof RolesRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/departments'
       fullPath: '/departments'
       preLoaderRoute: typeof DepartmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/director': {
+      id: '/director'
+      path: '/director'
+      fullPath: '/director'
+      preLoaderRoute: typeof DirectorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/members': {
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuditRoute: AuditRoute,
   DepartmentsRoute: DepartmentsRoute,
+  DirectorRoute: DirectorRoute,
   MembersRoute: MembersRoute,
   OrgRoute: OrgRoute,
   RolesRoute: RolesRoute,

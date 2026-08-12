@@ -17,6 +17,7 @@ import {
   UserCog,
   Plug,
   ChevronDown,
+  LayoutGrid,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -259,8 +260,9 @@ function UserProfileSheet({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-safe">
           {/* Профиль */}
-          <SheetHeader className="px-5 pb-4 pt-2">
-            <div className="flex items-center gap-4">
+          {/* text-left переопределяет text-center из shadcn SheetHeader */}
+          <SheetHeader className="px-5 pb-4 pt-2 [&>*]:text-left">
+            <div className="flex items-start gap-4">
               <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xl font-bold text-primary-foreground">
                 {initials}
                 {myMember && (
@@ -269,14 +271,20 @@ function UserProfileSheet({
                   />
                 )}
               </div>
-              <div className="min-w-0">
-                <SheetTitle className="truncate text-left text-base font-semibold">
+              <div className="min-w-0 flex-1 pt-0.5">
+                <SheetTitle className="block truncate text-left text-base font-semibold leading-snug">
                   {displayName}
                 </SheetTitle>
                 {user.username && (
-                  <p className="truncate text-sm text-muted-foreground">@{user.username}</p>
+                  <p className="mt-0.5 block truncate text-left text-sm text-muted-foreground">
+                    @{user.username}
+                  </p>
                 )}
-                {org && <p className="mt-0.5 truncate text-xs text-muted-foreground">{org.name}</p>}
+                {org && (
+                  <p className="mt-1 block truncate text-left text-xs text-muted-foreground/80">
+                    {org.name}
+                  </p>
+                )}
               </div>
             </div>
           </SheetHeader>
@@ -336,6 +344,12 @@ const GROUPS: NavGroup[] = [
     items: [
       { title: "Главная", url: "/", icon: Home, exact: true },
       { title: "Центр организации", url: "/org", icon: LayoutDashboard },
+      {
+        title: "Директорский центр",
+        url: "/director",
+        icon: LayoutGrid,
+        perm: "organization.update",
+      },
       { title: "Флот ботов", url: "/bots", icon: Bot, exact: true, perm: "bot.read" },
       { title: "Создать бота", url: "/bots/new", icon: Plus, perm: "bot.create" },
       { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList, perm: "task.create" },
