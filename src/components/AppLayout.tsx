@@ -48,6 +48,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 /* =====================================================================
    Цвет точки по статусу
@@ -71,28 +72,76 @@ function statusDot(status?: AvailabilityStatus | null) {
   }
 }
 
-/* Виджет статуса в шапке (только desktop, только если есть орг) */
+/* =====================================================================
+   Хук для списка членов орг (общий, чтобы не дублировать запросы)
+   ===================================================================== */
+function useMyMember(orgId: number | undefined, userId: number | undefined) {
+  const members = useQuery({
+    queryKey: ["org-members", orgId],
+    queryFn: () => orgApi.members(orgId!),
+    enabled: !!orgId,
+    staleTime: 60_000,
+  });
+  const myMember =
+    orgId && userId ? (members.data?.find((m) => m.user_id === userId) ?? null) : null;
+  return { myMember, membersLoading: members.isPending };
+}
+
+/* =====================================================================
+   Список статусов для выбора (унифицированный блок)
+   ===================================================================== */
+function StatusList({
+  currentStatus,
+  statuses,
+  onSelect,
+  isPending,
+}: {
+  currentStatus: AvailabilityStatus | null;
+  statuses: AvailabilityStatus[];
+  onSelect: (s: AvailabilityStatus) => void;
+  isPending: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-1">
+      {statuses.map((s) => {
+        const active = currentStatus === s;
+        return (
+          <button
+            key={s}
+            type="button"
+            disabled={isPending}
+            onClick={() => onSelect(s)}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+              active
+                ? "bg-accent font-semibold text-foreground"
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+            }`}
+          >
+            <span className={`h-3 w-3 shrink-0 rounded-full ${statusDot(s)}`} />
+            <span className="flex-1 text-left">{AVAILABILITY_LABELS[s]}</span>
+            {active && <span className="text-xs font-bold text-primary">✓</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* =====================================================================
+   Десктоп: виджет статуса в шапке
+   ===================================================================== */
 function UserStatusWidget({
   orgId,
-  memberId,
+  userId,
   canAll,
 }: {
   orgId: number;
-  memberId: number | null;
+  userId: number;
   canAll: boolean;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = React.useState(false);
-
-  // Находим свою запись в списке членов
-  const members = useQuery({
-    queryKey: ["org-members", orgId],
-    queryFn: () => orgApi.members(orgId),
-    staleTime: 60_000,
-  });
-
-  const myMember = memberId ? members.data?.find((m) => m.user_id === memberId) : null;
-
+  const { myMember } = useMyMember(orgId, userId);
   const currentStatus = myMember?.availability_status ?? null;
   const statuses = canAll ? MANAGER_STATUSES : SELF_STATUSES;
 
@@ -125,31 +174,149 @@ function UserStatusWidget({
 
       {open && (
         <>
-          {/* Оверлей для закрытия */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 min-w-[11rem] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
-            <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="absolute right-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-xl border border-border bg-card p-1.5 shadow-lg">
+            <p className="px-2 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Мой статус
-            </div>
-            {statuses.map((s) => (
-              <button
-                key={s}
-                type="button"
-                disabled={setStatus.isPending}
-                onClick={() => setStatus.mutate(s)}
-                className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-accent ${
-                  currentStatus === s ? "font-medium text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDot(s)}`} />
-                {AVAILABILITY_LABELS[s]}
-                {currentStatus === s && <span className="ml-auto text-primary">✓</span>}
-              </button>
-            ))}
+            </p>
+            <StatusList
+              currentStatus={currentStatus}
+              statuses={statuses}
+              onSelect={(s) => setStatus.mutate(s)}
+              isPending={setStatus.isPending}
+            />
           </div>
         </>
       )}
     </div>
+  );
+}
+
+/* =====================================================================
+   Мобильный Sheet — профиль + смена статуса
+   ===================================================================== */
+function UserProfileSheet({
+  user,
+  org,
+  canAll,
+  onSignOut,
+  inMiniApp,
+}: {
+  user: {
+    id: number;
+    full_name?: string | null;
+    username?: string | null;
+    first_name?: string | null;
+  };
+  org: { id: number; name: string } | null;
+  canAll: boolean;
+  onSignOut: () => void;
+  inMiniApp: boolean;
+}) {
+  const qc = useQueryClient();
+  const [open, setOpen] = React.useState(false);
+  const { myMember } = useMyMember(org?.id, user.id);
+  const currentStatus = myMember?.availability_status ?? null;
+  const statuses = canAll ? MANAGER_STATUSES : SELF_STATUSES;
+
+  const initials = (user.full_name || user.first_name || user.username || "?")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+  const displayName =
+    user.full_name?.trim() ||
+    (user.username ? `@${user.username}` : user.first_name || "Пользователь");
+
+  const setStatus = useMutation({
+    mutationFn: (s: AvailabilityStatus) => {
+      if (!myMember || !org) throw new Error("Не найдена запись члена");
+      return orgApi.setMemberStatus(org.id, myMember.id, s);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["org-members", org?.id] });
+    },
+  });
+
+  return (
+    <>
+      {/* Кнопка аватара — кликабельная, с точкой статуса поверх */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        aria-label="Профиль"
+      >
+        {initials}
+        {/* Точка статуса поверх аватара */}
+        {myMember && (
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card ${statusDot(currentStatus)}`}
+          />
+        )}
+      </button>
+
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-safe">
+          {/* Профиль */}
+          <SheetHeader className="px-5 pb-4 pt-2">
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xl font-bold text-primary-foreground">
+                {initials}
+                {myMember && (
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-card ${statusDot(currentStatus)}`}
+                  />
+                )}
+              </div>
+              <div className="min-w-0">
+                <SheetTitle className="truncate text-left text-base font-semibold">
+                  {displayName}
+                </SheetTitle>
+                {user.username && (
+                  <p className="truncate text-sm text-muted-foreground">@{user.username}</p>
+                )}
+                {org && <p className="mt-0.5 truncate text-xs text-muted-foreground">{org.name}</p>}
+              </div>
+            </div>
+          </SheetHeader>
+
+          <div className="border-t border-border" />
+
+          {/* Статус — только если есть орг */}
+          {myMember && (
+            <div className="px-4 py-3">
+              <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Мой статус
+              </p>
+              <StatusList
+                currentStatus={currentStatus}
+                statuses={statuses}
+                onSelect={(s) => setStatus.mutate(s)}
+                isPending={setStatus.isPending}
+              />
+            </div>
+          )}
+
+          {/* Выход */}
+          {!inMiniApp && (
+            <div className="border-t border-border px-4 pt-3 pb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onSignOut();
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                Выйти из аккаунта
+              </button>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
@@ -315,37 +482,42 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
             {user ? (
               <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-                {/* Статус доступности — только если есть организация */}
+                {/* Desktop: пилл статуса — скрыт на мобилке */}
                 {org ? (
                   <UserStatusWidget
                     orgId={org.id}
-                    memberId={user.id}
+                    userId={user.id}
                     canAll={can("employee.update")}
                   />
                 ) : null}
 
-                {/* Аватар + имя */}
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xs font-semibold text-primary-foreground">
-                    {(userHandle(user).replace("@", "")[0] ?? "?").toUpperCase()}
+                {/* Имя — видно только на sm+ */}
+                <div className="hidden min-w-0 leading-tight sm:block">
+                  <div className="max-w-[9rem] truncate text-sm font-medium">
+                    {user.full_name || userHandle(user)}
                   </div>
-                  <div className="hidden min-w-0 leading-tight sm:block">
-                    <div className="max-w-[9rem] truncate text-sm font-medium">
-                      {user.full_name || userHandle(user)}
-                    </div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {user.username ? `@${user.username}` : ""}
-                    </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {user.username ? `@${user.username}` : ""}
                   </div>
                 </div>
 
+                {/* Аватар — клик открывает Sheet на мобилке + точка статуса */}
+                <UserProfileSheet
+                  user={user}
+                  org={org ?? null}
+                  canAll={can("employee.update")}
+                  onSignOut={signOut}
+                  inMiniApp={inMiniApp}
+                />
+
+                {/* Desktop: кнопка выхода отдельно */}
                 {!inMiniApp ? (
                   <button
                     type="button"
                     onClick={signOut}
                     aria-label="Выйти"
                     title="Выйти"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:flex"
                   >
                     <LogOut className="h-4 w-4" />
                   </button>
