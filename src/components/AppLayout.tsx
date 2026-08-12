@@ -455,7 +455,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
   );
 }
 
-export function AppLayout({ children }: { children: ReactNode }) {
+export function AppLayout({ children, fullscreen }: { children: ReactNode; fullscreen?: boolean }) {
   const { data: user, isLoading, isError } = useCurrentUser();
   const { org, hasNoOrg, isPlatformAdmin, can } = useCurrentOrg();
   const locked = hasNoOrg && !isPlatformAdmin;
@@ -485,8 +485,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar locked={locked} />
 
-        <SidebarInset className="min-w-0">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-card/85 px-3 backdrop-blur sm:px-4">
+        <SidebarInset className="flex min-h-0 min-w-0 flex-col">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card/85 px-3 backdrop-blur sm:px-4">
             <SidebarTrigger className="shrink-0" />
             <Link to="/" className="flex min-w-0 items-center gap-2 lg:hidden">
               <img src={logo.url} alt="Yaya" className="h-7 w-7 shrink-0 rounded-full" />
@@ -541,7 +541,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
             ) : null}
           </header>
 
-          <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:py-8">
+          <main
+            className={
+              fullscreen
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+                : "mx-auto w-full max-w-6xl px-4 py-6 sm:py-8"
+            }
+          >
             {locked ? <NoTenantScreen /> : children}
           </main>
         </SidebarInset>

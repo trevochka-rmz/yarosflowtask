@@ -194,6 +194,41 @@ export const orgApi = {
   /** Директорский дашборд */
   dashboard: (orgId: number) => apiFetch<OrgDashboard>(`/organizations/${orgId}/dashboard`),
 
+  /* ---- Bitrix24 ---- */
+  bitrixConnect: (
+    orgId: number,
+    body:
+      | { name: string; webhookUrl: string }
+      | { name: string; baseUrl: string; accessToken: string; refreshToken?: string },
+  ) =>
+    apiFetch<BitrixConnectResponse>(`/organizations/${orgId}/integrations/bitrix/connect`, {
+      method: "POST",
+      body,
+    }),
+  bitrixTest: (orgId: number, integrationId: number) =>
+    apiFetch<BitrixTestResult>(
+      `/organizations/${orgId}/integrations/${integrationId}/bitrix/test`,
+      { method: "POST", body: {} },
+    ),
+  bitrixDeals: (orgId: number, integrationId: number) =>
+    apiFetch<BitrixDealsResult>(
+      `/organizations/${orgId}/integrations/${integrationId}/bitrix/deals`,
+    ),
+  bitrixDealsOverdue: (orgId: number, integrationId: number) =>
+    apiFetch<BitrixDealsResult>(
+      `/organizations/${orgId}/integrations/${integrationId}/bitrix/deals/overdue`,
+    ),
+  bitrixCall: (
+    orgId: number,
+    integrationId: number,
+    method: string,
+    params?: Record<string, unknown>,
+  ) =>
+    apiFetch<unknown>(`/organizations/${orgId}/integrations/${integrationId}/bitrix/call`, {
+      method: "POST",
+      body: { method, params: params ?? {} },
+    }),
+
   /* ---- Chat ---- */
   chats: (orgId: number) => apiFetch<OrgChat[]>(`/organizations/${orgId}/chats`),
   openOrgChat: (orgId: number) =>
@@ -372,6 +407,48 @@ export interface DashboardEmployee {
   username?: string | null;
   availability_status: AvailabilityStatus | null;
   role_name: string | null;
+}
+
+/* ----------------------------- Bitrix24 types ----------------------------- */
+
+export interface BitrixIntegration {
+  id: number;
+  provider: string;
+  name: string;
+  status: "ACTIVE" | "ERROR" | "DISABLED";
+  credentials: {
+    auth_type: "webhook" | "oauth";
+    base_url: string;
+    has_access_token: boolean;
+  };
+}
+
+export interface BitrixTestResult {
+  ok: boolean;
+  method: string;
+  status: string;
+  error?: string;
+  result?: unknown;
+}
+
+export interface BitrixConnectResponse {
+  integration: BitrixIntegration;
+  test: BitrixTestResult;
+}
+
+export interface BitrixDeal {
+  ID: string;
+  TITLE: string;
+  STAGE_ID: string;
+  OPPORTUNITY: string;
+  CLOSEDATE: string;
+  [key: string]: unknown;
+}
+
+export interface BitrixDealsResult {
+  ok: boolean;
+  deals: BitrixDeal[];
+  error?: string;
 }
 
 export interface OrgDashboard {
