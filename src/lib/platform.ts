@@ -270,7 +270,8 @@ export const platform = {
 
   bots: (organizationId: number) => apiFetch<Bot[]>(`/organizations/${organizationId}/bots`),
   /** Карточка бота с версиями */
-  botDetail: (botId: number) => apiFetch<BotDetail>(`/organizations/bots/${botId}`),
+  botDetail: (organizationId: number, botId: number) =>
+    apiFetch<BotDetail>(`/organizations/${organizationId}/bots/${botId}`),
   createBot: (
     organizationId: number,
     body: { templateCode?: string; code?: string; name?: string; description?: string },
@@ -309,17 +310,26 @@ export const platform = {
   /** Справочник ролей организации */
   roles: () => apiFetch<RoleInfo[]>("/organizations/roles"),
 
-  versions: (botId: number) => apiFetch<BotVersion[]>(`/organizations/bots/${botId}/versions`),
+  versions: (organizationId: number, botId: number) =>
+    apiFetch<BotVersion[]>(`/organizations/${organizationId}/bots/${botId}/versions`),
   /** Создать новую версию (статус draft, version назначает backend) */
   createVersion: (
+    organizationId: number,
     botId: number,
     body: { changelog?: string; spec?: unknown; riskClass?: string },
-  ) => apiFetch<BotVersion>(`/organizations/bots/${botId}/versions`, { method: "POST", body }),
-  publishVersion: (botId: number, versionId: number) =>
-    apiFetch<BotVersion>(`/organizations/bots/${botId}/versions/${versionId}/publish`, {
+  ) =>
+    apiFetch<BotVersion>(`/organizations/${organizationId}/bots/${botId}/versions`, {
       method: "POST",
-      body: {},
+      body,
     }),
+  publishVersion: (organizationId: number, botId: number, versionId: number) =>
+    apiFetch<BotVersion>(
+      `/organizations/${organizationId}/bots/${botId}/versions/${versionId}/publish`,
+      {
+        method: "POST",
+        body: {},
+      },
+    ),
 
   changeRequests: (params: {
     organizationId?: number;

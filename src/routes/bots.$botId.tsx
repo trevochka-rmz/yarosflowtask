@@ -34,36 +34,39 @@ function BotPage() {
   const { botId } = Route.useParams();
   const id = Number(botId);
   const { tenant } = useCurrentTenant();
+  const orgId = tenant?.id;
   const queryClient = useQueryClient();
 
-  // Карточка бота: предпочитаем GET /tenants/bots/:botId
+  // Карточка бота: предпочитаем GET /organizations/{orgId}/bots/:botId
   const botDetail = useQuery({
-    queryKey: ["bot-detail", id],
-    queryFn: () => platform.botDetail(id),
+    queryKey: ["bot-detail", orgId, id],
+    enabled: !!orgId,
+    queryFn: () => platform.botDetail(orgId!, id),
     retry: false,
   });
 
   // Фоллбэк: ищем бота в общем списке если botDetail не работает
   const botsQuery = useQuery({
-    queryKey: ["bots", tenant?.id],
-    queryFn: () => platform.bots(tenant!.id),
-    enabled: !!tenant?.id && botDetail.isError,
+    queryKey: ["bots", orgId],
+    queryFn: () => platform.bots(orgId!),
+    enabled: !!orgId && botDetail.isError,
   });
 
   const bot = botDetail.data ?? botsQuery.data?.find((b) => b.id === id);
   const isTaskFlow = bot?.code === "TASKFLOW-001";
 
   const versions = useQuery({
-    queryKey: ["bot-versions", id],
-    queryFn: () => platform.versions(id),
+    queryKey: ["bot-versions", orgId, id],
+    enabled: !!orgId,
+    queryFn: () => platform.versions(orgId!, id),
   });
 
   const publish = useMutation({
-    mutationFn: (versionId: number) => platform.publishVersion(id, versionId),
+    mutationFn: (versionId: number) => platform.publishVersion(orgId!, id, versionId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["bot-versions", id] });
-      void queryClient.invalidateQueries({ queryKey: ["bot-detail", id] });
-      void queryClient.invalidateQueries({ queryKey: ["bots"] });
+      void queryClient.invalidateQueries({ queryKey: ["bot-versions", orgId, id] });
+      void queryClient.invalidateQueries({ queryKey: ["bot-detail", orgId, id] });
+      void queryClient.invalidateQueries({ queryKey: ["bots", orgId] });
       toast.success("Версия опубликована");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -78,11 +81,11 @@ function BotPage() {
     mutationFn: () => {
       const body: { changelog?: string; riskClass?: string } = { riskClass };
       if (changelog.trim()) body.changelog = changelog.trim();
-      return platform.createVersion(id, body);
+      return platform.createVersion(orgId!, id, body);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["bot-versions", id] });
-      void queryClient.invalidateQueries({ queryKey: ["bot-detail", id] });
+      void queryClient.invalidateQueries({ queryKey: ["bot-versions", orgId, id] });
+      void queryClient.invalidateQueries({ queryKey: ["bot-detail", orgId, id] });
       setChangelog("");
       setRiskClass("C2");
       setShowNewVersion(false);
