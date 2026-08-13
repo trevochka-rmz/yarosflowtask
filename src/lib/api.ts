@@ -247,29 +247,43 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
 
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
-  employees: (tenantId: number) => apiFetch<User[]>(`/users/employees?tenantId=${tenantId}`),
-  users: (tenantId?: number) =>
-    apiFetch<User[]>(`/users${tenantId ? `?tenantId=${tenantId}` : ""}`),
-  tasks: (tenantId: number, query = "") => {
+  employees: (organizationId: number) =>
+    apiFetch<User[]>(`/users/employees?organizationId=${organizationId}`),
+  users: (organizationId?: number) =>
+    apiFetch<User[]>(`/users${organizationId ? `?organizationId=${organizationId}` : ""}`),
+
+  /** Список задач организации с фильтрами. */
+  tasks: (organizationId: number, query = "") => {
     const sep = query.startsWith("?") ? "&" : "?";
     return apiFetch<Task[]>(
-      `/tasks?tenantId=${tenantId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+      `/tasks?organizationId=${organizationId}${query ? sep + query.replace(/^\?/, "") : ""}`,
     );
   },
-  tasksByAuthor: (id: number, tenantId: number, query = "") => {
+
+  /** Задачи, созданные конкретным автором в организации. */
+  tasksByAuthor: (authorId: number, organizationId: number, query = "") => {
     const sep = query.startsWith("?") ? "&" : "?";
     return apiFetch<Task[]>(
-      `/tasks/author/${id}?tenantId=${tenantId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+      `/tasks?organizationId=${organizationId}${sep}authorId=${authorId}${
+        query ? "&" + query.replace(/^\?/, "") : ""
+      }`,
     );
   },
-  tasksAssigned: (id: number, tenantId: number, query = "") => {
+
+  /** Мои задачи (я исполнитель) в организации. */
+  tasksMine: (organizationId: number, query = "") => {
     const sep = query.startsWith("?") ? "&" : "?";
     return apiFetch<Task[]>(
-      `/tasks/assigned/${id}?tenantId=${tenantId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+      `/tasks/mine?organizationId=${organizationId}${query ? sep + query.replace(/^\?/, "") : ""}`,
     );
   },
-  task: (id: number, tenantId?: number) =>
-    apiFetch<Task>(`/tasks/${id}${tenantId ? `?tenantId=${tenantId}` : ""}`),
+
+  /** @deprecated: используйте tasksMine */
+  tasksAssigned: (id: number, organizationId: number, query = "") =>
+    api.tasksMine(organizationId, query),
+
+  task: (id: number, organizationId?: number) =>
+    apiFetch<Task>(`/tasks/${id}${organizationId ? `?organizationId=${organizationId}` : ""}`),
   createTask: (authorId: number, rawText: string, tenantId: number, departmentId?: number) =>
     apiFetch<Task>("/tasks", {
       method: "POST",
@@ -286,20 +300,27 @@ export const api = {
       method: "POST",
       body: { organizationId, aiActionId },
     }),
-  assign: (id: number, userIds: number[], assignedBy: number, tenantId: number) =>
-    apiFetch<Task>(`/tasks/${id}/assign?tenantId=${tenantId}`, {
+  /** Назначение исполнителей и отделов. userIds — ID пользователей (user_id из members). */
+  assign: (id: number, organizationId: number, userIds: number[], departmentIds: number[]) =>
+    apiFetch<Task>(`/tasks/${id}/assign?organizationId=${organizationId}`, {
       method: "PATCH",
-      body: { userIds, assignedBy },
+      body: { userIds, departmentIds },
     }),
-  setStatus: (id: number, status: TaskStatus, tenantId: number) =>
-    apiFetch<Task>(`/tasks/${id}/status?tenantId=${tenantId}`, {
+
+  setStatus: (id: number, status: TaskStatus, organizationId: number) =>
+    apiFetch<Task>(`/tasks/${id}/status?organizationId=${organizationId}`, {
       method: "PATCH",
       body: { status },
     }),
-  updateTask: (id: number, tenantId: number, patch: Record<string, unknown>) =>
-    apiFetch<Task>(`/tasks/${id}?tenantId=${tenantId}`, { method: "PATCH", body: patch }),
-  deleteTask: (id: number, tenantId: number) =>
-    apiFetch<unknown>(`/tasks/${id}?tenantId=${tenantId}`, { method: "DELETE" }),
+
+  updateTask: (id: number, organizationId: number, patch: Record<string, unknown>) =>
+    apiFetch<Task>(`/tasks/${id}?organizationId=${organizationId}`, {
+      method: "PATCH",
+      body: patch,
+    }),
+
+  deleteTask: (id: number, organizationId: number) =>
+    apiFetch<unknown>(`/tasks/${id}?organizationId=${organizationId}`, { method: "DELETE" }),
   comments: (taskId: number) => apiFetch<Comment[]>(`/comments/task/${taskId}`),
   addComment: (taskId: number, authorId: number, body: string) =>
     apiFetch<Comment>("/comments", { method: "POST", body: { taskId, authorId, body } }),

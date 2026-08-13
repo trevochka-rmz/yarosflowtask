@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
 import { useCurrentTenant } from "@/lib/platform";
+import { orgApi } from "@/lib/org";
 
 export const Route = createFileRoute("/tasks/$taskId")({
   head: () => ({
@@ -44,20 +45,25 @@ function TaskDetail() {
   const { tenant } = useCurrentTenant();
   const currentId = user?.id ?? 0;
   const role = user?.role ?? "manager";
-  const tenantId = tenant?.id;
+  const organizationId = tenant?.id;
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
   const [editing, setEditing] = useState(false);
 
   const taskQuery = useQuery({
-    queryKey: ["task", id, tenantId],
-    queryFn: () => api.task(id, tenantId),
+    queryKey: ["task", id, organizationId],
+    queryFn: () => api.task(id, organizationId),
   });
-  const employees = useQuery({
-    queryKey: ["employees", tenantId],
-    enabled: !!tenantId,
-    queryFn: () => (tenantId ? api.employees(tenantId) : Promise.resolve([])),
+  const members = useQuery({
+    queryKey: ["org-members", organizationId],
+    enabled: !!organizationId,
+    queryFn: () => orgApi.members(organizationId!),
+  });
+  const departments = useQuery({
+    queryKey: ["org-departments", organizationId],
+    enabled: !!organizationId,
+    queryFn: () => orgApi.departments(organizationId!),
   });
   const comments = useQuery({ queryKey: ["comments", id], queryFn: () => api.comments(id) });
   const history = useQuery({ queryKey: ["history", id], queryFn: () => api.history(id) });
@@ -69,13 +75,13 @@ function TaskDetail() {
   }, [task?.id, task?.assignees]);
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ["task", id] });
+    queryClient.invalidateQueries({ queryKey: ["task", id, organizationId] });
     queryClient.invalidateQueries({ queryKey: ["history", id] });
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
   };
 
   const statusMutation = useMutation({
-    mutationFn: (status: TaskStatus) => api.setStatus(id, status, tenantId ?? 0),
+    mutationFn: (status: TaskStatus) => api.setStatus(id, status, organizationId ?? 0),
     onSuccess: () => {
       invalidate();
       toast.success("Статус обновлён");
@@ -84,7 +90,8 @@ function TaskDetail() {
   });
 
   const assignMutation = useMutation({
-    mutationFn: (userIds: number[]) => api.assign(id, userIds, currentId, tenantId ?? 0),
+    mutationFn: (payload: { userIds: number[]; departmentIds: number[] }) =>
+      api.assign(id, organizationId ?? 0, payload.userIds, payload.departmentIds),
     onSuccess: () => {
       invalidate();
       toast.success("Исполнители обновлены");
@@ -160,7 +167,7 @@ function TaskDetail() {
               <TaskEditForm
                 task={task}
                 userId={currentId}
-                tenantId={tenantId ?? 0}
+                tenantId={organizationId ?? 0}
                 onDone={() => setEditing(false)}
               />
             ) : (
@@ -299,35 +306,82 @@ function TaskDetail() {
             )}
 
             {role === "manager" ? (
-              <div className="mt-4 border-t border-border pt-4">
-                <p className="text-sm font-medium">Назначить сотрудников</p>
-                <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                  {employees.data?.map((emp) => (
-                    <label
-                      key={emp.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
-                    >
-                      <input
-                        type="checkbox"
-                        className="accent-primary"
-                        checked={selected.includes(emp.id)}
-                        onChange={(e) =>
-                          setSelected((prev) =>
-                            e.target.checked ? [...prev, emp.id] : prev.filter((x) => x !== emp.id),
-                          )
-                        }
-                      />
-                      {userLabel(emp)}
-                    </label>
-                  ))}
-                  {employees.isError ? (
-                    <p className="text-xs text-destructive">{(employees.error as Error).message}</p>
-                  ) : null}
+              <div className="mt-4 border-t border-border pt-4 space-y-4">
+                <div>
+                  <p className="text-sm font-medium">Назначить сотрудников</p>
+                  <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+                    {members.data?.map((m) => (
+                      <label
+                        key={m.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-primary"
+                          checked={selected.includes(m.user_id)}
+                          onChange={(e) =>
+                            setSelected((prev) =>
+                              e.target.checked
+                                ? [...prev, m.user_id]
+                                : prev.filter((x) => x !== m.user_id),
+                            )
+                          }
+                        />
+                        {userLabel({
+                          full_name: m.full_name,
+                          username: m.username,
+                          id: m.user_id,
+                        })}
+                      </label>
+                    ))}
+                    {members.isError ? (
+                      <p className="text-xs text-destructive">{(members.error as Error).message}</p>
+                    ) : null}
+                  </div>
                 </div>
+
+                <div>
+                  <p className="text-sm font-medium">Назначить отделы</p>
+                  <div className="mt-2 max-h-36 space-y-1 overflow-y-auto">
+                    {departments.data?.map((d) => (
+                      <label
+                        key={d.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-primary"
+                          checked={selected.includes(d.id)}
+                          onChange={(e) =>
+                            setSelected((prev) =>
+                              e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id),
+                            )
+                          }
+                        />
+                        {d.name}
+                      </label>
+                    ))}
+                    {departments.isError ? (
+                      <p className="text-xs text-destructive">
+                        {(departments.error as Error).message}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
                 <Button
-                  className="mt-3 w-full"
+                  className="mt-1 w-full"
                   disabled={assignMutation.isPending}
-                  onClick={() => assignMutation.mutate(selected)}
+                  onClick={() =>
+                    assignMutation.mutate({
+                      userIds:
+                        members.data?.map((m) => m.user_id).filter((id) => selected.includes(id)) ??
+                        [],
+                      departmentIds:
+                        departments.data?.map((d) => d.id).filter((id) => selected.includes(id)) ??
+                        [],
+                    })
+                  }
                 >
                   {assignMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

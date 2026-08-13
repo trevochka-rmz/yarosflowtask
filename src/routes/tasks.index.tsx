@@ -43,24 +43,20 @@ function TasksPage() {
   const [status, setStatus] = useState<TaskStatus | "">("");
   const [assignment, setAssignment] = useState<Assignment>("any");
   const userId = user?.id ?? 0;
-  const tenantId = tenant?.id;
+  const organizationId = tenant?.id;
 
   const query = useQuery({
-    queryKey: ["tasks", scope, status, assignment, userId, tenantId],
-    enabled: !!tenantId,
+    queryKey: ["tasks", scope, status, assignment, userId, organizationId],
+    enabled: !!organizationId,
     queryFn: async (): Promise<Task[]> => {
-      if (!tenantId) return [];
+      if (!organizationId) return [];
       const params = new URLSearchParams();
       if (status) params.set("status", status);
-      if (assignment === "with") params.set("minAssignees", "1");
-      if (assignment === "without") {
-        params.set("minAssignees", "0");
-        params.set("maxAssignees", "0");
-      }
+      if (assignment === "without") params.set("unassigned", "true");
       const qs = params.toString() ? `?${params.toString()}` : "";
-      if (scope === "author") return api.tasksByAuthor(userId, tenantId, qs);
-      if (scope === "assigned") return api.tasksAssigned(userId, tenantId, qs);
-      return api.tasks(tenantId, qs);
+      if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
+      if (scope === "assigned") return api.tasksMine(organizationId, qs);
+      return api.tasks(organizationId, qs);
     },
   });
 
@@ -144,7 +140,7 @@ function TasksPage() {
       </div>
 
       <div className="mt-5">
-        {!tenantId ? (
+        {!organizationId ? (
           <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Выберите организацию для просмотра задач.
           </p>
@@ -181,7 +177,11 @@ function TasksPage() {
                     </Link>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <ExportMenu taskId={task.id} />
-                      <DeleteTaskButton taskId={task.id} title={task.title} tenantId={tenantId} />
+                      <DeleteTaskButton
+                        taskId={task.id}
+                        title={task.title}
+                        tenantId={organizationId}
+                      />
                     </div>
                   </div>
                   <Link to="/tasks/$taskId" params={{ taskId: String(task.id) }} className="block">
@@ -247,7 +247,7 @@ function TasksPage() {
                             <DeleteTaskButton
                               taskId={task.id}
                               title={task.title}
-                              tenantId={tenantId}
+                              tenantId={organizationId}
                             />
                           </div>
                         </td>
