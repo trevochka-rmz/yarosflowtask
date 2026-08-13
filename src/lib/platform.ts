@@ -118,12 +118,18 @@ export interface ChangeRequest {
 
 export interface AuditEntry {
   id: string;
+  /** ID организации (tenant), для которой записан лог. */
   tenant_id: number | null;
+  /** ID организации, если backend возвращает organization_id вместо tenant_id. */
+  organization_id?: number | null;
   actor_id: number | null;
+  actor_name?: string | null;
+  actor_username?: string | null;
   action: string;
   entity_type: string | null;
   entity_id: string | null;
-  meta: Record<string, unknown> | null;
+  /** meta может прийти как объект или как строка JSON. */
+  meta: Record<string, unknown> | string | null;
   created_at: string;
 }
 
@@ -361,7 +367,14 @@ export const platform = {
     organizationId?: number;
     actorId?: number;
     action?: string;
+    entityType?: string;
+    entityId?: string | number;
+    from?: string;
+    to?: string;
+    q?: string;
+    search?: string;
     limit?: number;
+    offset?: number;
   }) => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
