@@ -704,75 +704,80 @@ function ChatPage() {
 
   return (
     <AppLayout fullscreen>
-      {/* Мобильная панель навигации */}
-      <div className="sticky top-14 z-20 flex shrink-0 items-center gap-2 border-b border-border bg-card/60 px-3 py-2 md:hidden">
-        <button
-          type="button"
-          onClick={() => setMobileShowList((v) => !v)}
-          className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-          {mobileShowList ? "К чату" : "Чаты"}
-        </button>
-        {activeChat && !mobileShowList && (
-          <span className="truncate text-sm font-medium text-foreground">{activeChat.title}</span>
-        )}
-        <Link
-          to="/tasks"
-          className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          Задачи <ArrowRight className="h-3 w-3" />
-        </Link>
-      </div>
-
-      {/* Основной layout — занимает всё оставшееся пространство */}
-      <div className="flex min-h-0 flex-1 overflow-hidden border-t border-border">
-        <div className="flex h-full min-h-0 w-full">
-          {/* Левая панель */}
-          <aside
-            className={cn(
-              "flex-col h-full min-h-0 border-r border-border bg-card/50",
-              "hidden w-56 shrink-0 md:flex",
-              mobileShowList && "flex w-full md:hidden",
-            )}
+      <div className="flex h-[calc(100svh-56px)] min-h-0 flex-1 flex-col">
+        {/* Мобильная панель навигации */}
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card/60 px-3 py-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileShowList((v) => !v)}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent"
           >
-            <div className="border-b border-border px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Чат ассистента
-              </p>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <ChatList
-                orgId={org.id}
-                activeChatId={activeChatId}
-                onSelect={(c) => {
-                  setActiveChatId(c.id);
-                  setMobileShowList(false);
-                }}
-              />
-            </div>
-          </aside>
-
-          {/* Правая часть */}
-          <div
-            className={cn("min-h-0 min-w-0 flex-1", mobileShowList && "hidden md:flex md:flex-col")}
+            <MessageSquare className="h-3.5 w-3.5" />
+            {mobileShowList ? "К чату" : "Чаты"}
+          </button>
+          {activeChat && !mobileShowList && (
+            <span className="truncate text-sm font-medium text-foreground">{activeChat.title}</span>
+          )}
+          <Link
+            to="/tasks"
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            {activeChat ? (
-              <ChatWindow orgId={org.id} chat={activeChat} canWrite={canWrite} />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
-                {openOrg.isPending || chatsLoading ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                ) : (
-                  <>
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent">
-                      <MessageSquare className="h-7 w-7 text-accent-foreground" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Выберите чат слева</p>
-                  </>
-                )}
+            Задачи <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        {/* Основной layout — занимает всё оставшееся пространство */}
+        <div className="flex min-h-0 flex-1 overflow-hidden border-t border-border">
+          <div className="flex h-full min-h-0 w-full">
+            {/* Левая панель */}
+            <aside
+              className={cn(
+                "flex-col h-full min-h-0 border-r border-border bg-card/50",
+                "hidden w-56 shrink-0 md:flex",
+                mobileShowList && "flex w-full md:hidden",
+              )}
+            >
+              <div className="border-b border-border px-3 py-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Чат ассистента
+                </p>
               </div>
-            )}
+              <div className="flex-1 overflow-y-auto">
+                <ChatList
+                  orgId={org.id}
+                  activeChatId={activeChatId}
+                  onSelect={(c) => {
+                    setActiveChatId(c.id);
+                    setMobileShowList(false);
+                  }}
+                />
+              </div>
+            </aside>
+
+            {/* Правая часть */}
+            <div
+              className={cn(
+                "min-h-0 min-w-0 flex-1",
+                mobileShowList && "hidden md:flex md:flex-col",
+              )}
+            >
+              {activeChat ? (
+                <ChatWindow orgId={org.id} chat={activeChat} canWrite={canWrite} />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                  {openOrg.isPending || chatsLoading ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    <>
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent">
+                        <MessageSquare className="h-7 w-7 text-accent-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Выберите чат слева</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
