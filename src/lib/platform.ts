@@ -47,6 +47,19 @@ export interface BotTemplate {
   implemented: boolean;
 }
 
+/** Шаблон бота, доступный для подключения в организации (ещё не подключён). */
+export interface AvailableBotTemplate {
+  code: string;
+  name: string;
+  description: string;
+  required_integrations: IntegrationProvider[];
+  missing_integrations: IntegrationProvider[];
+  can_create: boolean;
+  connected: boolean;
+  bot: Bot | null;
+  executable: boolean;
+}
+
 export type BotStatus = "draft" | "active" | "paused" | "archived";
 
 export interface Bot {
@@ -94,7 +107,8 @@ export interface BotDetail extends Bot {
   versions?: BotVersion[];
 }
 
-export type CrType = "personal_ui" | "shared_ui" | "bot_logic" | "integration" | "platform";
+export type CrType =
+  "personal_ui" | "shared_ui" | "bot_logic" | "integration" | "platform" | "bot_create";
 export type CrStatus =
   "draft" | "submitted" | "in_review" | "approved" | "rejected" | "published" | "cancelled";
 export type RiskClass = "C1" | "C2" | "C3" | "C4";
@@ -271,9 +285,14 @@ export const platform = {
   createTenant: (body: { name: string; slug?: string }) =>
     apiFetch<Tenant>("/organizations", { method: "POST", body }),
 
-  /** Шаблоны ботов */
+  /** Шаблоны ботов (общий каталог) */
   botTemplates: () => apiFetch<BotTemplate[]>("/organizations/bot-templates"),
 
+  /** Доступные к подключению боты (шаблоны, которых ещё нет в организации). */
+  availableBots: (organizationId: number) =>
+    apiFetch<AvailableBotTemplate[]>(`/organizations/${organizationId}/bots/available`),
+
+  /** Уже подключённые (живые) боты организации. */
   bots: (organizationId: number) => apiFetch<Bot[]>(`/organizations/${organizationId}/bots`),
   /** Карточка бота с версиями */
   botDetail: (organizationId: number, botId: number) =>
@@ -337,6 +356,7 @@ export const platform = {
       },
     ),
 
+  /** Список заявок на изменения / создание. */
   changeRequests: (params: {
     organizationId?: number;
     botId?: number;
@@ -359,6 +379,7 @@ export const platform = {
     description?: string;
     payload?: unknown;
     riskClass?: RiskClass;
+    submit?: boolean;
   }) => apiFetch<ChangeRequest>("/change-requests", { method: "POST", body }),
   setChangeRequestStatus: (id: number, status: CrStatus) =>
     apiFetch<ChangeRequest>(`/change-requests/${id}/status`, { method: "PATCH", body: { status } }),
@@ -417,6 +438,7 @@ export const CR_TYPE_LABELS: Record<CrType, string> = {
   bot_logic: "Логика бота",
   integration: "Интеграция",
   platform: "Платформа",
+  bot_create: "Создание бота",
 };
 
 export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {

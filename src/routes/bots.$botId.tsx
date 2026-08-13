@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, CheckCircle2, ExternalLink, Loader2, Plus } from "lucide-react";
+import { Bot, CheckCircle2, ExternalLink, Loader2, MessageSquare, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
@@ -14,6 +14,7 @@ import {
   platform,
   useCurrentTenant,
 } from "@/lib/platform";
+import { orgApi } from "@/lib/org";
 
 export const Route = createFileRoute("/bots/$botId")({
   head: () => ({
@@ -36,6 +37,7 @@ function BotPage() {
   const { tenant } = useCurrentTenant();
   const orgId = tenant?.id;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Карточка бота: предпочитаем GET /organizations/{orgId}/bots/:botId
   const botDetail = useQuery({
@@ -68,6 +70,15 @@ function BotPage() {
       void queryClient.invalidateQueries({ queryKey: ["bot-detail", orgId, id] });
       void queryClient.invalidateQueries({ queryKey: ["bots", orgId] });
       toast.success("Версия опубликована");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const openChat = useMutation({
+    mutationFn: () => orgApi.openBotChat(orgId!, id),
+    onSuccess: (chat) => {
+      void queryClient.invalidateQueries({ queryKey: ["chats", orgId] });
+      void navigate({ to: "/chat", search: { chatId: chat.id } });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -114,6 +125,22 @@ function BotPage() {
       </header>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {orgId && (
+          <Button
+            className="w-full sm:w-auto"
+            variant="outline"
+            size="sm"
+            disabled={openChat.isPending}
+            onClick={() => openChat.mutate()}
+          >
+            {openChat.isPending ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <MessageSquare className="mr-1 h-4 w-4" />
+            )}
+            Чат бота
+          </Button>
+        )}
         {isTaskFlow && (
           <Button asChild className="w-full sm:w-auto">
             <Link to="/taskflow">
