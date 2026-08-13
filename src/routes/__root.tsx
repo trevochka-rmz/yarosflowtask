@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import ogImage from "@/assets/logo_in.png";
 import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -78,33 +79,39 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Yaya.ЦифровойБот — заметка превращается в ТЗ" },
+      { title: "Yaya.Цифровой бот — автоматизация рутины внутри компании" },
       {
         name: "description",
         content:
-          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+          "Создавайте AI-ботов для автоматизации задач, контроля сроков и обещаний. Всё внутри компании с ролями, версиями и аудитом.",
       },
-      { property: "og:title", content: "Yaya.ЦифровойБот — заметка превращается в ТЗ" },
+      {
+        property: "og:title",
+        content: "Yaya.Цифровой бот — автоматизация рутины внутри компании",
+      },
       {
         property: "og:description",
         content:
-          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+          "Создавайте AI-ботов для автоматизации задач, контроля сроков и обещаний. Всё внутри компании с ролями, версиями и аудитом.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Yaya.ЦифровойБот — заметка превращается в ТЗ" },
+      {
+        name: "twitter:title",
+        content: "Yaya.Цифровой бот — автоматизация рутины внутри компании",
+      },
       {
         name: "twitter:description",
         content:
-          "Превращаем мысли в задачи. Создавайте, назначайте, контролируйте — всё в одном месте.",
+          "Создавайте AI-ботов для автоматизации задач, контроля сроков и обещаний. Всё внутри компании с ролями, версиями и аудитом.",
       },
       {
         property: "og:image",
-        content: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
+        content: ogImage,
       },
       {
         name: "twitter:image",
-        content: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
+        content: ogImage,
       },
     ],
     links: [
@@ -114,12 +121,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "icon",
-        type: "image/svg+xml",
-        href: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
+        type: "image/png",
+        href: ogImage,
       },
       {
         rel: "apple-touch-icon",
-        href: "https://storage.yandexcloud.net/honnylove-images/logo/YayaBotLogo/yaya-logo.svg",
+        href: ogImage,
       },
     ],
     scripts: [
