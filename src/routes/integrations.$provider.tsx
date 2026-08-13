@@ -12,6 +12,7 @@ import {
   Plug,
   Plus,
   RefreshCw,
+  Trash2,
   Wifi,
   WifiOff,
 } from "lucide-react";
@@ -21,6 +22,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { IntegrationCard, ProviderIcon } from "@/components/IntegrationCard";
 import { IntegrationWizard } from "@/components/IntegrationWizard";
 import {
@@ -160,7 +172,15 @@ function DealsTable({
 }
 
 /* ── Bitrix: Карточка подключения ── */
-function BitrixIntegrationItem({ orgId, item }: { orgId: number; item: BitrixIntegration }) {
+function BitrixIntegrationItem({
+  orgId,
+  item,
+  canDelete,
+}: {
+  orgId: number;
+  item: BitrixIntegration;
+  canDelete: boolean;
+}) {
   const qc = useQueryClient();
   const [showDeals, setShowDeals] = useState(false);
   const [showOverdue, setShowOverdue] = useState(false);
@@ -183,6 +203,15 @@ function BitrixIntegrationItem({ orgId, item }: { orgId: number; item: BitrixInt
     queryFn: () => orgApi.bitrixDealsOverdue(orgId, item.id),
     enabled: showOverdue,
   });
+  const del = useMutation({
+    mutationFn: () => integrationApi.delete(orgId, item.id),
+    onSuccess: () => {
+      toast.success("Интеграция удалена");
+      void qc.invalidateQueries({ queryKey: ["bitrix-integrations", orgId] });
+      void qc.invalidateQueries({ queryKey: ["integrations", orgId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="flex flex-wrap items-center gap-3 px-5 py-4">
@@ -197,14 +226,51 @@ function BitrixIntegrationItem({ orgId, item }: { orgId: number; item: BitrixInt
           </p>
         </div>
         <StatusBadge status={item.status} />
-        <Button size="sm" variant="outline" disabled={test.isPending} onClick={() => test.mutate()}>
-          {test.isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3.5 w-3.5" />
-          )}{" "}
-          Проверить
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={test.isPending}
+            onClick={() => test.mutate()}
+          >
+            {test.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}{" "}
+            Проверить
+          </Button>
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={del.isPending}>
+                  {del.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Удалить интеграцию?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Токены и настройки будут стёрты. Отменить это действие нельзя.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => del.mutate()}
+                  >
+                    Удалить
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
       {test.data && (
         <div
@@ -422,6 +488,7 @@ function IntegrationProviderPage() {
   const [showConnectForm, setShowConnectForm] = useState(false);
   const canRead = can("integration.read");
   const canCreate = can("integration.create");
+  const canDelete = can("integration.delete");
   const label = INTEGRATION_PROVIDER_LABELS[provider] ?? provider;
 
   const generalQuery = useQuery({
@@ -527,7 +594,12 @@ function IntegrationProviderPage() {
           ) : (
             orgId &&
             bitrixItems.map((item) => (
-              <BitrixIntegrationItem key={item.id} orgId={orgId} item={item} />
+              <BitrixIntegrationItem
+                key={item.id}
+                orgId={orgId}
+                item={item}
+                canDelete={canDelete}
+              />
             ))
           )}
         </div>

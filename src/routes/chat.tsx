@@ -20,8 +20,17 @@ import {
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/api";
+import { platform } from "@/lib/platform";
 import {
   orgApi,
   useCurrentOrg,
@@ -122,16 +131,32 @@ function ProposalCard({
   orgId,
   proposal,
   actions,
+  canChangeBot,
   onDone,
 }: {
   orgId: number;
   proposal: ChatProposal;
   actions: string[];
+  canChangeBot: boolean;
   onDone: (msgs: ChatMessage[], updatedProposal?: ChatProposal) => void;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const alternatives = proposal.parsed?.alternatives ?? [];
+  const [botDialogOpen, setBotDialogOpen] = useState(false);
+  const [selectedBotId, setSelectedBotId] = useState<number | null>(null);
+
+  const {
+    data: bots = [],
+    isPending: botsPending,
+    isError: botsError,
+    error: botsErrorObj,
+  } = useQuery({
+    queryKey: ["bots", orgId],
+    enabled: botDialogOpen,
+    queryFn: () => platform.bots(orgId),
+    staleTime: 60_000,
+  });
 
   const accept = useMutation({
     mutationFn: () => orgApi.acceptProposal(orgId, proposal.id),
@@ -167,6 +192,8 @@ function ProposalCard({
       if (proposal.chat_id) {
         void qc.invalidateQueries({ queryKey: ["chat-messages", orgId, proposal.chat_id] });
       }
+      setBotDialogOpen(false);
+      setSelectedBotId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -218,17 +245,12 @@ function ProposalCard({
             Создать
           </Button>
         )}
-        {actions.includes("change_bot") && alternatives.length > 0 && (
+        {actions.includes("change_bot") && canChangeBot && (
           <Button
             size="sm"
             variant="outline"
             disabled={busy}
-            onClick={() => {
-              const first = alternatives[0];
-              if (alternatives.length === 1 && first) {
-                changeBot.mutate(first.code);
-              }
-            }}
+            onClick={() => setBotDialogOpen(true)}
             className="h-7 gap-1 text-xs"
           >
             {changeBot.isPending ? (
@@ -272,20 +294,94 @@ function ProposalCard({
         </div>
       )}
 
-      {actions.includes("change_bot") && alternatives.length > 1 && (
-        <div className="mt-1 flex flex-wrap gap-1">
-          {alternatives.map((alt) => (
-            <button
-              key={alt.id}
-              type="button"
-              disabled={busy}
-              onClick={() => changeBot.mutate(alt.code)}
-              className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
-            >
-              {alt.name ? `${alt.name} (${alt.code})` : alt.code}
-            </button>
-          ))}
-        </div>
+      {actions.includes("change_bot") && canChangeBot && (
+        <Dialog
+          open={botDialogOpen}
+          onOpenChange={(open) => {
+            setBotDialogOpen(open);
+            if (!open) setSelectedBotId(null);
+          }}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Сменить бота</DialogTitle>
+              <DialogDescription>
+                Выберите бота, от имени которого ассистент будет продолжать работу по этому запросу.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-2 max-h-72 space-y-1 overflow-y-auto pr-1">
+              {botsPending ? (
+                <div className="space-y-1.5">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
+                  ))}
+                </div>
+              ) : botsError ? (
+                <p className="text-sm text-destructive">{(botsErrorObj as Error)?.message}</p>
+              ) : bots.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Боты в организации не найдены.</p>
+              ) : (
+                bots.map((bot) => (
+                  <button
+                    key={bot.id}
+                    type="button"
+                    onClick={() => setSelectedBotId(bot.id)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                      selectedBotId === bot.id
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border hover:bg-accent",
+                    )}
+                  >
+                    <div className="min-w-0 pr-2">
+                      <p className="truncate font-medium">{bot.name || bot.code}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{bot.code}</p>
+                    </div>
+                    <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                      {bot.status}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+            <DialogFooter className="mt-4 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setBotDialogOpen(false);
+                  setSelectedBotId(null);
+                }}
+              >
+                Отмена
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  !selectedBotId ||
+                  botsPending ||
+                  changeBot.isPending ||
+                  botsError ||
+                  bots.length === 0
+                }
+                onClick={() => {
+                  const bot = bots.find((b) => b.id === selectedBotId);
+                  if (!bot) return;
+                  changeBot.mutate(bot.code);
+                }}
+              >
+                {changeBot.isPending ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Bot className="mr-1 h-3 w-3" />
+                )}
+                Применить
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
@@ -296,11 +392,13 @@ function MessageBubble({
   msg,
   orgId,
   proposals,
+  canChangeBot,
   onNewMessages,
 }: {
   msg: ChatMessage;
   orgId: number;
   proposals: ChatProposal[];
+  canChangeBot: boolean;
   onNewMessages: (msgs: ChatMessage[], updatedProposal?: ChatProposal) => void;
 }) {
   const { bubble, align } = roleMeta(msg.role);
@@ -330,6 +428,7 @@ function MessageBubble({
             orgId={orgId}
             proposal={proposal}
             actions={actions}
+            canChangeBot={canChangeBot}
             onDone={onNewMessages}
           />
         )}
@@ -631,6 +730,7 @@ function ChatWindow({
                 msg={msg}
                 orgId={orgId}
                 proposals={localProposals}
+                canChangeBot={chat.type === "org"}
                 onNewMessages={(newMsgs, updatedProposal) => {
                   setLocalMsgs((prev) => {
                     const ids = new Set(prev.map((m) => m.id));

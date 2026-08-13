@@ -57,8 +57,9 @@ function IntegrationDetailPage() {
   const { provider: providerSlug, integrationId } = Route.useParams();
   const provider = slugToProvider(providerSlug);
   const id = Number(integrationId);
-  const { tenant } = useCurrentTenant();
+  const { tenant, can } = useCurrentTenant();
   const orgId = tenant?.id;
+  const canDelete = can("integration.delete");
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("settings");
@@ -187,34 +188,36 @@ function IntegrationDetailPage() {
           )}
 
           {/* Удалить */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={del.isPending}>
-                {del.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Удалить интеграцию?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Токены и настройки будут стёрты. Отменить это действие нельзя.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Отмена</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => del.mutate()}
-                >
-                  Удалить
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={del.isPending}>
+                  {del.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Удалить интеграцию?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Токены и настройки будут стёрты. Отменить это действие нельзя.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => del.mutate()}
+                  >
+                    Удалить
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
