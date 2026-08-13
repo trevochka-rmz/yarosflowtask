@@ -705,7 +705,7 @@ function ChatPage() {
   return (
     <AppLayout fullscreen>
       {/* Мобильная панель навигации */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-card/60 px-3 py-2 md:hidden">
+      <div className="sticky top-14 z-20 flex shrink-0 items-center gap-2 border-b border-border bg-card/60 px-3 py-2 md:hidden">
         <button
           type="button"
           onClick={() => setMobileShowList((v) => !v)}
@@ -727,11 +727,11 @@ function ChatPage() {
 
       {/* Основной layout — занимает всё оставшееся пространство */}
       <div className="flex min-h-0 flex-1 overflow-hidden border-t border-border">
-        <div className="flex h-full w-full">
+        <div className="flex h-full min-h-0 w-full">
           {/* Левая панель */}
           <aside
             className={cn(
-              "flex-col border-r border-border bg-card/50",
+              "flex-col h-full min-h-0 border-r border-border bg-card/50",
               "hidden w-56 shrink-0 md:flex",
               mobileShowList && "flex w-full md:hidden",
             )}
@@ -754,7 +754,9 @@ function ChatPage() {
           </aside>
 
           {/* Правая часть */}
-          <div className={cn("min-w-0 flex-1", mobileShowList && "hidden md:flex md:flex-col")}>
+          <div
+            className={cn("min-h-0 min-w-0 flex-1", mobileShowList && "hidden md:flex md:flex-col")}
+          >
             {activeChat ? (
               <ChatWindow orgId={org.id} chat={activeChat} canWrite={canWrite} />
             ) : (
