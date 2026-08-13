@@ -352,7 +352,12 @@ const GROUPS: NavGroup[] = [
         perm: "organization.update",
       },
       { title: "Флот ботов", url: "/bots", icon: Bot, exact: true, perm: "bot.read" },
-      { title: "Создать бота", url: "/bots/new", icon: Plus, perm: "bot.create" },
+      {
+        title: "Подключение/создание ботов",
+        url: "/bots/new",
+        icon: Plus,
+        perm: "bot.read",
+      },
       { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList, perm: "task.create" },
       { title: "Задачи", url: "/tasks", icon: ListChecks, perm: "task.read" },
     ],

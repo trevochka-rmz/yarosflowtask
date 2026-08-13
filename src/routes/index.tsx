@@ -164,7 +164,7 @@ function Landing() {
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild className="w-full sm:w-auto">
-                <Link to="/bots/new">Создать бота</Link>
+                <Link to="/bots/new">Подключение/создание ботов</Link>
               </Button>
               <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link to="/members">Пригласить участников</Link>

@@ -163,6 +163,15 @@ function NewBotPage() {
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           Доступные боты
         </h2>
+
+        <div className="mt-2 text-xs text-muted-foreground">
+          Если нужного бота нет в каталоге, вы можете отправить заявку на создание нового бота. Для
+          этого перейдите в раздел{" "}
+          <Link to="/change-requests/new" className="text-primary underline">
+            «Заявки на изменения»
+          </Link>{" "}
+          и выберите тип <code>Создание бота</code>.
+        </div>
         {available.isPending ? (
           <p className="mt-3 text-sm text-muted-foreground">Загрузка каталога…</p>
         ) : available.isError ? (
