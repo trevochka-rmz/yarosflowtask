@@ -14,6 +14,7 @@ import {
   Pause,
   Play,
   SendHorizontal,
+  X,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -126,10 +127,11 @@ function ProposalCard({
   orgId: number;
   proposal: ChatProposal;
   actions: string[];
-  onDone: (msgs: ChatMessage[]) => void;
+  onDone: (msgs: ChatMessage[], updatedProposal?: ChatProposal) => void;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const alternatives = proposal.parsed?.alternatives ?? [];
 
   const accept = useMutation({
     mutationFn: () => orgApi.acceptProposal(orgId, proposal.id),
@@ -158,7 +160,18 @@ function ProposalCard({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const busy = accept.isPending || reject.isPending;
+  const changeBot = useMutation({
+    mutationFn: (botCode: string) => orgApi.changeProposalBot(orgId, proposal.id, { botCode }),
+    onSuccess: (res) => {
+      onDone([res.assistant_message], res.proposal);
+      if (proposal.chat_id) {
+        void qc.invalidateQueries({ queryKey: ["chat-messages", orgId, proposal.chat_id] });
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const busy = accept.isPending || reject.isPending || changeBot.isPending;
   const done = accept.isSuccess || reject.isSuccess;
   const taskId = accept.data?.task?.id;
 
@@ -188,37 +201,91 @@ function ProposalCard({
   }
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
-      {actions.includes("accept") && (
-        <Button
-          size="sm"
-          disabled={busy}
-          onClick={() => accept.mutate()}
-          className="h-7 gap-1 text-xs"
-        >
-          {accept.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <CheckCircle2 className="h-3 w-3" />
-          )}
-          Создать
-        </Button>
+    <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
+        {actions.includes("accept") && (
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => accept.mutate()}
+            className="h-7 gap-1 text-xs"
+          >
+            {accept.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-3 w-3" />
+            )}
+            Создать
+          </Button>
+        )}
+        {actions.includes("change_bot") && alternatives.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              const first = alternatives[0];
+              if (alternatives.length === 1 && first) {
+                changeBot.mutate(first.code);
+              }
+            }}
+            className="h-7 gap-1 text-xs"
+          >
+            {changeBot.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Bot className="h-3 w-3" />
+            )}
+            Сменить бота
+          </Button>
+        )}
+        {(actions.includes("reject") || actions.includes("cancel")) && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => reject.mutate()}
+            className="h-7 gap-1 text-xs"
+          >
+            {reject.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <XCircle className="h-3 w-3" />
+            )}
+            Отклонить
+          </Button>
+        )}
+      </div>
+
+      {(proposal.suggested_bot_code || alternatives.length > 0) && (
+        <div className="mt-1 text-[10px] text-muted-foreground">
+          Бот:
+          <span className="ml-1 font-medium text-foreground">
+            {(() => {
+              const current =
+                alternatives.find((b) => b.code === proposal.suggested_bot_code) ?? alternatives[0];
+              return current?.name
+                ? `${current.name} (${current.code})`
+                : proposal.suggested_bot_code;
+            })()}
+          </span>
+        </div>
       )}
-      {(actions.includes("reject") || actions.includes("cancel")) && (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={() => reject.mutate()}
-          className="h-7 gap-1 text-xs"
-        >
-          {reject.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <XCircle className="h-3 w-3" />
-          )}
-          Отклонить
-        </Button>
+
+      {actions.includes("change_bot") && alternatives.length > 1 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {alternatives.map((alt) => (
+            <button
+              key={alt.id}
+              type="button"
+              disabled={busy}
+              onClick={() => changeBot.mutate(alt.code)}
+              className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+            >
+              {alt.name ? `${alt.name} (${alt.code})` : alt.code}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -234,7 +301,7 @@ function MessageBubble({
   msg: ChatMessage;
   orgId: number;
   proposals: ChatProposal[];
-  onNewMessages: (msgs: ChatMessage[]) => void;
+  onNewMessages: (msgs: ChatMessage[], updatedProposal?: ChatProposal) => void;
 }) {
   const { bubble, align } = roleMeta(msg.role);
   const isUser = msg.role === "user";
@@ -303,6 +370,12 @@ function AutomationsPanel({ orgId }: { orgId: number }) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["automations", orgId] }),
     onError: (e: Error) => toast.error(e.message),
   });
+  const hide = useMutation({
+    mutationFn: (id: number) => orgApi.updateAutomation(orgId, id, "ARCHIVED"),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["automations", orgId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const active = automations.filter((a) => a.status !== "ARCHIVED");
   if (!active.length) return null;
   return (
@@ -324,22 +397,23 @@ function AutomationsPanel({ orgId }: { orgId: number }) {
             >
               {a.status}
             </span>
-            <span className="min-w-0 flex-1 truncate text-foreground">{a.title}</span>
-            {a.result_task_id && (
-              <Link
-                to="/tasks/$taskId"
-                params={{ taskId: String(a.result_task_id) }}
-                className="shrink-0 text-[10px] text-primary hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                #{a.result_task_id}
-              </Link>
-            )}
-            {a.schedule_cron && (
-              <span className="hidden shrink-0 font-mono text-[10px] text-muted-foreground sm:block">
-                {a.schedule_cron}
-              </span>
-            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-foreground">{a.title}</p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                {a.bot_code && <span className="truncate">Бот: {a.bot_code}</span>}
+                <span>{formatDate(a.created_at)}</span>
+                {a.result_task_id && (
+                  <Link
+                    to="/tasks/$taskId"
+                    params={{ taskId: String(a.result_task_id) }}
+                    className="shrink-0 text-[10px] text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Задача #{a.result_task_id}
+                  </Link>
+                )}
+              </p>
+            </div>
             <button
               type="button"
               disabled={toggle.isPending}
@@ -350,6 +424,15 @@ function AutomationsPanel({ orgId }: { orgId: number }) {
               title={a.status === "ACTIVE" ? "Пауза" : "Возобновить"}
             >
               {a.status === "ACTIVE" ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </button>
+            <button
+              type="button"
+              disabled={hide.isPending}
+              onClick={() => hide.mutate(a.id)}
+              className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+              title="Скрыть"
+            >
+              <X className="h-3 w-3" />
             </button>
           </li>
         ))}
@@ -548,12 +631,21 @@ function ChatWindow({
                 msg={msg}
                 orgId={orgId}
                 proposals={localProposals}
-                onNewMessages={(newMsgs) =>
+                onNewMessages={(newMsgs, updatedProposal) => {
                   setLocalMsgs((prev) => {
                     const ids = new Set(prev.map((m) => m.id));
                     return [...prev, ...newMsgs.filter((m) => !ids.has(m.id))];
-                  })
-                }
+                  });
+                  if (updatedProposal) {
+                    setLocalProposals((prev) => {
+                      const exists = prev.find((p) => p.id === updatedProposal.id);
+                      if (exists) {
+                        return prev.map((p) => (p.id === updatedProposal.id ? updatedProposal : p));
+                      }
+                      return [...prev, updatedProposal];
+                    });
+                  }
+                }}
               />
             ))}
             {send.isPending && (

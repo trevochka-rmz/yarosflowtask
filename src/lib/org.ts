@@ -247,6 +247,15 @@ export const orgApi = {
       method: "POST",
       body: {},
     }),
+  changeProposalBot: (
+    orgId: number,
+    proposalId: number,
+    body: { botCode?: string; botId?: number },
+  ) =>
+    apiFetch<ChangeBotResponse>(`/organizations/${orgId}/proposals/${proposalId}/change-bot`, {
+      method: "POST",
+      body,
+    }),
   rejectProposal: (orgId: number, proposalId: number) =>
     apiFetch<{ success: boolean }>(`/organizations/${orgId}/proposals/${proposalId}/reject`, {
       method: "POST",
@@ -299,6 +308,12 @@ export interface TaskPreview {
   deadline?: string | null;
 }
 
+export interface BotAlternative {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface ChatProposalParsed {
   action?: string;
   source?: string;
@@ -308,6 +323,7 @@ export interface ChatProposalParsed {
   output_mode?: string;
   ai_action_id?: number;
   task_preview?: TaskPreview;
+  alternatives?: BotAlternative[];
 }
 
 export interface ChatProposal {
@@ -347,6 +363,11 @@ export interface AcceptProposalResponse {
   execution?: { kind: string; summary: string } | null;
   message: ChatMessage;
   proposal_id: number;
+}
+
+export interface ChangeBotResponse {
+  assistant_message: ChatMessage;
+  proposal: ChatProposal;
 }
 
 export type AutomationStatus = "ACTIVE" | "PAUSED" | "ARCHIVED";
