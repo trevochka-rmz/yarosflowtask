@@ -218,6 +218,24 @@ export const orgApi = {
     apiFetch<BitrixDealsResult>(
       `/organizations/${orgId}/integrations/${integrationId}/bitrix/deals/overdue`,
     ),
+
+  /* ---- Jira ---- */
+  jiraConnect: (
+    orgId: number,
+    body:
+      | { name?: string; baseUrl: string; token: string }
+      | { name?: string; baseUrl: string; email: string; apiToken: string },
+  ) =>
+    apiFetch<{ integration: JiraIntegration; test: JiraTestResult }>(
+      `/organizations/${orgId}/integrations/jira/connect`,
+      { method: "POST", body },
+    ),
+  jiraTest: (orgId: number, integrationId: number) =>
+    apiFetch<JiraTestResult>(`/organizations/${orgId}/integrations/${integrationId}/jira/test`, {
+      method: "POST",
+      body: {},
+    }),
+
   bitrixCall: (
     orgId: number,
     integrationId: number,
@@ -521,6 +539,36 @@ export interface BitrixDealsResult {
   ok: boolean;
   deals: BitrixDeal[];
   error?: string;
+}
+
+/* ----------------------------- Jira types ----------------------------- */
+
+export interface JiraIntegration {
+  id: number;
+  provider: string;
+  name: string;
+  status: "ACTIVE" | "ERROR" | "DISABLED";
+  credentials: {
+    auth_type: string; // bearer / cloud / basic
+    base_url: string;
+    has_token?: boolean;
+    email?: string | null;
+  };
+}
+
+export interface JiraTestUser {
+  name?: string;
+  displayName?: string;
+  emailAddress?: string;
+  [key: string]: unknown;
+}
+
+export interface JiraTestResult {
+  ok: boolean;
+  method: string;
+  status?: number | string;
+  error?: string;
+  user?: JiraTestUser;
 }
 
 export interface OrgDashboard {
