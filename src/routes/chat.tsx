@@ -29,6 +29,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { formatDate } from "@/lib/api";
 import { platform } from "@/lib/platform";
 import {
@@ -36,6 +38,7 @@ import {
   useCurrentOrg,
   type ChatMessage,
   type ChatProposal,
+  type ExecutionDisplay,
   type OrgChat,
 } from "@/lib/org";
 import { cn } from "@/lib/utils";
@@ -126,6 +129,115 @@ function TaskPreviewCard({ proposal }: { proposal: ChatProposal }) {
   );
 }
 
+/* ── Визуализация execution.display (таблица + сводка + график) ── */
+function ExecutionDisplayCard({ display }: { display: ExecutionDisplay }) {
+  if (!display) return null;
+  const { mode_label, mode, table, summary, chart } = display;
+
+  const rows = table?.rows ?? [];
+  const columns = table?.columns ?? [];
+  const hasTable = rows.length > 0 && columns.length > 0;
+  const hasSummary =
+    summary && (summary.count !== undefined || summary.opportunity_sum !== undefined);
+  const hasChart = !!chart && chart.labels?.length && chart.datasets?.length;
+
+  // Ограничим количество строк на карточке, остальное — в прокручиваемой области.
+  const maxVisibleRows = 8;
+  const visibleRows = rows.slice(0, maxVisibleRows);
+  const hasMoreRows = rows.length > maxVisibleRows;
+
+  return (
+    <div className="mt-3 space-y-3 rounded-2xl border border-border bg-background/90 p-3 text-xs text-foreground">
+      {(mode_label || mode) && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {mode_label || mode}
+          </p>
+          {summary?.count !== undefined && (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+              Записей: {summary.count}
+            </span>
+          )}
+        </div>
+      )}
+
+      {hasSummary && (
+        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+          {summary.count !== undefined && (
+            <span className="rounded-full bg-muted px-2 py-0.5">Всего: {summary.count}</span>
+          )}
+          {summary.opportunity_sum !== undefined && (
+            <span className="rounded-full bg-muted px-2 py-0.5">
+              Сумма: {summary.opportunity_sum.toLocaleString("ru-RU")} ₽
+            </span>
+          )}
+        </div>
+      )}
+
+      {hasTable && (
+        <div className="overflow-hidden rounded-xl border border-border">
+          <div className="max-h-64 overflow-auto">
+            <table className="min-w-full text-xs">
+              <thead className="sticky top-0 bg-muted/80 text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  {columns.map((col) => (
+                    <th key={col.key} className="px-3 py-2 text-left font-medium">
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {visibleRows.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-accent/40">
+                    {columns.map((col) => (
+                      <td key={col.key} className="truncate px-3 py-1.5 align-top text-[11px]">
+                        {String((row as Record<string, unknown>)[col.key] ?? "—")}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {hasMoreRows && (
+            <div className="border-t border-border bg-muted/60 px-3 py-1.5 text-[11px] text-muted-foreground">
+              Показаны первые {maxVisibleRows} из {rows.length} записей
+            </div>
+          )}
+        </div>
+      )}
+
+      {hasChart && chart && (
+        <div className="mt-1 rounded-xl border border-border bg-card/60 p-2">
+          {chart.title && (
+            <p className="mb-1 text-[11px] font-semibold text-muted-foreground">{chart.title}</p>
+          )}
+          <ChartContainer
+            config={{
+              value: { label: chart.datasets[0]?.label ?? "" },
+            }}
+            className="h-40 w-full"
+          >
+            <BarChart
+              data={chart.labels.map((label, i) => ({
+                label,
+                value: chart.datasets[0]?.data?.[i] ?? 0,
+              }))}
+            >
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={4} />
+              <YAxis tickLine={false} axisLine={false} tickMargin={4} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="value" fill="var(--color-value, #4f46e5)" radius={4} />
+            </BarChart>
+          </ChartContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Кнопки proposal ── */
 function ProposalCard({
   orgId,
@@ -162,7 +274,13 @@ function ProposalCard({
     mutationFn: () => orgApi.acceptProposal(orgId, proposal.id),
     onSuccess: (res) => {
       void qc.invalidateQueries({ queryKey: ["automations", orgId] });
-      onDone([res.message]);
+      const msg: ChatMessage = res.execution?.display
+        ? {
+            ...res.message,
+            meta: { ...res.message.meta, execution_display: res.execution.display },
+          }
+        : res.message;
+      onDone([msg]);
       if (res.task) {
         const taskId = res.task.id;
         toast.success(`Задача #${taskId} создана`, {
@@ -406,6 +524,7 @@ function MessageBubble({
   const proposalId = msg.meta?.proposal_id;
   const actions: string[] = msg.meta?.actions ?? [];
   const proposal = proposalId ? proposals.find((p) => p.id === proposalId) : null;
+  const execDisplay = msg.meta?.execution_display;
 
   return (
     <div className={cn("flex flex-col gap-0.5", align)}>
@@ -422,6 +541,7 @@ function MessageBubble({
         )}
       >
         <p className="whitespace-pre-wrap leading-relaxed">{msg.body}</p>
+        {execDisplay && <ExecutionDisplayCard display={execDisplay} />}
         {proposal && <TaskPreviewCard proposal={proposal} />}
         {proposal && actions.length > 0 && (
           <ProposalCard

@@ -282,6 +282,45 @@ export interface OrgChat {
   created_at: string;
 }
 
+export interface ExecutionDisplayTableColumn {
+  key: string;
+  label: string;
+}
+
+export interface ExecutionDisplayTable {
+  columns: ExecutionDisplayTableColumn[];
+  rows: Record<string, unknown>[];
+}
+
+export interface ExecutionDisplayChartDataset {
+  label: string;
+  data: number[];
+}
+
+export interface ExecutionDisplayChart {
+  type: string; // bar, line, ...
+  title?: string;
+  labels: string[];
+  datasets: ExecutionDisplayChartDataset[];
+}
+
+export interface ExecutionDisplaySummary {
+  count?: number;
+  opportunity_sum?: number;
+  by_stage?: Record<string, number>;
+  [key: string]: unknown;
+}
+
+export interface ExecutionDisplay {
+  type?: string; // sales_deals и т.п.
+  mode?: string;
+  mode_label?: string;
+  intent?: Record<string, unknown>;
+  table?: ExecutionDisplayTable | null;
+  summary?: ExecutionDisplaySummary | null;
+  chart?: ExecutionDisplayChart | null;
+}
+
 export interface ChatMessage {
   id: number;
   chat_id: number;
@@ -295,6 +334,8 @@ export interface ChatMessage {
     task_id?: number;
     bot_code?: string;
     ai_action_id?: number;
+    execution_kind?: string;
+    execution_display?: ExecutionDisplay;
   };
   author_name: string | null;
   created_at: string;
@@ -357,10 +398,20 @@ export interface AcceptedTask {
   assignees: unknown[];
 }
 
+export interface AcceptProposalExecution {
+  kind: string;
+  summary: string;
+  display?: ExecutionDisplay | null;
+  mode?: string;
+  limit?: number;
+  ok?: boolean;
+  stats?: Record<string, unknown> | null;
+}
+
 export interface AcceptProposalResponse {
   task: AcceptedTask | null;
   automation: Automation | null;
-  execution?: { kind: string; summary: string } | null;
+  execution?: AcceptProposalExecution | null;
   message: ChatMessage;
   proposal_id: number;
 }
