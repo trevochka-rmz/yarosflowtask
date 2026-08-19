@@ -13,6 +13,7 @@ import {
   Plus,
   Shield,
   Building,
+  Terminal,
   KeyRound,
   UserCog,
   Plug,
@@ -429,13 +430,34 @@ function AppSidebar({ locked }: { locked?: boolean }) {
             Навигация недоступна — вас ещё не добавили в организацию.
           </div>
         ) : (
-          GROUPS.filter((g) => (g.adminOnly ? isPlatformAdmin : true))
-            .map((group) => ({
-              ...group,
-              items: group.items.filter((i) => (i.perm ? can(i.perm) : true)),
-            }))
-            .filter((g) => g.items.length > 0)
-            .map((group) => (
+          (() => {
+            const baseGroups = GROUPS.filter((g) => (g.adminOnly ? isPlatformAdmin : true))
+              .map((group) => ({
+                ...group,
+                items: group.items.filter((i) => (i.perm ? can(i.perm) : true)),
+              }))
+              .filter((g) => g.items.length > 0);
+
+            const groups =
+              org?.id === 1
+                ? baseGroups.map((group) => {
+                    if (group.label !== "Управление") return group;
+                    const items = [...group.items];
+                    const insertAfter = items.findIndex((i) => i.url === "/tasks");
+                    const acquiringItem: NavItem = {
+                      title: "Эквайринг",
+                      url: "/acquiring",
+                      icon: Terminal,
+                    };
+                    if (!items.some((i) => i.url === acquiringItem.url)) {
+                      if (insertAfter >= 0) items.splice(insertAfter + 1, 0, acquiringItem);
+                      else items.push(acquiringItem);
+                    }
+                    return { ...group, items };
+                  })
+                : baseGroups;
+
+            return groups.map((group) => (
               <SidebarGroup key={group.label}>
                 <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -453,7 +475,8 @@ function AppSidebar({ locked }: { locked?: boolean }) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
-            ))
+            ));
+          })()
         )}
       </SidebarContent>
     </Sidebar>

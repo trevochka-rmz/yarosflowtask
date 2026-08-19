@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AcquiringRouteImport } from './routes/acquiring'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as ChatRouteImport } from './routes/chat'
@@ -20,6 +21,7 @@ import { Route as OrgRouteImport } from './routes/org'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as TaskflowRouteImport } from './routes/taskflow'
 import { Route as TeamRouteImport } from './routes/team'
+import { Route as AcquiringTerminalIdRouteImport } from './routes/acquiring.$terminalId'
 import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as BotsIndexRouteImport } from './routes/bots.index'
 import { Route as BotsBotIdRouteImport } from './routes/bots.$botId'
@@ -34,6 +36,11 @@ import { Route as IntegrationsProviderIntegrationIdRouteImport } from './routes/
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcquiringRoute = AcquiringRouteImport.update({
+  id: '/acquiring',
+  path: '/acquiring',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -85,6 +92,11 @@ const TeamRoute = TeamRouteImport.update({
   id: '/team',
   path: '/team',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AcquiringTerminalIdRoute = AcquiringTerminalIdRouteImport.update({
+  id: '/$terminalId',
+  path: '/$terminalId',
+  getParentRoute: () => AcquiringRoute,
 } as any)
 const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
   id: '/api/transcribe',
@@ -140,6 +152,7 @@ const IntegrationsProviderIntegrationIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/acquiring': typeof AcquiringRouteWithChildren
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
@@ -150,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
+  '/acquiring/$terminalId': typeof AcquiringTerminalIdRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
@@ -163,6 +177,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/acquiring': typeof AcquiringRouteWithChildren
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
@@ -173,6 +188,7 @@ export interface FileRoutesByTo {
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
+  '/acquiring/$terminalId': typeof AcquiringTerminalIdRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
@@ -187,6 +203,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/acquiring': typeof AcquiringRouteWithChildren
   '/admin': typeof AdminRoute
   '/audit': typeof AuditRoute
   '/chat': typeof ChatRoute
@@ -197,6 +214,7 @@ export interface FileRoutesById {
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
+  '/acquiring/$terminalId': typeof AcquiringTerminalIdRoute
   '/api/transcribe': typeof ApiTranscribeRoute
   '/bots/$botId': typeof BotsBotIdRoute
   '/bots/new': typeof BotsNewRoute
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/acquiring'
     | '/admin'
     | '/audit'
     | '/chat'
@@ -222,6 +241,7 @@ export interface FileRouteTypes {
     | '/roles'
     | '/taskflow'
     | '/team'
+    | '/acquiring/$terminalId'
     | '/api/transcribe'
     | '/bots/$botId'
     | '/bots/new'
@@ -235,6 +255,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/acquiring'
     | '/admin'
     | '/audit'
     | '/chat'
@@ -245,6 +266,7 @@ export interface FileRouteTypes {
     | '/roles'
     | '/taskflow'
     | '/team'
+    | '/acquiring/$terminalId'
     | '/api/transcribe'
     | '/bots/$botId'
     | '/bots/new'
@@ -258,6 +280,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/acquiring'
     | '/admin'
     | '/audit'
     | '/chat'
@@ -268,6 +291,7 @@ export interface FileRouteTypes {
     | '/roles'
     | '/taskflow'
     | '/team'
+    | '/acquiring/$terminalId'
     | '/api/transcribe'
     | '/bots/$botId'
     | '/bots/new'
@@ -282,6 +306,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AcquiringRoute: typeof AcquiringRouteWithChildren
   AdminRoute: typeof AdminRoute
   AuditRoute: typeof AuditRoute
   ChatRoute: typeof ChatRoute
@@ -310,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acquiring': {
+      id: '/acquiring'
+      path: '/acquiring'
+      fullPath: '/acquiring'
+      preLoaderRoute: typeof AcquiringRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -381,6 +413,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/team'
       preLoaderRoute: typeof TeamRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/acquiring/$terminalId': {
+      id: '/acquiring/$terminalId'
+      path: '/$terminalId'
+      fullPath: '/acquiring/$terminalId'
+      preLoaderRoute: typeof AcquiringTerminalIdRouteImport
+      parentRoute: typeof AcquiringRoute
     }
     '/api/transcribe': {
       id: '/api/transcribe'
@@ -455,6 +494,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AcquiringRouteChildren {
+  AcquiringTerminalIdRoute: typeof AcquiringTerminalIdRoute
+}
+
+const AcquiringRouteChildren: AcquiringRouteChildren = {
+  AcquiringTerminalIdRoute: AcquiringTerminalIdRoute,
+}
+
+const AcquiringRouteWithChildren = AcquiringRoute._addFileChildren(
+  AcquiringRouteChildren,
+)
+
 interface IntegrationsProviderRouteChildren {
   IntegrationsProviderIntegrationIdRoute: typeof IntegrationsProviderIntegrationIdRoute
 }
@@ -469,6 +520,7 @@ const IntegrationsProviderRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AcquiringRoute: AcquiringRouteWithChildren,
   AdminRoute: AdminRoute,
   AuditRoute: AuditRoute,
   ChatRoute: ChatRoute,
