@@ -202,10 +202,10 @@ function TaskDetail() {
                                 {STATUS_LABELS[task.status]}
                               </div>
                             )}
-                            {task.external_payload && (task.external_payload as any).assignee && (
+                            {task.external_assignee_name && (
                               <div>
-                                Исполнитель в Jira:{" "}
-                                <span>{(task.external_payload as any).assignee}</span>
+                                Исполнитель (Jira):" "}
+                                <span>{task.external_assignee_name}</span>
                               </div>
                             )}
                             {task.external_url && (
