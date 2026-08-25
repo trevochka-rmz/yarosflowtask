@@ -67,6 +67,18 @@ export interface Task {
   external_url?: string | null;
   /** Статус во внешней системе (например, In Progress в Jira). */
   external_status?: string | null;
+  /** Отображаемое имя исполнителя во внешней системе (Jira). */
+  external_assignee_name?: string | null;
+  /** Внутренний ключ/ID исполнителя во внешней системе (служебное поле). */
+  external_assignee_key?: string | null;
+  /** Отображаемое имя автора (reporter) во внешней системе. */
+  external_reporter_name?: string | null;
+  /** Ключ проекта во внешней системе (например, YPS). */
+  external_project_key?: string | null;
+  /** Название проекта во внешней системе. */
+  external_project_name?: string | null;
+  /** Тип задачи во внешней системе (Задача / Ошибка и т.п.). */
+  external_issuetype?: string | null;
   /** ID интеграции, через которую синхронизирована задача. */
   integration_id?: number | null;
   /** Время последней успешной синхронизации с внешней системой. */
