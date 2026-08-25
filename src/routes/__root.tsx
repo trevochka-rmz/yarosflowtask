@@ -10,7 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import ogImage from "@/assets/logo_in.png";
+import logo from "@/assets/yaros-logo.png.asset.json";
 import { Toaster } from "@/components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -107,11 +107,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         property: "og:image",
-        content: ogImage,
+        content: logo.url,
       },
       {
         name: "twitter:image",
-        content: ogImage,
+        content: logo.url,
       },
     ],
     links: [
@@ -122,11 +122,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "icon",
         type: "image/png",
-        href: ogImage,
+        href: logo.url,
       },
       {
         rel: "apple-touch-icon",
-        href: ogImage,
+        href: logo.url,
       },
     ],
     scripts: [

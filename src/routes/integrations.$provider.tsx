@@ -39,6 +39,7 @@ import {
   integrationApi,
   INTEGRATION_PROVIDER_LABELS,
   type IntegrationProvider,
+  type Integration,
 } from "@/lib/platform";
 import { useCurrentTenant } from "@/lib/platform";
 import { orgApi, useCurrentOrg, type BitrixIntegration, type BitrixDeal } from "@/lib/org";
@@ -324,6 +325,101 @@ function BitrixIntegrationItem({
   );
 }
 
+/* ── Jira: Карточка подключения ── */
+function JiraIntegrationItem({
+  orgId,
+  item,
+  canDelete,
+}: {
+  orgId: number;
+  item: Integration;
+  canDelete: boolean;
+}) {
+  const qc = useQueryClient();
+  const test = useMutation({
+    mutationFn: () => orgApi.jiraTest(orgId, item.id),
+    onSuccess: (res) => {
+      if (res.ok) {
+        const who = res.user?.displayName || res.user?.name;
+        toast.success(
+          who ? `Соединение Jira в порядке (пользователь: ${who})` : "Соединение Jira в порядке",
+        );
+      } else {
+        toast.error(res.error ?? "Тест не прошёл. Проверьте URL и токен.");
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const del = useMutation({
+    mutationFn: () => integrationApi.delete(orgId, item.id),
+    onSuccess: () => {
+      toast.success("Интеграция удалена");
+      void qc.invalidateQueries({ queryKey: ["integrations", orgId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0052CC]/10 text-[#0052CC]">
+          <Plug className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold text-foreground">{item.name}</p>
+          <p className="truncate text-xs text-muted-foreground">Jira</p>
+        </div>
+        <StatusBadge status={item.status} />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={test.isPending}
+            onClick={() => test.mutate()}
+          >
+            {test.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}{" "}
+            Проверить
+          </Button>
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={del.isPending}>
+                  {del.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Удалить интеграцию?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Токены и настройки будут стёрты. Отменить это действие нельзя.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => del.mutate()}
+                  >
+                    Удалить
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Bitrix: Форма подключения ── */
 type AuthMode = "webhook" | "oauth";
 function BitrixConnectForm({ orgId, onSuccess }: { orgId: number; onSuccess: () => void }) {
@@ -479,6 +575,7 @@ function IntegrationProviderPage() {
   const { provider: providerSlug } = Route.useParams();
   const provider = slugToProvider(providerSlug);
   const isBitrix = provider === "BITRIX24";
+  const isJira = provider === "JIRA";
   const { tenant } = useCurrentTenant();
   const { org, can } = useCurrentOrg();
   const orgId = tenant?.id ?? org?.id;
@@ -609,6 +706,100 @@ function IntegrationProviderPage() {
 
   /* ── Другие провайдеры ── */
   const items = (generalQuery.data ?? []).filter((i) => i.provider === provider);
+
+  /* ── Jira ── */
+  if (isJira) {
+    if (!canRead)
+      return (
+        <AppLayout>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-deep">Jira</h1>
+          <p className="mt-4 flex items-start gap-2 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0" /> Нужно право <code>integration.read</code>.
+          </p>
+        </AppLayout>
+      );
+
+    const jiraItems = items;
+
+    return (
+      <AppLayout>
+        <div className="flex flex-wrap items-center gap-4">
+          <ProviderIcon provider={provider} className="h-14 w-14 shrink-0 text-base" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
+              {label}
+            </h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {PROVIDER_DESCRIPTIONS[provider] ?? "Интеграция с внешней системой."}
+            </p>
+          </div>
+          {canCreate && (
+            <Button className="ml-auto shrink-0" onClick={() => setWizardOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" /> Подключить
+            </Button>
+          )}
+        </div>
+        <div className="mt-6">
+          {!orgId ? (
+            <p className="text-sm text-muted-foreground">Выберите организацию.</p>
+          ) : generalQuery.isPending ? (
+            <div className="space-y-3">
+              {[0, 1].map((i) => (
+                <div key={i} className="h-20 animate-pulse rounded-2xl bg-muted" />
+              ))}
+            </div>
+          ) : generalQuery.isError ? (
+            <p className="text-sm text-destructive">{(generalQuery.error as Error).message}</p>
+          ) : jiraItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
+              <ProviderIcon provider={provider} className="mx-auto h-16 w-16 opacity-40" />
+              <p className="mt-4 text-base font-medium">Нет активных подключений {label}</p>
+              {canCreate && (
+                <Button className="mt-5" onClick={() => setWizardOpen(true)}>
+                  <Plus className="mr-1.5 h-4 w-4" /> Подключить {label}
+                </Button>
+              )}
+            </div>
+          ) : (
+            orgId && (
+              <div className="space-y-3">
+                {jiraItems.map((integration) => (
+                  <JiraIntegrationItem
+                    key={integration.id}
+                    orgId={orgId}
+                    item={integration}
+                    canDelete={canDelete}
+                  />
+                ))}
+              </div>
+            )
+          )}
+        </div>
+        <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Подключить {label}</DialogTitle>
+            </DialogHeader>
+            {orgId && (
+              <IntegrationWizard
+                orgId={orgId}
+                defaultProvider={provider}
+                onSuccess={(id) => {
+                  setWizardOpen(false);
+                  void navigate({
+                    to: "/integrations/$provider/$integrationId",
+                    params: { provider: providerSlug, integrationId: String(id) },
+                  });
+                }}
+                onCancel={() => setWizardOpen(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="flex flex-wrap items-center gap-4">
