@@ -235,6 +235,15 @@ export const orgApi = {
       method: "POST",
       body: {},
     }),
+  /**
+   * Запустить синхронизацию задач с Jira для организации.
+   * maxResults и jql опциональны; если не заданы, backend использует значения по умолчанию.
+   */
+  tasksSyncJira: (orgId: number, body: { maxResults?: number; jql?: string }) =>
+    apiFetch<{ success?: boolean; synced?: number }>(`/organizations/${orgId}/tasks/sync-jira`, {
+      method: "POST",
+      body,
+    }),
 
   bitrixCall: (
     orgId: number,

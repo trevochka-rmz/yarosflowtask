@@ -55,6 +55,24 @@ export interface Task {
   updated_at: string;
   assignees?: Assignee[];
   assignee_count?: number;
+  /**
+   * Источник задачи:
+   * - internal — создана внутри платформы
+   * - jira — подтянута из Jira (или связана с Jira по external_key)
+   */
+  source?: string | null;
+  /** Ключ задачи во внешней системе, например DEV-15 для Jira. */
+  external_key?: string | null;
+  /** URL на карточку задачи во внешней системе (Jira и т.п.). */
+  external_url?: string | null;
+  /** Статус во внешней системе (например, In Progress в Jira). */
+  external_status?: string | null;
+  /** ID интеграции, через которую синхронизирована задача. */
+  integration_id?: number | null;
+  /** Время последней успешной синхронизации с внешней системой. */
+  last_synced_at?: string | null;
+  /** Сырая нагрузка из внешней системы (например, весь объект Jira issue). */
+  external_payload?: Record<string, unknown> | null;
 }
 
 export interface Comment {

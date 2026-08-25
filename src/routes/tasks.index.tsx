@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Loader2, RefreshCw, Search } from "lucide-react";
+import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
 import { DeleteTaskButton } from "@/components/DeleteTaskButton";
 import { ExportMenu } from "@/components/ExportMenu";
+import { Input } from "@/components/ui/input";
 
 import {
   api,
@@ -15,7 +18,8 @@ import {
   type TaskStatus,
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { useCurrentTenant } from "@/lib/platform";
+import { integrationApi, useCurrentTenant } from "@/lib/platform";
+import { orgApi } from "@/lib/org";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks/")({
@@ -34,30 +38,62 @@ export const Route = createFileRoute("/tasks/")({
 });
 
 type Scope = "all" | "author" | "assigned";
-type Assignment = "any" | "with" | "without";
+type Assignment = "any" | "without";
+type SourceFilter = "all" | "internal" | "jira";
 
 function TasksPage() {
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
+  const qc = useQueryClient();
   const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<TaskStatus | "">("");
   const [assignment, setAssignment] = useState<Assignment>("any");
+  const [source, setSource] = useState<SourceFilter>("all");
+  const [search, setSearch] = useState("");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
 
+  const integrations = useQuery({
+    queryKey: ["integrations", organizationId],
+    enabled: !!organizationId,
+    queryFn: () => integrationApi.list(organizationId!),
+  });
+
+  const hasActiveJira = (integrations.data ?? []).some(
+    (i) => i.provider === "JIRA" && i.status === "ACTIVE",
+  );
+
   const query = useQuery({
-    queryKey: ["tasks", scope, status, assignment, userId, organizationId],
+    queryKey: ["tasks", scope, status, assignment, source, search, userId, organizationId],
     enabled: !!organizationId,
     queryFn: async (): Promise<Task[]> => {
       if (!organizationId) return [];
       const params = new URLSearchParams();
       if (status) params.set("status", status);
       if (assignment === "without") params.set("unassigned", "true");
+      if (source !== "all") params.set("source", source);
+      if (search.trim()) params.set("search", search.trim());
       const qs = params.toString() ? `?${params.toString()}` : "";
       if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
       if (scope === "assigned") return api.tasksMine(organizationId, qs);
       return api.tasks(organizationId, qs);
     },
+  });
+
+  const syncJira = useMutation({
+    mutationFn: (payload: { maxResults?: number; jql?: string }) => {
+      if (!organizationId) throw new Error("Организация не выбрана");
+      return orgApi.tasksSyncJira(organizationId, payload);
+    },
+    onSuccess: (res) => {
+      toast.success(
+        res?.synced && res.synced > 0
+          ? `Синхронизировано задач из Jira: ${res.synced}`
+          : "Синхронизация с Jira выполнена",
+      );
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const tasks = query.data ?? [];
@@ -70,35 +106,73 @@ function TasksPage() {
 
   const assignments: { key: Assignment; label: string }[] = [
     { key: "any", label: "Все" },
-    { key: "with", label: "Назначенные" },
     { key: "without", label: "Без исполнителя" },
+  ];
+
+  const sources: { key: SourceFilter; label: string }[] = [
+    { key: "all", label: "Все" },
+    { key: "internal", label: "Только наши" },
+    ...(hasActiveJira ? [{ key: "jira", label: "Только Jira" as const }] : []),
   ];
 
   return (
     <AppLayout>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
-          Задачи
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Отслеживайте прогресс от постановки ТЗ до выполнения.
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
+            Задачи
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Отслеживайте прогресс от постановки ТЗ до выполнения.
+          </p>
+        </div>
+        {hasActiveJira && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+            disabled={syncJira.isPending}
+            onClick={() =>
+              syncJira.mutate({
+                maxResults: 50,
+                jql: "statusCategory != Done ORDER BY updated DESC",
+              })
+            }
+          >
+            {syncJira.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            Синхронизировать Jira
+          </button>
+        )}
       </div>
 
-      {/* Фильтры — мобильные: столбцом, десктоп: одна строка */}
+      {/* Фильтры */}
       <div className="mt-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
-          className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:w-44"
-        >
-          <option value="">Все статусы</option>
-          {Object.entries(STATUS_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div className="flex w-full items-center gap-2 md:max-w-sm">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск по названию, описанию или ключу Jira…"
+              className="pl-8"
+            />
+          </div>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
+            className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm"
+          >
+            <option value="">Все статусы</option>
+            {Object.entries(STATUS_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
           <div className="inline-flex rounded-lg border border-border bg-card p-1">
@@ -109,6 +183,25 @@ function TasksPage() {
                 className={cn(
                   "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                   scope === s.key
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
+          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+            {sources.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setSource(s.key)}
+                className={cn(
+                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  source === s.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
                 )}
@@ -168,13 +261,21 @@ function TasksPage() {
                   className="rounded-2xl border border-border bg-card p-4 shadow-soft"
                 >
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                    <Link
-                      to="/tasks/$taskId"
-                      params={{ taskId: String(task.id) }}
-                      className="min-w-0 font-medium text-foreground"
-                    >
-                      {task.title}
-                    </Link>
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <SourceBadge
+                          source={task.source ?? undefined}
+                          externalKey={task.external_key ?? undefined}
+                        />
+                      </div>
+                      <Link
+                        to="/tasks/$taskId"
+                        params={{ taskId: String(task.id) }}
+                        className="block min-w-0 font-medium text-foreground"
+                      >
+                        {task.title}
+                      </Link>
+                    </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <ExportMenu taskId={task.id} />
                       <DeleteTaskButton
@@ -185,14 +286,32 @@ function TasksPage() {
                     </div>
                   </div>
                   <Link to="/tasks/$taskId" params={{ taskId: String(task.id) }} className="block">
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      {task.source === "jira" && task.external_status ? (
+                        <span className="font-medium">
+                          {task.external_status} <span className="text-muted-foreground">→</span>
+                        </span>
+                      ) : null}
                       <StatusBadge status={task.status} />
                       <PriorityBadge priority={task.priority} />
                       <AssignmentBadge count={assigneeCount(task)} />
                     </div>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      #{task.id} · {task.category ?? "Без категории"} ·{" "}
-                      {formatDate(task.created_at)}
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>
+                        #{task.id} · {task.category ?? "Без категории"} ·{" "}
+                        {formatDate(task.created_at)}
+                      </span>
+                      {task.source === "jira" && task.external_url ? (
+                        <a
+                          href={task.external_url}
+                          onClick={(e) => e.stopPropagation()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          🔗 Открыть в Jira
+                        </a>
+                      ) : null}
                     </div>
                   </Link>
                 </li>
@@ -206,6 +325,7 @@ function TasksPage() {
                   <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-medium">#</th>
+                      <th className="px-4 py-3 font-medium">Источник</th>
                       <th className="px-4 py-3 font-medium">Название</th>
                       <th className="px-4 py-3 font-medium">Статус</th>
                       <th className="px-4 py-3 font-medium">Исполнители</th>
@@ -220,6 +340,12 @@ function TasksPage() {
                       <tr key={task.id} className="transition-colors hover:bg-accent/40">
                         <td className="px-4 py-3 text-muted-foreground">{task.id}</td>
                         <td className="px-4 py-3">
+                          <SourceBadge
+                            source={task.source ?? undefined}
+                            externalKey={task.external_key ?? undefined}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
                           <Link
                             to="/tasks/$taskId"
                             params={{ taskId: String(task.id) }}
@@ -227,6 +353,13 @@ function TasksPage() {
                           >
                             {task.title}
                           </Link>
+                          {task.source === "jira" && task.external_status ? (
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {task.external_status}{" "}
+                              <span className="text-muted-foreground">→</span>{" "}
+                              {STATUS_LABELS[task.status]}
+                            </div>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3">
                           <StatusBadge status={task.status} />
@@ -242,7 +375,18 @@ function TasksPage() {
                           {formatDate(task.created_at)}
                         </td>
                         <td className="px-2 py-2">
-                          <div className="flex items-center justify-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1">
+                            {task.source === "jira" && task.external_url ? (
+                              <a
+                                href={task.external_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                🔗 Jira
+                              </a>
+                            ) : null}
                             <ExportMenu taskId={task.id} />
                             <DeleteTaskButton
                               taskId={task.id}

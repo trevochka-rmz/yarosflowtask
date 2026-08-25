@@ -60,3 +60,20 @@ export function AssignmentBadge({ count }: { count: number }) {
     </Pill>
   );
 }
+
+export function SourceBadge({
+  source,
+  externalKey,
+}: {
+  source?: string | null;
+  externalKey?: string | null;
+}) {
+  if (source === "jira") {
+    return (
+      <Pill className="bg-[#0052CC]/10 text-[#0052CC]">
+        Jira{externalKey ? ` ${externalKey}` : ""}
+      </Pill>
+    );
+  }
+  return <Pill className="bg-muted text-muted-foreground">Внутренняя</Pill>;
+}

@@ -5,7 +5,7 @@ import { ArrowLeft, Loader2, Pencil, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { TaskAttachments } from "@/components/Attachments";
-import { AssignmentBadge, PriorityBadge, StatusBadge } from "@/components/Badges";
+import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
 import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TaskEditForm } from "@/components/TaskEditForm";
@@ -146,7 +146,15 @@ function TaskDetail() {
             <div className="bg-brand-gradient px-4 py-4 text-primary-foreground sm:px-6 sm:py-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-xs opacity-80">Задача #{task.id}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs opacity-80">
+                    <span>Задача #{task.id}</span>
+                    {task.source && (
+                      <SourceBadge
+                        source={task.source}
+                        externalKey={task.external_key ?? undefined}
+                      />
+                    )}
+                  </div>
                   <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">
                     {task.title}
                   </h1>
@@ -184,6 +192,36 @@ function TaskDetail() {
                           <PriorityBadge priority={task.priority} />
                           <AssignmentBadge count={task.assignees?.length ?? 0} />
                         </div>
+                        {task.source === "jira" && (task.external_status || task.external_url) && (
+                          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                            {task.external_status && (
+                              <div>
+                                Статус в Jira:{" "}
+                                <span className="font-medium">{task.external_status}</span>
+                                <span className="mx-1">→</span>
+                                {STATUS_LABELS[task.status]}
+                              </div>
+                            )}
+                            {task.external_payload && (task.external_payload as any).assignee && (
+                              <div>
+                                Исполнитель в Jira:{" "}
+                                <span>{(task.external_payload as any).assignee}</span>
+                              </div>
+                            )}
+                            {task.external_url && (
+                              <div>
+                                <a
+                                  href={task.external_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                >
+                                  🔗 Открыть в Jira
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                     <tr className="max-sm:block">
