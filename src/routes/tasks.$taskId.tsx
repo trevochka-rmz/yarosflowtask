@@ -204,8 +204,7 @@ function TaskDetail() {
                             )}
                             {task.external_assignee_name && (
                               <div>
-                                Исполнитель (Jira):" "}
-                                <span>{task.external_assignee_name}</span>
+                                Исполнитель (Jira): <span>{task.external_assignee_name}</span>
                               </div>
                             )}
                             {task.external_url && (
