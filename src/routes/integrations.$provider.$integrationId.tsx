@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Save, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Plug, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   type IntegrationStatus,
 } from "@/lib/platform";
 import { useCurrentTenant } from "@/lib/platform";
+import { orgApi, type JiraTestResult } from "@/lib/org";
 import { formatDate } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,7 @@ function IntegrationDetailPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("settings");
+  const [jiraTest, setJiraTest] = useState<JiraTestResult | null>(null);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["integration", orgId, id],
@@ -83,6 +85,22 @@ function IntegrationDetailPage() {
       toast.success("Статус обновлён");
       void qc.invalidateQueries({ queryKey: ["integration", orgId, id] });
       void qc.invalidateQueries({ queryKey: ["integrations", orgId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const jiraTestMutation = useMutation({
+    mutationFn: () => orgApi.jiraTest(orgId!, id),
+    onSuccess: (res) => {
+      setJiraTest(res);
+      if (res.ok) {
+        const who = res.user?.displayName || res.user?.name;
+        toast.success(
+          who ? `Подключение Jira в порядке (пользователь: ${who})` : "Подключение Jira в порядке",
+        );
+      } else {
+        toast.error(res.error ?? "Тест не прошёл. Проверьте URL и токен.");
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -127,6 +145,7 @@ function IntegrationDetailPage() {
   const label = INTEGRATION_PROVIDER_LABELS[provider] ?? provider;
   const isActive = data.status === "ACTIVE";
   const isDisabled = data.status === "DISABLED";
+  const isJira = provider === "JIRA";
 
   return (
     <AppLayout>
@@ -154,8 +173,23 @@ function IntegrationDetailPage() {
           </p>
         </div>
 
-        {/* Переключатель статуса */}
+        {/* Переключатель статуса / тест */}
         <div className="flex items-center gap-2">
+          {isJira && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={jiraTestMutation.isPending}
+              onClick={() => jiraTestMutation.mutate()}
+            >
+              {jiraTestMutation.isPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Plug className="mr-1 h-4 w-4" />
+              )}
+              Проверить Jira
+            </Button>
+          )}
           {data.status === "ERROR" && (
             <Button
               variant="outline"
@@ -220,6 +254,37 @@ function IntegrationDetailPage() {
           )}
         </div>
       </div>
+
+      {isJira && jiraTest && (
+        <div
+          className={`mt-5 flex items-start gap-2 rounded-2xl px-3 py-2.5 text-sm ${
+            jiraTest.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+          }`}
+        >
+          <Plug className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            {jiraTest.ok ? (
+              <>
+                <div>Последний тест подключения Jira прошёл успешно.</div>
+                {jiraTest.user?.displayName && (
+                  <div className="text-xs opacity-80">
+                    Пользователь: {jiraTest.user.displayName}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="font-medium">
+                  Последний тест подключения Jira завершился с ошибкой.
+                </div>
+                <div className="text-xs">
+                  {jiraTest.error ?? "Проверьте URL и токен/учётные данные."}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Табы */}
       <div className="mt-6 border-b border-border">

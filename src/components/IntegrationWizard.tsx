@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import {
   INTEGRATION_PROVIDER_LABELS,
   type IntegrationProvider,
 } from "@/lib/platform";
+import { orgApi, type JiraTestResult } from "@/lib/org";
 import { ProviderIcon } from "@/components/IntegrationCard";
 
 const PROVIDERS: IntegrationProvider[] = ["BITRIX24", "ONE_C", "JIRA"];
@@ -21,7 +22,12 @@ const CRED_FIELDS: Record<IntegrationProvider, CredField[]> = {
   BITRIX24: [
     { key: "base_url", label: "URL портала", placeholder: "https://portal.bitrix24.ru" },
     { key: "access_token", label: "Access Token", secret: true, placeholder: "Токен доступа" },
-    { key: "refresh_token", label: "Refresh Token (опционально)", secret: true, placeholder: "Refresh токен" },
+    {
+      key: "refresh_token",
+      label: "Refresh Token (опционально)",
+      secret: true,
+      placeholder: "Refresh токен",
+    },
   ],
   ONE_C: [
     { key: "base_url", label: "URL сервера 1С", placeholder: "https://1c.company.ru/base" },
@@ -55,13 +61,15 @@ interface Props {
 
 export function IntegrationWizard({ orgId, defaultProvider, onSuccess, onCancel }: Props) {
   const qc = useQueryClient();
-  const [step, setStep] = useState<1 | 2 | 3>(defaultProvider ? 2 : 1);
+  const [step, setStep] = useState<1 | 2>(defaultProvider ? 2 : 1);
   const [provider, setProvider] = useState<IntegrationProvider>(defaultProvider ?? "BITRIX24");
   const [name, setName] = useState("");
   const [creds, setCreds] = useState<Record<string, string>>({});
   const [settings, setSettings] = useState<Record<string, string>>(
     DEFAULT_SETTINGS[defaultProvider ?? "BITRIX24"],
   );
+  const [jiraMode, setJiraMode] = useState<"server" | "cloud">("server");
+  const [jiraTest, setJiraTest] = useState<JiraTestResult | null>(null);
 
   const create = useMutation({
     mutationFn: () =>
@@ -72,14 +80,58 @@ export function IntegrationWizard({ orgId, defaultProvider, onSuccess, onCancel 
         credentials: Object.fromEntries(
           Object.entries(creds).filter(([, v]) => v.trim() !== ""),
         ) as Record<string, string>,
-        settings: Object.fromEntries(
-          Object.entries(settings).filter(([, v]) => v.trim() !== ""),
-        ),
+        settings: Object.fromEntries(Object.entries(settings).filter(([, v]) => v.trim() !== "")),
       }),
     onSuccess: (data) => {
       toast.success("Интеграция создана");
       void qc.invalidateQueries({ queryKey: ["integrations", orgId] });
       onSuccess?.(data.id);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const jiraConnect = useMutation({
+    mutationFn: () => {
+      const trimmedName = name.trim();
+      const baseUrl = (creds.baseUrl ?? "").trim();
+      const token = (creds.token ?? "").trim();
+      const email = (creds.email ?? "").trim();
+      const apiToken = (creds.apiToken ?? "").trim();
+
+      if (!baseUrl) throw new Error("Укажите URL Jira");
+      if (jiraMode === "server" && !token) throw new Error("Укажите токен доступа");
+      if (jiraMode === "cloud" && (!email || !apiToken))
+        throw new Error("Укажите email и API Token");
+
+      const body =
+        jiraMode === "server"
+          ? {
+              baseUrl,
+              token,
+              ...(trimmedName ? { name: trimmedName } : {}),
+            }
+          : {
+              baseUrl,
+              email,
+              apiToken,
+              ...(trimmedName ? { name: trimmedName } : {}),
+            };
+
+      return orgApi.jiraConnect(orgId, body);
+    },
+    onSuccess: (res) => {
+      setJiraTest(res.test);
+      void qc.invalidateQueries({ queryKey: ["integrations", orgId] });
+      if (res.test.ok) {
+        const who = res.test.user?.displayName || res.test.user?.name;
+        toast.success(
+          who ? `Jira подключена (пользователь: ${who})` : "Jira подключена и проверена",
+        );
+        onSuccess?.(res.integration.id);
+      } else {
+        const msg = res.test.error ?? "Тест не прошёл. Проверьте URL и токен.";
+        toast.error(msg);
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -100,9 +152,7 @@ export function IntegrationWizard({ orgId, defaultProvider, onSuccess, onCancel 
                 setCreds({});
               }}
               className={`flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-center transition-colors hover:bg-accent/40 ${
-                provider === p
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-card"
+                provider === p ? "border-primary bg-primary/5" : "border-border bg-card"
               }`}
             >
               <ProviderIcon provider={p} className="h-14 w-14 text-base" />
@@ -126,7 +176,20 @@ export function IntegrationWizard({ orgId, defaultProvider, onSuccess, onCancel 
 
   /* ---- Шаг 2: имя + credentials ---- */
   if (step === 2) {
-    const fields = CRED_FIELDS[provider] ?? [];
+    const isJira = provider === "JIRA";
+    const fields = isJira ? [] : (CRED_FIELDS[provider] ?? []);
+
+    const canSubmitJira = (() => {
+      if (!name.trim()) return false;
+      const baseUrl = (creds.baseUrl ?? "").trim();
+      const token = (creds.token ?? "").trim();
+      const email = (creds.email ?? "").trim();
+      const apiToken = (creds.apiToken ?? "").trim();
+      if (!baseUrl) return false;
+      if (jiraMode === "server") return !!token;
+      return !!(email && apiToken);
+    })();
+
     return (
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">
@@ -145,19 +208,129 @@ export function IntegrationWizard({ orgId, defaultProvider, onSuccess, onCancel 
             />
           </div>
 
-          {fields.map((f) => (
-            <div key={f.key}>
-              <Label htmlFor={`cred-${f.key}`}>{f.label}</Label>
-              <Input
-                id={`cred-${f.key}`}
-                className="mt-1"
-                type={f.secret ? "password" : "text"}
-                value={creds[f.key] ?? ""}
-                onChange={(e) => setCreds((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                placeholder={f.placeholder}
-              />
-            </div>
-          ))}
+          {isJira ? (
+            <>
+              <div>
+                <Label className="mb-1.5 block">Способ подключения</Label>
+                <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-border bg-muted/40 p-1">
+                  {[
+                    { key: "server" as const, label: "Server / Data Center" },
+                    { key: "cloud" as const, label: "Cloud (Atlassian)" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setJiraMode(opt.key)}
+                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                        jiraMode === opt.key
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="jira-base">URL Jira</Label>
+                <Input
+                  id="jira-base"
+                  className="mt-1"
+                  value={creds.baseUrl ?? ""}
+                  onChange={(e) => setCreds((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                  placeholder={
+                    jiraMode === "server"
+                      ? "https://jira.ys.kg"
+                      : "https://your-domain.atlassian.net"
+                  }
+                />
+              </div>
+
+              {jiraMode === "server" ? (
+                <div>
+                  <Label htmlFor="jira-token">Personal Access Token</Label>
+                  <Input
+                    id="jira-token"
+                    type="password"
+                    className="mt-1"
+                    value={creds.token ?? ""}
+                    onChange={(e) => setCreds((prev) => ({ ...prev, token: e.target.value }))}
+                    placeholder="PAT из Jira (Bearer токен)"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label htmlFor="jira-email">Email аккаунта</Label>
+                    <Input
+                      id="jira-email"
+                      className="mt-1"
+                      value={creds.email ?? ""}
+                      onChange={(e) => setCreds((prev) => ({ ...prev, email: e.target.value }))}
+                      placeholder="user@company.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jira-api-token">API Token</Label>
+                    <Input
+                      id="jira-api-token"
+                      type="password"
+                      className="mt-1"
+                      value={creds.apiToken ?? ""}
+                      onChange={(e) => setCreds((prev) => ({ ...prev, apiToken: e.target.value }))}
+                      placeholder="Токен из Atlassian Cloud"
+                    />
+                  </div>
+                </>
+              )}
+
+              {jiraTest && (
+                <div
+                  className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${
+                    jiraTest.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  <Plug className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    {jiraTest.ok ? (
+                      <>
+                        <div>Подключение проверено успешно.</div>
+                        {jiraTest.user?.displayName && (
+                          <div className="text-xs opacity-80">
+                            Пользователь: {jiraTest.user.displayName}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-medium">Тест не прошёл.</div>
+                        <div className="text-xs">
+                          {jiraTest.error ??
+                            "Проверьте URL и токен/учётные данные и попробуйте снова."}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            fields.map((f) => (
+              <div key={f.key}>
+                <Label htmlFor={`cred-${f.key}`}>{f.label}</Label>
+                <Input
+                  id={`cred-${f.key}`}
+                  className="mt-1"
+                  type={f.secret ? "password" : "text"}
+                  value={creds[f.key] ?? ""}
+                  onChange={(e) => setCreds((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                />
+              </div>
+            ))
+          )}
         </div>
 
         <div className="flex justify-between pt-2">
@@ -173,53 +346,25 @@ export function IntegrationWizard({ orgId, defaultProvider, onSuccess, onCancel 
           )}
           <Button
             className="ml-auto"
-            disabled={!name.trim()}
-            onClick={() => setStep(3)}
+            disabled={
+              isJira ? !canSubmitJira || jiraConnect.isPending : !name.trim() || create.isPending
+            }
+            onClick={() => {
+              if (isJira) jiraConnect.mutate();
+              else create.mutate();
+            }}
           >
-            Далее <ArrowRight className="ml-1 h-4 w-4" />
+            {jiraConnect.isPending || create.isPending ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Plug className="mr-1 h-4 w-4" />
+            )}
+            Подключить
           </Button>
         </div>
       </div>
     );
   }
 
-  /* ---- Шаг 3: настройки ---- */
-  return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Шаг 3 — Настройки синхронизации</h2>
-      <div className="space-y-3">
-        {Object.entries(settings).map(([key, val]) => (
-          <div key={key}>
-            <Label htmlFor={`setting-${key}`}>{key}</Label>
-            <Input
-              id={`setting-${key}`}
-              className="mt-1"
-              value={val}
-              onChange={(e) =>
-                setSettings((prev) => ({ ...prev, [key]: e.target.value }))
-              }
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-between pt-2">
-        <Button variant="ghost" onClick={() => setStep(2)}>
-          <ArrowLeft className="mr-1 h-4 w-4" /> Назад
-        </Button>
-        <Button
-          className="ml-auto"
-          disabled={create.isPending}
-          onClick={() => create.mutate()}
-        >
-          {create.isPending ? (
-            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-          ) : (
-            <Check className="mr-1 h-4 w-4" />
-          )}
-          Сохранить
-        </Button>
-      </div>
-    </div>
-  );
+  return null;
 }
