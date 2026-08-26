@@ -60,6 +60,8 @@ export interface OrgMember {
   updated_at?: string;
   full_name: string | null;
   username: string | null;
+  /** Логин пользователя в Jira (jira_username). */
+  jira_username?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   tg_id: number | string | null;
@@ -135,13 +137,24 @@ export const orgApi = {
     apiFetch<Organization>(`/organizations/${id}`, { method: "PATCH", body }),
   deactivate: (id: number) => apiFetch<Organization>(`/organizations/${id}`, { method: "DELETE" }),
 
-  members: (id: number) => apiFetch<OrgMember[]>(`/organizations/${id}/members`),
+  members: (id: number, opts?: { forJira?: boolean; hasJiraUsername?: boolean }) => {
+    const params = new URLSearchParams();
+    if (opts?.forJira) params.set("forJira", "1");
+    if (opts?.hasJiraUsername) params.set("hasJiraUsername", "true");
+    const qs = params.toString();
+    return apiFetch<OrgMember[]>(`/organizations/${id}/members${qs ? `?${qs}` : ""}`);
+  },
   addMember: (id: number, body: { userId: number; roleId: number; departmentId?: number }) =>
     apiFetch<OrgMember>(`/organizations/${id}/members`, { method: "POST", body }),
   updateMember: (
     id: number,
     memberId: number,
-    body: { roleId?: number; departmentId?: number | null; is_active?: boolean },
+    body: {
+      roleId?: number;
+      departmentId?: number | null;
+      is_active?: boolean;
+      jiraUsername?: string | null;
+    },
   ) => apiFetch<OrgMember>(`/organizations/${id}/members/${memberId}`, { method: "PATCH", body }),
   removeMember: (id: number, memberId: number) =>
     apiFetch<unknown>(`/organizations/${id}/members/${memberId}`, { method: "DELETE" }),

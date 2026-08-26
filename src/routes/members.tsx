@@ -175,7 +175,12 @@ function MembersPage() {
   const patch = useMutation({
     mutationFn: (v: {
       member: OrgMember;
-      body: { roleId?: number; departmentId?: number | null; is_active?: boolean };
+      body: {
+        roleId?: number;
+        departmentId?: number | null;
+        is_active?: boolean;
+        jiraUsername?: string | null;
+      };
     }) => orgApi.updateMember(orgId!, v.member.id, v.body),
     onSuccess: () => {
       invalidate();
@@ -337,6 +342,7 @@ function MembersPage() {
                   <th className="px-4 py-3">Сотрудник</th>
                   <th className="px-4 py-3">Статус</th>
                   <th className="px-4 py-3">Telegram</th>
+                  <th className="px-4 py-3">Jira username</th>
                   <th className="px-4 py-3">Роль</th>
                   <th className="px-4 py-3">Отдел</th>
                   <th className="px-4 py-3">Добавлен</th>
@@ -363,6 +369,23 @@ function MembersPage() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {m.username ? `@${m.username}` : (m.tg_id ?? "—")}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {canUpdate ? (
+                          <input
+                            className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm"
+                            defaultValue={m.jira_username ?? ""}
+                            placeholder="Логин в Jira"
+                            onBlur={(e) => {
+                              const raw = e.target.value.trim();
+                              const next = raw === "" ? null : raw;
+                              if (next === (m.jira_username ?? null)) return;
+                              patch.mutate({ member: m, body: { jiraUsername: next } });
+                            }}
+                          />
+                        ) : (
+                          m.jira_username || "—"
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <RoleSelect m={m} />
@@ -431,6 +454,9 @@ function MembersPage() {
                   <div className="mt-2 grid gap-2">
                     <RoleSelect m={m} />
                     <DeptSelect m={m} />
+                    <div className="text-xs text-muted-foreground">
+                      Jira username: {m.jira_username || "—"}
+                    </div>
                   </div>
                 </li>
               );

@@ -55,10 +55,14 @@ function TaskDetail() {
     queryKey: ["task", id, organizationId],
     queryFn: () => api.task(id, organizationId),
   });
+
+  const task = taskQuery.data;
+
   const members = useQuery({
-    queryKey: ["org-members", organizationId],
-    enabled: !!organizationId,
-    queryFn: () => orgApi.members(organizationId!),
+    queryKey: ["org-members", organizationId, task?.source === "jira" ? "forJira" : "all"],
+    enabled: !!organizationId && !!task,
+    queryFn: () =>
+      orgApi.members(organizationId!, task?.source === "jira" ? { forJira: true } : undefined),
   });
   const departments = useQuery({
     queryKey: ["org-departments", organizationId],
@@ -67,8 +71,6 @@ function TaskDetail() {
   });
   const comments = useQuery({ queryKey: ["comments", id], queryFn: () => api.comments(id) });
   const history = useQuery({ queryKey: ["history", id], queryFn: () => api.history(id) });
-
-  const task = taskQuery.data;
 
   useEffect(() => {
     if (task?.assignees) setSelected(task.assignees.map((a) => a.id));
