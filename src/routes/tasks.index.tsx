@@ -38,7 +38,7 @@ export const Route = createFileRoute("/tasks/")({
 });
 
 type Scope = "all" | "author" | "assigned";
-type Assignment = "any" | "without";
+type Assignment = "any" | "yes" | "no";
 type SourceFilter = "all" | "internal" | "jira";
 
 function TasksPage() {
@@ -70,7 +70,7 @@ function TasksPage() {
       if (!organizationId) return [];
       const params = new URLSearchParams();
       if (status) params.set("status", status);
-      if (assignment === "without") params.set("unassigned", "true");
+      if (assignment !== "any") params.set("assigned", assignment);
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       const qs = params.toString() ? `?${params.toString()}` : "";
@@ -106,7 +106,8 @@ function TasksPage() {
 
   const assignments: { key: Assignment; label: string }[] = [
     { key: "any", label: "Все" },
-    { key: "without", label: "Без исполнителя" },
+    { key: "yes", label: "С исполнителем" },
+    { key: "no", label: "Без исполнителя" },
   ];
 
   const sources: { key: SourceFilter; label: string }[] = [
@@ -117,7 +118,7 @@ function TasksPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
             Задачи
@@ -129,7 +130,7 @@ function TasksPage() {
         {hasActiveJira && (
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground sm:w-auto"
             disabled={syncJira.isPending}
             onClick={() =>
               syncJira.mutate({
@@ -149,21 +150,21 @@ function TasksPage() {
       </div>
 
       {/* Фильтры */}
-      <div className="mt-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-        <div className="flex w-full items-center gap-2 md:max-w-sm">
-          <div className="relative flex-1">
+      <div className="mt-4 space-y-3">
+        <div className="grid w-full gap-3 md:grid-cols-2">
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Поиск по названию, описанию или ключу Jira…"
-              className="pl-8"
+              className="w-full pl-8"
             />
           </div>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
-            className="h-10 w-40 rounded-md border border-input bg-card px-3 text-sm"
+            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
           >
             <option value="">Все статусы</option>
             {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -174,14 +175,14 @@ function TasksPage() {
           </select>
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
-          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap">
+          <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
             {scopes.map((s) => (
               <button
                 key={s.key}
                 onClick={() => setScope(s.key)}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm md:flex-none",
                   scope === s.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -191,16 +192,14 @@ function TasksPage() {
               </button>
             ))}
           </div>
-        </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
-          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+          <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
             {sources.map((s) => (
               <button
                 key={s.key}
                 onClick={() => setSource(s.key)}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm md:flex-none",
                   source === s.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -210,16 +209,14 @@ function TasksPage() {
               </button>
             ))}
           </div>
-        </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:overflow-visible md:px-0">
-          <div className="inline-flex rounded-lg border border-border bg-card p-1">
+          <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
             {assignments.map((a) => (
               <button
                 key={a.key}
                 onClick={() => setAssignment(a.key)}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm md:flex-none",
                   assignment === a.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
