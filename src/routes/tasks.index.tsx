@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Columns3, FolderKanban, List, Loader2, RefreshCw, Search, UserRound } from "lucide-react";
+import { Columns3, List, Loader2, RefreshCw, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
@@ -279,37 +279,14 @@ function TasksPage() {
       {/* Фильтры */}
       <div className="mt-4 space-y-3">
         <div className={cn("grid w-full gap-3", view === "table" && "md:grid-cols-2")}>
-          <div className="w-full space-y-2">
-            <div className="relative w-full">
-              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Поиск по названию, описанию или ключу Jira…"
-                className="w-full pl-8"
-              />
-            </div>
-            {hasActiveJira && (
-              <div className="relative w-full">
-                <FolderKanban className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <select
-                  value={projectKey}
-                  disabled={projectsQuery.isPending}
-                  onChange={(event) => setProjectKey(event.target.value)}
-                  aria-label="Фильтр по Jira-проекту"
-                  className="h-10 w-full rounded-md border border-input bg-card pl-8 pr-3 text-sm disabled:cursor-wait disabled:opacity-60"
-                >
-                  <option value="">
-                    {projectsQuery.isPending ? "Загрузка проектов…" : "Все Jira-проекты"}
-                  </option>
-                  {(projectsQuery.data ?? []).map((project) => (
-                    <option key={project.project_key} value={project.project_key}>
-                      {project.project_name} ({project.project_key}) · {project.task_count}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск по названию, описанию или ключу Jira…"
+              className="w-full pl-8"
+            />
           </div>
           {view === "table" && (
             <select
@@ -326,6 +303,25 @@ function TasksPage() {
             </select>
           )}
         </div>
+
+        {hasActiveJira && (
+          <select
+            value={projectKey}
+            disabled={projectsQuery.isPending}
+            onChange={(event) => setProjectKey(event.target.value)}
+            aria-label="Фильтр по Jira-проекту"
+            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm disabled:cursor-wait disabled:opacity-60"
+          >
+            <option value="">
+              {projectsQuery.isPending ? "Загрузка проектов…" : "Все Jira-проекты"}
+            </option>
+            {(projectsQuery.data ?? []).map((project) => (
+              <option key={project.project_key} value={project.project_key}>
+                {project.project_name} ({project.project_key}) · {project.task_count}
+              </option>
+            ))}
+          </select>
+        )}
 
         <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap">
           <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
