@@ -44,6 +44,8 @@ type Scope = "all" | "author" | "assigned";
 type Assignment = "any" | "yes" | "no";
 type SourceFilter = "all" | "internal" | "jira";
 type TasksView = "table" | "board";
+type DateMode = "week" | "month" | "all" | "date" | "range";
+type DateField = "updated_at" | "created_at" | "deadline" | "last_synced_at";
 
 function TasksPage() {
   const { data: user } = useCurrentUser();
@@ -55,6 +57,11 @@ function TasksPage() {
   const [source, setSource] = useState<SourceFilter>("all");
   const [search, setSearch] = useState("");
   const [projectKey, setProjectKey] = useState("");
+  const [dateMode, setDateMode] = useState<DateMode>("week");
+  const [dateField, setDateField] = useState<DateField>("updated_at");
+  const [exactDate, setExactDate] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [view, setView] = useState<TasksView>("table");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
@@ -84,6 +91,11 @@ function TasksPage() {
       source,
       search,
       projectKey,
+      dateMode,
+      dateField,
+      exactDate,
+      dateFrom,
+      dateTo,
       userId,
       organizationId,
     ],
@@ -96,6 +108,7 @@ function TasksPage() {
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
+      appendDateParams(params, dateMode, dateField, exactDate, dateFrom, dateTo);
       const qs = params.toString() ? `?${params.toString()}` : "";
       if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
       if (scope === "assigned") return api.tasksMine(organizationId, qs);
@@ -110,6 +123,11 @@ function TasksPage() {
     source,
     search,
     projectKey,
+    dateMode,
+    dateField,
+    exactDate,
+    dateFrom,
+    dateTo,
     userId,
     organizationId,
   ] as const;
@@ -125,6 +143,7 @@ function TasksPage() {
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
+      appendDateParams(params, dateMode, dateField, exactDate, dateFrom, dateTo);
       const qs = params.toString() ? `?${params.toString()}` : "";
       return api.tasksBoard(organizationId, qs);
     },
@@ -374,7 +393,63 @@ function TasksPage() {
               </button>
             ))}
           </div>
+
+          <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-border bg-card p-1 md:w-auto">
+            <select
+              value={dateMode}
+              onChange={(event) => setDateMode(event.target.value as DateMode)}
+              aria-label="Период задач"
+              className="h-8 min-w-0 rounded-md border-0 bg-transparent px-2 text-xs font-medium text-foreground sm:text-sm md:w-40"
+            >
+              <option value="week">За неделю</option>
+              <option value="month">За месяц</option>
+              <option value="all">За всё время</option>
+              <option value="date">Конкретная дата</option>
+              <option value="range">Диапазон дат</option>
+            </select>
+            <select
+              value={dateField}
+              onChange={(event) => setDateField(event.target.value as DateField)}
+              aria-label="Поле даты"
+              className="h-8 min-w-0 rounded-md border-0 bg-transparent px-2 text-xs text-muted-foreground sm:text-sm md:w-44"
+            >
+              <option value="updated_at">По обновлению</option>
+              <option value="created_at">По созданию</option>
+              <option value="deadline">По дедлайну</option>
+              <option value="last_synced_at">По синхронизации</option>
+            </select>
+          </div>
         </div>
+
+        {dateMode === "date" && (
+          <input
+            type="date"
+            value={exactDate}
+            onChange={(event) => setExactDate(event.target.value)}
+            aria-label="Конкретная дата"
+            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm md:max-w-xs"
+          />
+        )}
+        {dateMode === "range" && (
+          <div className="grid w-full gap-3 sm:grid-cols-2 md:max-w-2xl">
+            <input
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(event) => setDateFrom(event.target.value)}
+              aria-label="Дата начала"
+              className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(event) => setDateTo(event.target.value)}
+              aria-label="Дата окончания"
+              className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-5">
@@ -573,6 +648,25 @@ function TasksPage() {
       </div>
     </AppLayout>
   );
+}
+
+function appendDateParams(
+  params: URLSearchParams,
+  mode: DateMode,
+  field: DateField,
+  exactDate: string,
+  dateFrom: string,
+  dateTo: string,
+) {
+  if (mode === "week" || mode === "month" || mode === "all") {
+    params.set("period", mode);
+  } else if (mode === "date" && exactDate) {
+    params.set("date", exactDate);
+  } else if (mode === "range") {
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
+  }
+  if (field !== "updated_at") params.set("dateField", field);
 }
 
 const BOARD_COLUMNS: BoardColumnKey[] = [
