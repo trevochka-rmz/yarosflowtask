@@ -85,8 +85,17 @@ function TasksPage() {
     },
   });
 
+  const boardQueryKey = [
+    "tasks-board",
+    scope,
+    assignment,
+    source,
+    search,
+    userId,
+    organizationId,
+  ] as const;
   const boardQuery = useQuery({
-    queryKey: ["tasks-board", scope, assignment, source, search, userId, organizationId],
+    queryKey: boardQueryKey,
     enabled: !!organizationId && view === "board",
     queryFn: () => {
       if (!organizationId) throw new Error("Организация не выбрана");
@@ -98,6 +107,53 @@ function TasksPage() {
       if (search.trim()) params.set("search", search.trim());
       const qs = params.toString() ? `?${params.toString()}` : "";
       return api.tasksBoard(organizationId, qs);
+    },
+  });
+
+  const moveTask = useMutation({
+    mutationFn: ({ taskId, status }: { taskId: number; status: TaskStatus }) => {
+      if (!organizationId) throw new Error("Организация не выбрана");
+      return api.setStatus(taskId, status, organizationId);
+    },
+    onMutate: async ({ taskId, status }) => {
+      await qc.cancelQueries({ queryKey: boardQueryKey });
+      const previousBoard = qc.getQueryData<TasksBoard>(boardQueryKey);
+      if (!previousBoard) return { previousBoard };
+
+      const targetColumn =
+        BOARD_COLUMNS.find((column) => BOARD_COLUMN_STATUS[column] === status) ?? "TODO";
+      let movedTask: BoardTask | undefined;
+      const columns = Object.fromEntries(
+        BOARD_COLUMNS.map((key) => {
+          const tasks = previousBoard.columns[key] ?? [];
+          const found = tasks.find((task) => task.id === taskId);
+          if (found) movedTask = found;
+          return [key, tasks.filter((task) => task.id !== taskId)];
+        }),
+      ) as TasksBoard["columns"];
+
+      if (movedTask) {
+        columns[targetColumn] = [
+          { ...movedTask, status, board_column: targetColumn },
+          ...columns[targetColumn],
+        ];
+        qc.setQueryData<TasksBoard>(boardQueryKey, {
+          ...previousBoard,
+          columns,
+          counts: Object.fromEntries(
+            BOARD_COLUMNS.map((key) => [key, columns[key].length]),
+          ) as TasksBoard["counts"],
+        });
+      }
+      return { previousBoard };
+    },
+    onError: (error: Error, _variables, context) => {
+      if (context?.previousBoard) qc.setQueryData(boardQueryKey, context.previousBoard);
+      toast.error(error.message || "Не удалось изменить статус задачи");
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: boardQueryKey });
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
@@ -299,7 +355,13 @@ function TasksPage() {
               {(boardQuery.error as Error).message}
             </p>
           ) : board ? (
-            <KanbanBoard board={board} />
+            <KanbanBoard
+              board={board}
+              movingTaskId={moveTask.isPending ? moveTask.variables?.taskId : undefined}
+              onMove={(taskId, column) =>
+                moveTask.mutate({ taskId, status: BOARD_COLUMN_STATUS[column] })
+              }
+            />
           ) : null
         ) : query.isPending ? (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-6">
@@ -473,6 +535,12 @@ function TasksPage() {
 }
 
 const BOARD_COLUMNS: BoardColumnKey[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"];
+const BOARD_COLUMN_STATUS: Record<BoardColumnKey, TaskStatus> = {
+  TODO: "NEW",
+  IN_PROGRESS: "IN_PROGRESS",
+  REVIEW: "ACCEPTED",
+  DONE: "COMPLETED",
+};
 const BOARD_LABELS: Record<BoardColumnKey, string> = {
   TODO: "К выполнению",
   IN_PROGRESS: "В работе",
@@ -489,7 +557,16 @@ function getBoardAssignee(task: BoardTask) {
   return task.external_assignee_name || "Без исполнителя";
 }
 
-function KanbanBoard({ board }: { board: TasksBoard }) {
+function KanbanBoard({
+  board,
+  movingTaskId,
+  onMove,
+}: {
+  board: TasksBoard;
+  movingTaskId?: number;
+  onMove: (taskId: number, column: BoardColumnKey) => void;
+}) {
+  const [dragOverColumn, setDragOverColumn] = useState<BoardColumnKey | null>(null);
   const metaLabels = Object.fromEntries(
     board.columnsMeta.map((column) => [column.key, column.label]),
   ) as Partial<Record<BoardColumnKey, string>>;
@@ -503,7 +580,27 @@ function KanbanBoard({ board }: { board: TasksBoard }) {
           return (
             <section
               key={columnKey}
-              className="min-w-0 rounded-2xl border border-border bg-muted/35 p-3"
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDragOverColumn(columnKey);
+              }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  setDragOverColumn(null);
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragOverColumn(null);
+                const taskId = Number(event.dataTransfer.getData("text/plain"));
+                const taskAlreadyHere = columnTasks.some((task) => task.id === taskId);
+                if (Number.isFinite(taskId) && !taskAlreadyHere) onMove(taskId, columnKey);
+              }}
+              className={cn(
+                "min-w-0 rounded-2xl border border-border bg-muted/35 p-3 transition-colors",
+                dragOverColumn === columnKey && "border-primary bg-primary/5",
+              )}
             >
               <div className="mb-3 flex items-center justify-between gap-2 px-1">
                 <h2 className="font-semibold text-foreground">
@@ -520,7 +617,14 @@ function KanbanBoard({ board }: { board: TasksBoard }) {
                     Нет задач
                   </p>
                 ) : (
-                  columnTasks.map((task) => <KanbanTaskCard key={task.id} task={task} />)
+                  columnTasks.map((task) => (
+                    <KanbanTaskCard
+                      key={task.id}
+                      task={task}
+                      isMoving={movingTaskId === task.id}
+                      onMove={(column) => onMove(task.id, column)}
+                    />
+                  ))
                 )}
               </div>
             </section>
@@ -531,11 +635,29 @@ function KanbanBoard({ board }: { board: TasksBoard }) {
   );
 }
 
-function KanbanTaskCard({ task }: { task: BoardTask }) {
+function KanbanTaskCard({
+  task,
+  isMoving,
+  onMove,
+}: {
+  task: BoardTask;
+  isMoving: boolean;
+  onMove: (column: BoardColumnKey) => void;
+}) {
   const project = task.project_name || task.project_key || "Без проекта";
 
   return (
-    <article className="rounded-xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md">
+    <article
+      draggable={!isMoving}
+      onDragStart={(event) => {
+        event.dataTransfer.setData("text/plain", String(task.id));
+        event.dataTransfer.effectAllowed = "move";
+      }}
+      className={cn(
+        "cursor-grab rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md active:cursor-grabbing",
+        isMoving && "pointer-events-none opacity-60",
+      )}
+    >
       <div className="flex flex-wrap items-center gap-1.5">
         <SourceBadge source={task.source} externalKey={task.external_key} />
         <StatusBadge status={task.status} />
@@ -569,6 +691,21 @@ function KanbanTaskCard({ task }: { task: BoardTask }) {
           </a>
         ) : null}
       </div>
+      <label className="mt-3 block border-t border-border pt-2 text-xs text-muted-foreground lg:hidden">
+        Переместить в
+        <select
+          value={task.board_column}
+          disabled={isMoving}
+          onChange={(event) => onMove(event.target.value as BoardColumnKey)}
+          className="mt-1 h-9 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground"
+        >
+          {BOARD_COLUMNS.map((column) => (
+            <option key={column} value={column}>
+              {BOARD_LABELS[column]}
+            </option>
+          ))}
+        </select>
+      </label>
     </article>
   );
 }

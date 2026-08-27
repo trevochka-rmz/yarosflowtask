@@ -372,9 +372,9 @@ export const api = {
     }),
 
   setStatus: (id: number, status: TaskStatus, organizationId: number) =>
-    apiFetch<Task>(`/tasks/${id}/status?organizationId=${organizationId}`, {
+    apiFetch<Task>(`/tasks/${id}/status`, {
       method: "PATCH",
-      body: { status },
+      body: { organizationId, status },
     }),
 
   updateTask: (id: number, organizationId: number, patch: Record<string, unknown>) =>
