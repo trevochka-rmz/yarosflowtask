@@ -114,6 +114,12 @@ export interface TasksBoard {
   columns: Record<BoardColumnKey, BoardTask[]>;
 }
 
+export interface TaskProject {
+  project_key: string;
+  project_name: string;
+  task_count: number;
+}
+
 export interface Comment {
   id: number;
   task_id: number;
@@ -324,6 +330,10 @@ export const api = {
       `/tasks/board?organizationId=${organizationId}${query ? sep + query.replace(/^\?/, "") : ""}`,
     );
   },
+
+  /** Jira-проекты, которые встречаются в задачах организации. */
+  taskProjects: (organizationId: number) =>
+    apiFetch<TaskProject[]>(`/tasks/projects?organizationId=${organizationId}`),
 
   /** Задачи, созданные конкретным автором в организации. */
   tasksByAuthor: (authorId: number, organizationId: number, query = "") => {

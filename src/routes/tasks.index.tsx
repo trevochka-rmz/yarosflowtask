@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Columns3, List, Loader2, RefreshCw, Search, UserRound } from "lucide-react";
+import { Columns3, FolderKanban, List, Loader2, RefreshCw, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
@@ -54,6 +54,7 @@ function TasksPage() {
   const [assignment, setAssignment] = useState<Assignment>("any");
   const [source, setSource] = useState<SourceFilter>("all");
   const [search, setSearch] = useState("");
+  const [projectKey, setProjectKey] = useState("");
   const [view, setView] = useState<TasksView>("table");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
@@ -68,8 +69,24 @@ function TasksPage() {
     (i) => i.provider === "JIRA" && i.status === "ACTIVE",
   );
 
+  const projectsQuery = useQuery({
+    queryKey: ["task-projects", organizationId],
+    enabled: !!organizationId && hasActiveJira,
+    queryFn: () => api.taskProjects(organizationId!),
+  });
+
   const query = useQuery({
-    queryKey: ["tasks", scope, status, assignment, source, search, userId, organizationId],
+    queryKey: [
+      "tasks",
+      scope,
+      status,
+      assignment,
+      source,
+      search,
+      projectKey,
+      userId,
+      organizationId,
+    ],
     enabled: !!organizationId && view === "table",
     queryFn: async (): Promise<Task[]> => {
       if (!organizationId) return [];
@@ -78,6 +95,7 @@ function TasksPage() {
       if (assignment !== "any") params.set("assigned", assignment);
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
+      if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
       const qs = params.toString() ? `?${params.toString()}` : "";
       if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
       if (scope === "assigned") return api.tasksMine(organizationId, qs);
@@ -91,6 +109,7 @@ function TasksPage() {
     assignment,
     source,
     search,
+    projectKey,
     userId,
     organizationId,
   ] as const;
@@ -105,6 +124,7 @@ function TasksPage() {
       else if (assignment !== "any") params.set("assigned", assignment);
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
+      if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
       const qs = params.toString() ? `?${params.toString()}` : "";
       return api.tasksBoard(organizationId, qs);
     },
@@ -259,14 +279,37 @@ function TasksPage() {
       {/* Фильтры */}
       <div className="mt-4 space-y-3">
         <div className={cn("grid w-full gap-3", view === "table" && "md:grid-cols-2")}>
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по названию, описанию или ключу Jira…"
-              className="w-full pl-8"
-            />
+          <div className="w-full space-y-2">
+            <div className="relative w-full">
+              <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск по названию, описанию или ключу Jira…"
+                className="w-full pl-8"
+              />
+            </div>
+            {hasActiveJira && (
+              <div className="relative w-full">
+                <FolderKanban className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <select
+                  value={projectKey}
+                  disabled={projectsQuery.isPending}
+                  onChange={(event) => setProjectKey(event.target.value)}
+                  aria-label="Фильтр по Jira-проекту"
+                  className="h-10 w-full rounded-md border border-input bg-card pl-8 pr-3 text-sm disabled:cursor-wait disabled:opacity-60"
+                >
+                  <option value="">
+                    {projectsQuery.isPending ? "Загрузка проектов…" : "Все Jira-проекты"}
+                  </option>
+                  {(projectsQuery.data ?? []).map((project) => (
+                    <option key={project.project_key} value={project.project_key}>
+                      {project.project_name} ({project.project_key}) · {project.task_count}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           {view === "table" && (
             <select
