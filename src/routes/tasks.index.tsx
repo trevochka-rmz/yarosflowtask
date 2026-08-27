@@ -384,12 +384,10 @@ function TasksPage() {
           </p>
         ) : view === "board" ? (
           boardQuery.isPending ? (
-            <div className="-mx-4 overflow-hidden px-4 sm:-mx-6 sm:px-6">
-              <div className="grid min-w-full w-max grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4">
-                {BOARD_COLUMNS.map((column) => (
-                  <div key={column} className="h-48 animate-pulse rounded-2xl bg-muted" />
-                ))}
-              </div>
+            <div className="grid w-full min-w-0 grid-cols-7 gap-1 sm:gap-2 xl:gap-3">
+              {BOARD_COLUMNS.map((column) => (
+                <div key={column} className="h-48 min-w-0 animate-pulse rounded-xl bg-muted" />
+              ))}
             </div>
           ) : boardQuery.isError ? (
             <p className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive">
@@ -629,64 +627,63 @@ function KanbanBoard({
   return (
     <div>
       <p className="mb-3 text-sm text-muted-foreground">Всего задач: {board.total}</p>
-      <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6">
-        <div className="grid min-w-full w-max grid-flow-col auto-cols-[minmax(15rem,1fr)] items-start gap-4">
-          {BOARD_COLUMNS.map((columnKey) => {
-            const columnTasks = board.columns[columnKey] ?? [];
-            return (
-              <section
-                key={columnKey}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  setDragOverColumn(columnKey);
-                }}
-                onDragLeave={(event) => {
-                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                    setDragOverColumn(null);
-                  }
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
+      <div className="grid w-full min-w-0 grid-cols-7 items-start gap-1 sm:gap-2 xl:gap-3">
+        {BOARD_COLUMNS.map((columnKey) => {
+          const columnTasks = board.columns[columnKey] ?? [];
+          return (
+            <section
+              key={columnKey}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                setDragOverColumn(columnKey);
+              }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                   setDragOverColumn(null);
-                  const taskId = Number(event.dataTransfer.getData("text/plain"));
-                  const taskAlreadyHere = columnTasks.some((task) => task.id === taskId);
-                  if (Number.isFinite(taskId) && !taskAlreadyHere) onMove(taskId, columnKey);
-                }}
-                className={cn(
-                  "min-w-0 rounded-2xl border border-border bg-muted/35 p-3 transition-colors",
-                  dragOverColumn === columnKey && "border-primary bg-primary/5",
-                )}
-              >
-                <div className="mb-3 flex items-center justify-between gap-2 px-1">
-                  <h2 className="font-semibold text-foreground">
-                    {metaLabels[columnKey] ?? BOARD_LABELS[columnKey]}
-                  </h2>
-                  <span className="inline-flex min-w-7 justify-center rounded-full bg-card px-2 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
-                    {board.counts[columnKey] ?? columnTasks.length}
-                  </span>
-                </div>
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragOverColumn(null);
+                const taskId = Number(event.dataTransfer.getData("text/plain"));
+                const taskAlreadyHere = columnTasks.some((task) => task.id === taskId);
+                if (Number.isFinite(taskId) && !taskAlreadyHere) onMove(taskId, columnKey);
+              }}
+              className={cn(
+                "min-w-0 overflow-hidden rounded-lg border border-border bg-muted/35 p-1 transition-colors sm:rounded-xl sm:p-2 xl:p-3",
+                dragOverColumn === columnKey && "border-primary bg-primary/5",
+              )}
+            >
+              <div className="mb-2 flex min-w-0 flex-col items-center gap-1 px-0.5 text-center xl:mb-3 xl:flex-row xl:justify-between xl:gap-2 xl:px-1 xl:text-left">
+                <h2 className="min-w-0 break-words text-[9px] font-semibold leading-tight text-foreground sm:text-xs xl:text-sm">
+                  {metaLabels[columnKey] ?? BOARD_LABELS[columnKey]}
+                </h2>
+                <span className="inline-flex min-w-5 justify-center rounded-full bg-card px-1 py-0.5 text-[9px] font-semibold text-muted-foreground shadow-sm sm:text-xs xl:min-w-7 xl:px-2 xl:py-1">
+                  {board.counts[columnKey] ?? columnTasks.length}
+                </span>
+              </div>
 
-                <div className="space-y-3">
-                  {columnTasks.length === 0 ? (
-                    <p className="rounded-xl border border-dashed border-border bg-card/50 px-3 py-6 text-center text-xs text-muted-foreground">
-                      Нет задач
-                    </p>
-                  ) : (
-                    columnTasks.map((task) => (
-                      <KanbanTaskCard
-                        key={task.id}
-                        task={task}
-                        isMoving={movingTaskId === task.id}
-                        onMove={(column) => onMove(task.id, column)}
-                      />
-                    ))
-                  )}
-                </div>
-              </section>
-            );
-          })}
-        </div>
+              <div className="min-w-0 space-y-1.5 xl:space-y-3">
+                {columnTasks.length === 0 ? (
+                  <p className="overflow-hidden rounded-md border border-dashed border-border bg-card/50 px-0.5 py-3 text-center text-[9px] text-muted-foreground sm:rounded-lg sm:text-xs xl:rounded-xl xl:px-3 xl:py-6">
+                    <span className="sm:hidden">—</span>
+                    <span className="hidden sm:inline">Нет задач</span>
+                  </p>
+                ) : (
+                  columnTasks.map((task) => (
+                    <KanbanTaskCard
+                      key={task.id}
+                      task={task}
+                      isMoving={movingTaskId === task.id}
+                      onMove={(column) => onMove(task.id, column)}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );
