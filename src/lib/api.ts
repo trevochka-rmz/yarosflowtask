@@ -3,15 +3,7 @@ export const API_BASE_URL =
 
 export type Role = "manager" | "employee";
 export type TaskStatus =
-  | "NEW"
-  | "ASSIGNED"
-  | "ACCEPTED"
-  | "IN_PROGRESS"
-  | "WAITING"
-  | "COMPLETED"
-  | "CLOSED"
-  | "OVERDUE"
-  | "CANCELLED";
+  "BACKLOG" | "SELECTED" | "WAITING" | "IN_PROGRESS" | "REVIEW" | "DONE" | "CANCELLED";
 export type Priority = "low" | "medium" | "high" | "critical";
 
 export interface User {
@@ -87,7 +79,7 @@ export interface Task {
   external_payload?: Record<string, unknown> | null;
 }
 
-export type BoardColumnKey = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+export type BoardColumnKey = TaskStatus;
 
 export interface BoardTask {
   id: number;
@@ -95,6 +87,7 @@ export interface BoardTask {
   title: string;
   status: TaskStatus;
   board_column: BoardColumnKey;
+  status_label?: string | null;
   priority?: Priority | null;
   project_key?: string | null;
   project_name?: string | null;
@@ -406,15 +399,13 @@ export const api = {
 };
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  NEW: "Новая",
-  ASSIGNED: "Назначена",
-  ACCEPTED: "Принята",
+  BACKLOG: "Новые задачи",
+  SELECTED: "На утверждении",
+  WAITING: "Ожидает исполнения",
   IN_PROGRESS: "В работе",
-  WAITING: "Ожидание",
-  COMPLETED: "Выполнена",
-  CLOSED: "Закрыта",
-  OVERDUE: "Просрочена",
-  CANCELLED: "Отменена",
+  REVIEW: "На проверке",
+  DONE: "Выполнено",
+  CANCELLED: "Отменено",
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
@@ -426,20 +417,16 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 
 export function nextStatuses(status: TaskStatus, role: Role): TaskStatus[] {
   if (role === "employee") {
-    if (status === "ASSIGNED") return ["ACCEPTED"];
-    if (status === "ACCEPTED") return ["IN_PROGRESS"];
-    if (status === "IN_PROGRESS") return ["WAITING", "COMPLETED"];
     if (status === "WAITING") return ["IN_PROGRESS"];
+    if (status === "IN_PROGRESS") return ["REVIEW", "WAITING"];
     return [];
   }
   // manager
-  if (status === "NEW") return ["ASSIGNED", "CANCELLED"];
-  if (status === "ASSIGNED") return ["ACCEPTED", "CANCELLED"];
-  if (status === "ACCEPTED") return ["IN_PROGRESS", "CANCELLED"];
-  if (status === "IN_PROGRESS") return ["WAITING", "COMPLETED", "CANCELLED"];
+  if (status === "BACKLOG") return ["SELECTED", "CANCELLED"];
+  if (status === "SELECTED") return ["WAITING", "CANCELLED"];
   if (status === "WAITING") return ["IN_PROGRESS", "CANCELLED"];
-  if (status === "COMPLETED") return ["CLOSED"];
-  if (status === "OVERDUE") return ["IN_PROGRESS", "CANCELLED"];
+  if (status === "IN_PROGRESS") return ["REVIEW", "WAITING", "CANCELLED"];
+  if (status === "REVIEW") return ["DONE", "IN_PROGRESS", "CANCELLED"];
   return [];
 }
 

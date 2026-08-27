@@ -270,7 +270,7 @@ function TaskDetail() {
                     {transitions.map((s) => (
                       <Button
                         key={s}
-                        variant={s === "COMPLETED" || s === "CLOSED" ? "default" : "outline"}
+                        variant={s === "DONE" ? "default" : "outline"}
                         className="w-full sm:w-auto"
                         disabled={statusMutation.isPending}
                         onClick={() => statusMutation.mutate(s)}
