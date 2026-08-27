@@ -216,7 +216,7 @@ function TasksPage() {
   ];
 
   return (
-    <AppLayout>
+    <AppLayout wide>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
@@ -384,13 +384,10 @@ function TasksPage() {
           </p>
         ) : view === "board" ? (
           boardQuery.isPending ? (
-            <div className="-mx-4 flex overflow-hidden px-4 sm:mx-0 sm:px-0">
-              <div className="flex gap-4">
+            <div className="-mx-4 overflow-hidden px-4 sm:-mx-6 sm:px-6">
+              <div className="grid min-w-full w-max grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4">
                 {BOARD_COLUMNS.map((column) => (
-                  <div
-                    key={column}
-                    className="h-48 w-[82vw] max-w-80 shrink-0 animate-pulse rounded-2xl bg-muted sm:w-72"
-                  />
+                  <div key={column} className="h-48 animate-pulse rounded-2xl bg-muted" />
                 ))}
               </div>
             </div>
@@ -632,8 +629,8 @@ function KanbanBoard({
   return (
     <div>
       <p className="mb-3 text-sm text-muted-foreground">Всего задач: {board.total}</p>
-      <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:mx-0 sm:px-0">
-        <div className="flex min-w-max items-start gap-4">
+      <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6">
+        <div className="grid min-w-full w-max grid-flow-col auto-cols-[minmax(15rem,1fr)] items-start gap-4">
           {BOARD_COLUMNS.map((columnKey) => {
             const columnTasks = board.columns[columnKey] ?? [];
             return (
@@ -657,7 +654,7 @@ function KanbanBoard({
                   if (Number.isFinite(taskId) && !taskAlreadyHere) onMove(taskId, columnKey);
                 }}
                 className={cn(
-                  "w-[82vw] max-w-80 shrink-0 rounded-2xl border border-border bg-muted/35 p-3 transition-colors sm:w-72",
+                  "min-w-0 rounded-2xl border border-border bg-muted/35 p-3 transition-colors",
                   dragOverColumn === columnKey && "border-primary bg-primary/5",
                 )}
               >

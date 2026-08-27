@@ -483,7 +483,15 @@ function AppSidebar({ locked }: { locked?: boolean }) {
   );
 }
 
-export function AppLayout({ children, fullscreen }: { children: ReactNode; fullscreen?: boolean }) {
+export function AppLayout({
+  children,
+  fullscreen,
+  wide,
+}: {
+  children: ReactNode;
+  fullscreen?: boolean;
+  wide?: boolean;
+}) {
   const { data: user, isLoading, isError } = useCurrentUser();
   const { org, hasNoOrg, isPlatformAdmin, can } = useCurrentOrg();
   const locked = hasNoOrg && !isPlatformAdmin;
@@ -573,7 +581,9 @@ export function AppLayout({ children, fullscreen }: { children: ReactNode; fulls
             className={
               fullscreen
                 ? "flex min-h-0 flex-1 flex-col overflow-hidden"
-                : "mx-auto w-full max-w-6xl px-4 py-6 sm:py-8"
+                : wide
+                  ? "w-full px-4 py-6 sm:px-6 sm:py-8"
+                  : "mx-auto w-full max-w-6xl px-4 py-6 sm:py-8"
             }
           >
             {locked ? <NoTenantScreen /> : children}
