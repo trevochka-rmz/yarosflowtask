@@ -87,6 +87,33 @@ export interface Task {
   external_payload?: Record<string, unknown> | null;
 }
 
+export type BoardColumnKey = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+
+export interface BoardTask {
+  id: number;
+  source?: string | null;
+  title: string;
+  status: TaskStatus;
+  board_column: BoardColumnKey;
+  priority?: Priority | null;
+  project_key?: string | null;
+  project_name?: string | null;
+  external_key?: string | null;
+  external_url?: string | null;
+  external_status?: string | null;
+  assignees?: Array<{ id: number; full_name: string | null; username: string | null }>;
+  assignee_label?: string | null;
+  external_assignee_name?: string | null;
+}
+
+export interface TasksBoard {
+  columnOrder: BoardColumnKey[];
+  columnsMeta: Array<{ key: BoardColumnKey; label: string; statuses: TaskStatus[] }>;
+  counts: Record<BoardColumnKey, number>;
+  total: number;
+  columns: Record<BoardColumnKey, BoardTask[]>;
+}
+
 export interface Comment {
   id: number;
   task_id: number;
@@ -290,11 +317,18 @@ export const api = {
     );
   },
 
+  /** Канбан-доска задач. Статусы сервер сам группирует по четырём колонкам. */
+  tasksBoard: (organizationId: number, query = "") => {
+    const sep = query.startsWith("?") ? "&" : "?";
+    return apiFetch<TasksBoard>(
+      `/tasks/board?organizationId=${organizationId}${query ? sep + query.replace(/^\?/, "") : ""}`,
+    );
+  },
+
   /** Задачи, созданные конкретным автором в организации. */
   tasksByAuthor: (authorId: number, organizationId: number, query = "") => {
-    const sep = query.startsWith("?") ? "&" : "?";
     return apiFetch<Task[]>(
-      `/tasks?organizationId=${organizationId}${sep}authorId=${authorId}${
+      `/tasks?organizationId=${organizationId}&authorId=${authorId}${
         query ? "&" + query.replace(/^\?/, "") : ""
       }`,
     );

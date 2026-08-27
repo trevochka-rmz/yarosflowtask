@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Loader2, RefreshCw, Search } from "lucide-react";
+import { Columns3, List, Loader2, RefreshCw, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
@@ -14,7 +14,10 @@ import {
   assigneeCount,
   formatDate,
   STATUS_LABELS,
+  type BoardColumnKey,
+  type BoardTask,
   type Task,
+  type TasksBoard,
   type TaskStatus,
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
@@ -40,6 +43,7 @@ export const Route = createFileRoute("/tasks/")({
 type Scope = "all" | "author" | "assigned";
 type Assignment = "any" | "yes" | "no";
 type SourceFilter = "all" | "internal" | "jira";
+type TasksView = "table" | "board";
 
 function TasksPage() {
   const { data: user } = useCurrentUser();
@@ -50,6 +54,7 @@ function TasksPage() {
   const [assignment, setAssignment] = useState<Assignment>("any");
   const [source, setSource] = useState<SourceFilter>("all");
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<TasksView>("table");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
 
@@ -65,7 +70,7 @@ function TasksPage() {
 
   const query = useQuery({
     queryKey: ["tasks", scope, status, assignment, source, search, userId, organizationId],
-    enabled: !!organizationId,
+    enabled: !!organizationId && view === "table",
     queryFn: async (): Promise<Task[]> => {
       if (!organizationId) return [];
       const params = new URLSearchParams();
@@ -77,6 +82,22 @@ function TasksPage() {
       if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
       if (scope === "assigned") return api.tasksMine(organizationId, qs);
       return api.tasks(organizationId, qs);
+    },
+  });
+
+  const boardQuery = useQuery({
+    queryKey: ["tasks-board", scope, assignment, source, search, userId, organizationId],
+    enabled: !!organizationId && view === "board",
+    queryFn: () => {
+      if (!organizationId) throw new Error("Организация не выбрана");
+      const params = new URLSearchParams();
+      if (scope === "author") params.set("authorId", String(userId));
+      if (scope === "assigned") params.set("assigned", "me");
+      else if (assignment !== "any") params.set("assigned", assignment);
+      if (source !== "all") params.set("source", source);
+      if (search.trim()) params.set("search", search.trim());
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      return api.tasksBoard(organizationId, qs);
     },
   });
 
@@ -92,11 +113,13 @@ function TasksPage() {
           : "Синхронизация с Jira выполнена",
       );
       void qc.invalidateQueries({ queryKey: ["tasks"] });
+      void qc.invalidateQueries({ queryKey: ["tasks-board"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const tasks = query.data ?? [];
+  const board = boardQuery.data;
 
   const scopes: { key: Scope; label: string }[] = [
     { key: "all", label: "Все" },
@@ -127,31 +150,59 @@ function TasksPage() {
             Отслеживайте прогресс от постановки ТЗ до выполнения.
           </p>
         </div>
-        {hasActiveJira && (
-          <button
-            type="button"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground sm:w-auto"
-            disabled={syncJira.isPending}
-            onClick={() =>
-              syncJira.mutate({
-                maxResults: 50,
-                jql: "statusCategory != Done ORDER BY updated DESC",
-              })
-            }
-          >
-            {syncJira.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3.5 w-3.5" />
-            )}
-            Синхронизировать Jira
-          </button>
-        )}
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <div className="flex w-full rounded-lg border border-border bg-card p-1 sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setView("table")}
+              className={cn(
+                "inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
+                view === "table"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <List className="h-4 w-4" /> Таблица
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("board")}
+              className={cn(
+                "inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
+                view === "board"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Columns3 className="h-4 w-4" /> Канбан
+            </button>
+          </div>
+          {hasActiveJira && (
+            <button
+              type="button"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground sm:w-auto"
+              disabled={syncJira.isPending}
+              onClick={() =>
+                syncJira.mutate({
+                  maxResults: 50,
+                  jql: "statusCategory != Done ORDER BY updated DESC",
+                })
+              }
+            >
+              {syncJira.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Синхронизировать Jira
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Фильтры */}
       <div className="mt-4 space-y-3">
-        <div className="grid w-full gap-3 md:grid-cols-2">
+        <div className={cn("grid w-full gap-3", view === "table" && "md:grid-cols-2")}>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -161,18 +212,20 @@ function TasksPage() {
               className="w-full pl-8"
             />
           </div>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
-            className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-          >
-            <option value="">Все статусы</option>
-            {Object.entries(STATUS_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+          {view === "table" && (
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TaskStatus | "")}
+              className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+            >
+              <option value="">Все статусы</option>
+              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap">
@@ -234,6 +287,20 @@ function TasksPage() {
           <p className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
             Выберите организацию для просмотра задач.
           </p>
+        ) : view === "board" ? (
+          boardQuery.isPending ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-48 animate-pulse rounded-2xl bg-muted" />
+              ))}
+            </div>
+          ) : boardQuery.isError ? (
+            <p className="rounded-2xl border border-border bg-card p-6 text-sm text-destructive">
+              {(boardQuery.error as Error).message}
+            </p>
+          ) : board ? (
+            <KanbanBoard board={board} />
+          ) : null
         ) : query.isPending ? (
           <div className="space-y-3 rounded-2xl border border-border bg-card p-6">
             {[0, 1, 2].map((i) => (
@@ -402,5 +469,106 @@ function TasksPage() {
         )}
       </div>
     </AppLayout>
+  );
+}
+
+const BOARD_COLUMNS: BoardColumnKey[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"];
+const BOARD_LABELS: Record<BoardColumnKey, string> = {
+  TODO: "К выполнению",
+  IN_PROGRESS: "В работе",
+  REVIEW: "На проверке",
+  DONE: "Готово",
+};
+
+function getBoardAssignee(task: BoardTask) {
+  if (task.assignee_label) return task.assignee_label;
+  const internalNames = (task.assignees ?? [])
+    .map((assignee) => assignee.full_name || assignee.username)
+    .filter(Boolean);
+  if (internalNames.length > 0) return internalNames.join(", ");
+  return task.external_assignee_name || "Без исполнителя";
+}
+
+function KanbanBoard({ board }: { board: TasksBoard }) {
+  const metaLabels = Object.fromEntries(
+    board.columnsMeta.map((column) => [column.key, column.label]),
+  ) as Partial<Record<BoardColumnKey, string>>;
+
+  return (
+    <div>
+      <p className="mb-3 text-sm text-muted-foreground">Всего задач: {board.total}</p>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4 lg:items-start">
+        {BOARD_COLUMNS.map((columnKey) => {
+          const columnTasks = board.columns[columnKey] ?? [];
+          return (
+            <section
+              key={columnKey}
+              className="min-w-0 rounded-2xl border border-border bg-muted/35 p-3"
+            >
+              <div className="mb-3 flex items-center justify-between gap-2 px-1">
+                <h2 className="font-semibold text-foreground">
+                  {metaLabels[columnKey] ?? BOARD_LABELS[columnKey]}
+                </h2>
+                <span className="inline-flex min-w-7 justify-center rounded-full bg-card px-2 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+                  {board.counts[columnKey] ?? columnTasks.length}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {columnTasks.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border bg-card/50 px-3 py-6 text-center text-xs text-muted-foreground">
+                    Нет задач
+                  </p>
+                ) : (
+                  columnTasks.map((task) => <KanbanTaskCard key={task.id} task={task} />)
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function KanbanTaskCard({ task }: { task: BoardTask }) {
+  const project = task.project_name || task.project_key || "Без проекта";
+
+  return (
+    <article className="rounded-xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <SourceBadge source={task.source} externalKey={task.external_key} />
+        <StatusBadge status={task.status} />
+      </div>
+      <Link
+        to="/tasks/$taskId"
+        params={{ taskId: String(task.id) }}
+        className="mt-2 block font-medium leading-snug text-foreground hover:text-primary"
+      >
+        {task.title}
+      </Link>
+      <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+        <p className="truncate" title={project}>
+          Проект: <span className="font-medium text-foreground">{project}</span>
+        </p>
+        <p className="flex items-start gap-1.5">
+          <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="line-clamp-2">{getBoardAssignee(task)}</span>
+        </p>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        {task.priority ? <PriorityBadge priority={task.priority} /> : <span />}
+        {task.external_url ? (
+          <a
+            href={task.external_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Открыть в Jira
+          </a>
+        ) : null}
+      </div>
+    </article>
   );
 }
