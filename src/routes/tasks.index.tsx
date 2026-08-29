@@ -325,34 +325,37 @@ function TasksPage() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-          <Button className="w-full sm:w-auto" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" /> Добавить задачу
-          </Button>
-          <div className="flex w-full rounded-lg border border-border bg-card p-1 sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setView("table")}
-              className={cn(
-                "inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
-                view === "table"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <List className="h-4 w-4" /> Таблица
-            </button>
-            <button
-              type="button"
-              onClick={() => setView("board")}
-              className={cn(
-                "inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
-                view === "board"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Columns3 className="h-4 w-4" /> Канбан
-            </button>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <div className="flex min-w-0 flex-1 rounded-lg border border-border bg-card p-1 sm:flex-none">
+              <button
+                type="button"
+                onClick={() => setView("table")}
+                className={cn(
+                  "inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
+                  view === "table"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <List className="h-4 w-4" /> Таблица
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("board")}
+                className={cn(
+                  "inline-flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:flex-none",
+                  view === "board"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Columns3 className="h-4 w-4" /> Канбан
+              </button>
+            </div>
+            <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Добавить задачу</span>
+              <span className="sm:hidden">Добавить</span>
+            </Button>
           </div>
           {hasActiveJira && (
             <button
