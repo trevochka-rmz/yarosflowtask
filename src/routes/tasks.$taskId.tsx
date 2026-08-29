@@ -68,12 +68,12 @@ function TaskDetail() {
   });
 
   const task = taskQuery.data;
+  const isJiraTask = Boolean(task && (task.is_jira || task.source === "jira"));
 
   const members = useQuery({
-    queryKey: ["org-members", organizationId, task?.source === "jira" ? "forJira" : "all"],
+    queryKey: ["org-members", organizationId, isJiraTask ? "forJira" : "all"],
     enabled: !!organizationId && !!task,
-    queryFn: () =>
-      orgApi.members(organizationId!, task?.source === "jira" ? { forJira: true } : undefined),
+    queryFn: () => orgApi.members(organizationId!, isJiraTask ? { forJira: true } : undefined),
   });
   const departments = useQuery({
     queryKey: ["org-departments", organizationId],
@@ -84,7 +84,13 @@ function TaskDetail() {
   const history = useQuery({ queryKey: ["history", id], queryFn: () => api.history(id) });
 
   useEffect(() => {
-    if (task?.assignees) setSelected(task.assignees.map((a) => a.id));
+    if (task?.assignees) {
+      setSelected(
+        task.assignees
+          .filter((assignee) => !assignee.is_external && assignee.id != null)
+          .map((assignee) => assignee.id as number),
+      );
+    }
     if (task?.department_assignees) {
       setSelectedDepartments(task.department_assignees.map((department) => department.id));
     }
@@ -437,10 +443,25 @@ function TaskDetail() {
             {task.assignees?.length ? (
               <ul className="mt-3 space-y-1 text-sm">
                 {task.assignees.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-2">
-                    <span>{userLabel(a)}</span>
+                  <li
+                    key={a.id ?? `jira-${a.jira_username ?? a.username ?? a.full_name}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="min-w-0">
+                      <span>{userLabel(a)}</span>
+                      {a.jira_username ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          Jira: {a.jira_username}
+                        </span>
+                      ) : null}
+                      {a.is_external ? (
+                        <span className="ml-2 rounded-full bg-[#0052CC]/10 px-2 py-0.5 text-xs text-[#0052CC]">
+                          внешний Jira
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatDate(a.assigned_at)}
+                      {a.assigned_at ? formatDate(a.assigned_at) : null}
                     </span>
                   </li>
                 ))}
@@ -484,26 +505,41 @@ function TaskDetail() {
                         className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
                       >
                         <input
-                          type="checkbox"
+                          type={isJira ? "radio" : "checkbox"}
+                          name={isJira ? "jira-assignee" : undefined}
                           className="accent-primary"
                           checked={selected.includes(m.user_id)}
                           onChange={(e) =>
-                            setSelected((prev) =>
-                              e.target.checked
+                            setSelected((prev) => {
+                              if (isJira) return e.target.checked ? [m.user_id] : [];
+                              return e.target.checked
                                 ? [...prev, m.user_id]
-                                : prev.filter((x) => x !== m.user_id),
-                            )
+                                : prev.filter((x) => x !== m.user_id);
+                            })
                           }
                         />
-                        {userLabel({
-                          full_name: m.full_name,
-                          username: m.username,
-                          id: m.user_id,
-                        })}
+                        <span>
+                          {userLabel({
+                            full_name: m.full_name,
+                            username: m.username,
+                            id: m.user_id,
+                          })}
+                          {isJira && m.jira_username ? (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              Jira: {m.jira_username}
+                            </span>
+                          ) : null}
+                        </span>
                       </label>
                     ))}
                     {members.isError ? (
                       <p className="text-xs text-destructive">{(members.error as Error).message}</p>
+                    ) : null}
+                    {isJira && !members.isPending && !members.isError && !members.data?.length ? (
+                      <p className="text-xs text-muted-foreground">
+                        Нет участников с заполненным Jira username. Укажите его на странице
+                        участников организации.
+                      </p>
                     ) : null}
                   </div>
                 </div>

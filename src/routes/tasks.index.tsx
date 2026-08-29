@@ -1,19 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Columns3, List, Loader2, RefreshCw, Search, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Columns3, List, Loader2, Plus, RefreshCw, Search, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
 import { DeleteTaskButton } from "@/components/DeleteTaskButton";
 import { ExportMenu } from "@/components/ExportMenu";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 import {
   api,
   assigneeCount,
   formatDate,
   STATUS_LABELS,
+  userLabel,
   type BoardColumnKey,
   type BoardTask,
   type Task,
@@ -63,6 +73,12 @@ function TasksPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [view, setView] = useState<TasksView>("board");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newPriority, setNewPriority] = useState<Task["priority"]>("medium");
+  const [newDeadline, setNewDeadline] = useState("");
+  const [newAssignees, setNewAssignees] = useState<number[]>([]);
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
 
@@ -75,6 +91,69 @@ function TasksPage() {
   const hasActiveJira = (integrations.data ?? []).some(
     (i) => i.provider === "JIRA" && i.status === "ACTIVE",
   );
+
+  const createMembers = useQuery({
+    queryKey: ["org-members", organizationId, hasActiveJira ? "forJira" : "all"],
+    enabled: !!organizationId && createOpen && !integrations.isPending,
+    queryFn: () => orgApi.members(organizationId!, hasActiveJira ? { forJira: true } : undefined),
+  });
+
+  useEffect(() => {
+    if (!createOpen || !hasActiveJira || !createMembers.data?.length || newAssignees.length) return;
+    const timur = createMembers.data.find((member) =>
+      [member.full_name, member.username, member.jira_username].some((value) =>
+        /(^|\s)(timur|тимур)(\s|$)/i.test(value ?? ""),
+      ),
+    );
+    if (timur) setNewAssignees([timur.user_id]);
+  }, [createOpen, createMembers.data, hasActiveJira, newAssignees.length]);
+
+  const createTask = useMutation({
+    mutationFn: async () => {
+      if (!organizationId) throw new Error("Организация не выбрана");
+      const selectedMember = createMembers.data?.find((member) =>
+        newAssignees.includes(member.user_id),
+      );
+      const created = await api.createManualTask(organizationId, {
+        title: newTitle.trim(),
+        description: newDescription.trim() || undefined,
+        priority: newPriority,
+        deadline: newDeadline || null,
+        ...(hasActiveJira
+          ? {
+              pushToJira: true,
+              projectKey: "DEV",
+              jiraAssignee: selectedMember?.jira_username ?? null,
+            }
+          : {}),
+      });
+      if ((created as Task & { jira_push_error?: string }).jira_push_error) {
+        throw new Error(
+          `Локальная задача создана, но Jira вернула ошибку: ${(created as Task & { jira_push_error?: string }).jira_push_error}`,
+        );
+      }
+      if (!hasActiveJira && newAssignees.length) {
+        return api.assign(created.id, organizationId, newAssignees, []);
+      }
+      return created;
+    },
+    onSuccess: () => {
+      setCreateOpen(false);
+      setNewTitle("");
+      setNewDescription("");
+      setNewPriority("medium");
+      setNewDeadline("");
+      setNewAssignees([]);
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      void qc.invalidateQueries({ queryKey: ["tasks-board"] });
+      toast.success(hasActiveJira ? "Задача создана и добавлена в Jira" : "Задача создана");
+    },
+    onError: (error: Error) => {
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+      void qc.invalidateQueries({ queryKey: ["tasks-board"] });
+      toast.error(error.message);
+    },
+  });
 
   const projectsQuery = useQuery({
     queryKey: ["task-projects", organizationId],
@@ -246,6 +325,9 @@ function TasksPage() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <Button className="w-full sm:w-auto" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" /> Добавить задачу
+          </Button>
           <div className="flex w-full rounded-lg border border-border bg-card p-1 sm:w-auto">
             <button
               type="button"
@@ -294,6 +376,140 @@ function TasksPage() {
           )}
         </div>
       </div>
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setNewAssignees([]);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Новая задача</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {integrations.isPending ? (
+              <p className="text-sm text-muted-foreground">Проверяем интеграции…</p>
+            ) : hasActiveJira ? (
+              <p className="rounded-lg bg-[#0052CC]/10 px-3 py-2 text-sm text-[#0052CC]">
+                Задача будет автоматически добавлена в Jira, проект DEV.
+              </p>
+            ) : (
+              <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+                Jira не подключена — задача будет создана только в TaskFlow.
+              </p>
+            )}
+
+            <label className="block space-y-1.5 text-sm font-medium">
+              Название
+              <Input
+                autoFocus
+                value={newTitle}
+                onChange={(event) => setNewTitle(event.target.value)}
+                placeholder="Что нужно сделать?"
+              />
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Описание
+              <Textarea
+                value={newDescription}
+                onChange={(event) => setNewDescription(event.target.value)}
+                placeholder="Подробности и ожидаемый результат"
+                rows={4}
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1.5 text-sm font-medium">
+                Приоритет
+                <select
+                  value={newPriority}
+                  onChange={(event) => setNewPriority(event.target.value as Task["priority"])}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                >
+                  <option value="low">Низкий</option>
+                  <option value="medium">Средний</option>
+                  <option value="high">Высокий</option>
+                  <option value="critical">Критичный</option>
+                </select>
+              </label>
+              <label className="block space-y-1.5 text-sm font-medium">
+                Срок
+                <Input
+                  type="datetime-local"
+                  value={newDeadline}
+                  onChange={(event) => setNewDeadline(event.target.value)}
+                />
+              </label>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium">Исполнитель{hasActiveJira ? " Jira" : "и"}</p>
+              {hasActiveJira ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  По умолчанию выбирается Timur. Для Jira разрешён один исполнитель.
+                </p>
+              ) : null}
+              <div className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+                {createMembers.isPending ? (
+                  <p className="px-2 py-1 text-xs text-muted-foreground">Загрузка участников…</p>
+                ) : null}
+                {(createMembers.data ?? []).map((member) => (
+                  <label
+                    key={member.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
+                  >
+                    <input
+                      type={hasActiveJira ? "radio" : "checkbox"}
+                      name={hasActiveJira ? "create-jira-assignee" : undefined}
+                      checked={newAssignees.includes(member.user_id)}
+                      onChange={(event) =>
+                        setNewAssignees((previous) => {
+                          if (hasActiveJira) return event.target.checked ? [member.user_id] : [];
+                          return event.target.checked
+                            ? [...previous, member.user_id]
+                            : previous.filter((id) => id !== member.user_id);
+                        })
+                      }
+                    />
+                    <span className="min-w-0">
+                      {userLabel({
+                        id: member.user_id,
+                        full_name: member.full_name,
+                        username: member.username,
+                      })}
+                      {hasActiveJira && member.jira_username ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          Jira: {member.jira_username}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                ))}
+                {!createMembers.isPending && !createMembers.data?.length ? (
+                  <p className="px-2 py-1 text-xs text-muted-foreground">
+                    {hasActiveJira
+                      ? "Нет участников с заполненным Jira username."
+                      : "В организации нет доступных участников."}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              disabled={!newTitle.trim() || integrations.isPending || createTask.isPending}
+              onClick={() => createTask.mutate()}
+            >
+              {createTask.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Создать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Фильтры */}
       <div className="mt-4 space-y-3">
@@ -537,6 +753,19 @@ function TasksPage() {
                       <StatusBadge status={task.status} />
                       <PriorityBadge priority={task.priority} />
                       <AssignmentBadge count={assigneeCount(task)} />
+                      {task.assignees?.length ? (
+                        <span className="max-w-full truncate">
+                          {task.assignees
+                            .map((assignee) =>
+                              userLabel({
+                                id: assignee.id,
+                                full_name: assignee.full_name,
+                                username: assignee.username,
+                              }),
+                            )
+                            .join(", ")}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
@@ -608,6 +837,19 @@ function TasksPage() {
                         </td>
                         <td className="px-4 py-3">
                           <AssignmentBadge count={assigneeCount(task)} />
+                          {task.assignees?.length ? (
+                            <div className="mt-1 max-w-48 truncate text-xs text-muted-foreground">
+                              {task.assignees
+                                .map((assignee) =>
+                                  userLabel({
+                                    id: assignee.id,
+                                    full_name: assignee.full_name,
+                                    username: assignee.username,
+                                  }),
+                                )
+                                .join(", ")}
+                            </div>
+                          ) : null}
                         </td>
                         <td className="px-4 py-3">
                           <PriorityBadge priority={task.priority} />

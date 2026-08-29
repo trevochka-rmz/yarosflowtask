@@ -21,13 +21,17 @@ export interface User {
 }
 
 export interface Assignee {
-  id: number;
-  tg_id: number | string;
+  id: number | null;
+  tg_id?: number | string | null;
   full_name: string | null;
   username: string | null;
+  jira_username?: string | null;
+  department_name?: string | null;
+  assignment_source?: "local" | "jira" | "local+jira" | "jira_external";
+  is_external?: boolean;
   role?: Role;
-  assigned_at: string;
-  assigned_by: number;
+  assigned_at?: string | null;
+  assigned_by?: number | null;
 }
 
 export interface DepartmentAssignee {
@@ -386,6 +390,23 @@ export const api = {
         ...(departmentId ? { departmentId } : {}),
       },
     }),
+  createManualTask: (
+    organizationId: number,
+    body: {
+      title: string;
+      description?: string;
+      acceptanceCriteria?: string;
+      priority?: Priority;
+      deadline?: string | null;
+      pushToJira?: boolean;
+      projectKey?: string;
+      jiraAssignee?: string | null;
+    },
+  ) =>
+    apiFetch<Task>("/tasks", {
+      method: "POST",
+      body: { organizationId, ...body },
+    }),
   /** Создать задачу из AI-превью (шаг 2 TaskFlow) */
   createTaskFromAi: (organizationId: number, aiActionId: number) =>
     apiFetch<Task>("/tasks", {
@@ -464,8 +485,12 @@ export function isAssigned(task: Task): boolean {
   return assigneeCount(task) >= 1;
 }
 
-export function userLabel(u: { full_name?: string | null; username?: string | null; id: number }) {
-  return u.full_name || (u.username ? `@${u.username}` : `#${u.id}`);
+export function userLabel(u: {
+  full_name?: string | null;
+  username?: string | null;
+  id?: number | null;
+}) {
+  return u.full_name || (u.username ? `@${u.username}` : u.id != null ? `#${u.id}` : "Без имени");
 }
 
 /** Отображаемое имя: username, иначе имя/фамилия. */
