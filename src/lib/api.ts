@@ -22,16 +22,25 @@ export interface User {
 
 export interface Assignee {
   id: number;
-  tg_id: number;
+  tg_id: number | string;
   full_name: string | null;
   username: string | null;
-  role: Role;
+  role?: Role;
+  assigned_at: string;
+  assigned_by: number;
+}
+
+export interface DepartmentAssignee {
+  id: number;
+  name: string;
+  code: string | null;
   assigned_at: string;
   assigned_by: number;
 }
 
 export interface Task {
   id: number;
+  organization_id?: number;
   author_id: number;
   raw_text: string;
   title: string;
@@ -41,12 +50,28 @@ export interface Task {
   status: TaskStatus;
   category: string | null;
   deadline: string | null;
+  result?: string | null;
+  department_id?: number | null;
+  bot_id?: number | null;
   ai_suggested_deadline: string | null;
   ai_model?: string | null;
   created_at: string;
   updated_at: string;
   assignees?: Assignee[];
   assignee_count?: number;
+  department_assignees?: DepartmentAssignee[];
+  is_jira?: boolean;
+  jira_key?: string | null;
+  jira_url?: string | null;
+  jira_status?: string | null;
+  jira_project_key?: string | null;
+  jira_project_name?: string | null;
+  jira_assignee?: string | null;
+  jira_assignee_key?: string | null;
+  jira_reporter?: string | null;
+  jira_issuetype?: string | null;
+  jira_created_at?: string | null;
+  jira_updated_at?: string | null;
   /**
    * Источник задачи:
    * - internal — создана внутри платформы

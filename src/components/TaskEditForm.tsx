@@ -58,6 +58,7 @@ export function TaskEditForm({
       queryClient.invalidateQueries({ queryKey: ["task", task.id] });
       queryClient.invalidateQueries({ queryKey: ["history", task.id] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks-board"] });
       toast.success("Задача обновлена");
       onDone();
     },

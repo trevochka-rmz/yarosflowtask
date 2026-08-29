@@ -62,7 +62,7 @@ function TasksPage() {
   const [exactDate, setExactDate] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [view, setView] = useState<TasksView>("table");
+  const [view, setView] = useState<TasksView>("board");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
 

@@ -1,7 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Loader2, Pencil, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Clock3,
+  ExternalLink,
+  FolderKanban,
+  Loader2,
+  Pencil,
+  Send,
+  UsersRound,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { TaskAttachments } from "@/components/Attachments";
@@ -49,6 +59,7 @@ function TaskDetail() {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
+  const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
   const [editing, setEditing] = useState(false);
 
   const taskQuery = useQuery({
@@ -74,12 +85,16 @@ function TaskDetail() {
 
   useEffect(() => {
     if (task?.assignees) setSelected(task.assignees.map((a) => a.id));
-  }, [task?.id, task?.assignees]);
+    if (task?.department_assignees) {
+      setSelectedDepartments(task.department_assignees.map((department) => department.id));
+    }
+  }, [task?.id, task?.assignees, task?.department_assignees]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["task", id, organizationId] });
     queryClient.invalidateQueries({ queryKey: ["history", id] });
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["tasks-board"] });
   };
 
   const statusMutation = useMutation({
@@ -132,6 +147,15 @@ function TaskDetail() {
   }
 
   const transitions = nextStatuses(task.status, role);
+  const isJira = task.is_jira || task.source === "jira";
+  const jiraKey = task.jira_key || task.external_key;
+  const jiraUrl = task.jira_url || task.external_url;
+  const jiraStatus = task.jira_status || task.external_status;
+  const jiraAssignee = task.jira_assignee || task.external_assignee_name;
+  const jiraProjectKey = task.jira_project_key || task.external_project_key;
+  const jiraProjectName = task.jira_project_name || task.external_project_name;
+  const jiraReporter = task.jira_reporter || task.external_reporter_name;
+  const jiraIssueType = task.jira_issuetype || task.external_issuetype;
 
   return (
     <AppLayout>
@@ -151,10 +175,7 @@ function TaskDetail() {
                   <div className="flex flex-wrap items-center gap-2 text-xs opacity-80">
                     <span>Задача #{task.id}</span>
                     {task.source && (
-                      <SourceBadge
-                        source={task.source}
-                        externalKey={task.external_key ?? undefined}
-                      />
+                      <SourceBadge source={task.source} externalKey={jiraKey ?? undefined} />
                     )}
                   </div>
                   <h1 className="mt-1 text-xl font-semibold break-words sm:text-2xl">
@@ -194,25 +215,24 @@ function TaskDetail() {
                           <PriorityBadge priority={task.priority} />
                           <AssignmentBadge count={task.assignees?.length ?? 0} />
                         </div>
-                        {task.source === "jira" && (task.external_status || task.external_url) && (
+                        {isJira && (jiraStatus || jiraUrl) && (
                           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                            {task.external_status && (
+                            {jiraStatus && (
                               <div>
-                                Статус в Jira:{" "}
-                                <span className="font-medium">{task.external_status}</span>
+                                Статус в Jira: <span className="font-medium">{jiraStatus}</span>
                                 <span className="mx-1">→</span>
                                 {STATUS_LABELS[task.status]}
                               </div>
                             )}
-                            {task.external_assignee_name && (
+                            {jiraAssignee && (
                               <div>
-                                Исполнитель (Jira): <span>{task.external_assignee_name}</span>
+                                Исполнитель (Jira): <span>{jiraAssignee}</span>
                               </div>
                             )}
-                            {task.external_url && (
+                            {jiraUrl && (
                               <div>
                                 <a
-                                  href={task.external_url}
+                                  href={jiraUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 text-primary hover:underline"
@@ -225,6 +245,24 @@ function TaskDetail() {
                         )}
                       </td>
                     </tr>
+                    {task.ai_model || task.bot_id || task.ai_suggested_deadline ? (
+                      <tr className="max-sm:block">
+                        <th className="bg-muted/40 px-4 py-2 text-left align-top font-medium text-muted-foreground sm:px-6 sm:py-3">
+                          Генерация
+                        </th>
+                        <td className="px-4 py-3 sm:px-6">
+                          <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                            {task.ai_model ? <span>AI-модель: {task.ai_model}</span> : null}
+                            {task.bot_id ? <span>Бот: #{task.bot_id}</span> : null}
+                            {task.ai_suggested_deadline ? (
+                              <span>
+                                Предложенный дедлайн: {formatDate(task.ai_suggested_deadline)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
                     <tr className="max-sm:block">
                       <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                         Категория
@@ -253,6 +291,32 @@ function TaskDetail() {
                       </th>
                       <td className="px-4 py-3 sm:px-6">
                         {formatDate(task.deadline ?? task.ai_suggested_deadline)}
+                      </td>
+                    </tr>
+                    {task.result ? (
+                      <tr className="max-sm:block">
+                        <th className="bg-muted/40 px-4 py-2 text-left align-top font-medium text-muted-foreground sm:px-6 sm:py-3">
+                          Результат
+                        </th>
+                        <td className="px-4 py-3 sm:px-6">
+                          <ExpandableText text={task.result} />
+                        </td>
+                      </tr>
+                    ) : null}
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 text-left align-top font-medium text-muted-foreground sm:px-6 sm:py-3">
+                        Даты
+                      </th>
+                      <td className="px-4 py-3 sm:px-6">
+                        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                          <span className="inline-flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" /> Создана:{" "}
+                            {formatDate(task.created_at)}
+                          </span>
+                          <span className="inline-flex items-center gap-2">
+                            <Clock3 className="h-4 w-4" /> Обновлена: {formatDate(task.updated_at)}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                     <tr className="max-sm:block">
@@ -327,6 +391,47 @@ function TaskDetail() {
         </div>
 
         <div className="space-y-6">
+          {isJira ? (
+            <section className="overflow-hidden rounded-2xl border border-[#0052CC]/20 bg-card shadow-soft">
+              <div className="flex items-center justify-between gap-3 bg-[#0052CC]/10 px-4 py-3 sm:px-6">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#0052CC]">Jira</p>
+                  <h2 className="font-semibold text-foreground">
+                    {[jiraProjectName, jiraKey].filter(Boolean).join(" · ") || "Данные Jira"}
+                  </h2>
+                </div>
+                {jiraUrl ? (
+                  <a
+                    href={jiraUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Открыть задачу в Jira"
+                    className="rounded-full bg-[#0052CC] p-2 text-white transition-opacity hover:opacity-85"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                ) : null}
+              </div>
+              <dl className="grid gap-x-4 gap-y-3 p-4 text-sm sm:grid-cols-2 sm:p-6">
+                <TaskMeta label="Статус Jira" value={jiraStatus} />
+                <TaskMeta label="Тип задачи" value={jiraIssueType} />
+                <TaskMeta
+                  label="Проект"
+                  value={[jiraProjectName, jiraProjectKey].filter(Boolean).join(" · ")}
+                />
+                <TaskMeta label="Исполнитель Jira" value={jiraAssignee} />
+                <TaskMeta
+                  label="Логин исполнителя"
+                  value={task.jira_assignee_key || task.external_assignee_key}
+                />
+                <TaskMeta label="Автор Jira" value={jiraReporter} />
+                <TaskMeta label="Создана в Jira" value={formatDate(task.jira_created_at)} />
+                <TaskMeta label="Обновлена в Jira" value={formatDate(task.jira_updated_at)} />
+                <TaskMeta label="Последняя синхронизация" value={formatDate(task.last_synced_at)} />
+              </dl>
+            </section>
+          ) : null}
+
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <h2 className="text-lg font-semibold">Исполнители</h2>
             {task.assignees?.length ? (
@@ -342,6 +447,30 @@ function TaskDetail() {
               </ul>
             ) : (
               <p className="mt-2 text-sm text-muted-foreground">Никто не назначен.</p>
+            )}
+
+            <h3 className="mt-5 flex items-center gap-2 border-t border-border pt-4 text-sm font-semibold">
+              <UsersRound className="h-4 w-4 text-muted-foreground" /> Назначенные отделы
+            </h3>
+            {task.department_assignees?.length ? (
+              <ul className="mt-3 space-y-2 text-sm">
+                {task.department_assignees.map((department) => (
+                  <li
+                    key={department.id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2"
+                  >
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="truncate">{department.name}</span>
+                    </span>
+                    {department.code ? (
+                      <span className="text-xs text-muted-foreground">{department.code}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">Отделы не назначены.</p>
             )}
 
             {role === "manager" ? (
@@ -390,9 +519,9 @@ function TaskDetail() {
                         <input
                           type="checkbox"
                           className="accent-primary"
-                          checked={selected.includes(d.id)}
+                          checked={selectedDepartments.includes(d.id)}
                           onChange={(e) =>
-                            setSelected((prev) =>
+                            setSelectedDepartments((prev) =>
                               e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id),
                             )
                           }
@@ -416,9 +545,7 @@ function TaskDetail() {
                       userIds:
                         members.data?.map((m) => m.user_id).filter((id) => selected.includes(id)) ??
                         [],
-                      departmentIds:
-                        departments.data?.map((d) => d.id).filter((id) => selected.includes(id)) ??
-                        [],
+                      departmentIds: selectedDepartments,
                     })
                   }
                 >
@@ -463,5 +590,14 @@ function TaskDetail() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+function TaskMeta({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 break-words font-medium text-foreground">{value || "—"}</dd>
+    </div>
   );
 }
