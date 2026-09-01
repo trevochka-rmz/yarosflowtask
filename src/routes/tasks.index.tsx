@@ -68,7 +68,7 @@ function TasksPage() {
   const [search, setSearch] = useState("");
   const [projectKey, setProjectKey] = useState("");
   const [dateMode, setDateMode] = useState<DateMode>("week");
-  const [dateField, setDateField] = useState<DateField>("created_at");
+  const [dateField, setDateField] = useState<DateField>("updated_at");
   const [exactDate, setExactDate] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
