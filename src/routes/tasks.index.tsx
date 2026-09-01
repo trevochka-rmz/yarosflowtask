@@ -79,6 +79,7 @@ function TasksPage() {
   const [newPriority, setNewPriority] = useState<Task["priority"]>("medium");
   const [newDeadline, setNewDeadline] = useState("");
   const [newAssignees, setNewAssignees] = useState<number[]>([]);
+  const [publishToJira, setPublishToJira] = useState(false);
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
 
@@ -93,20 +94,21 @@ function TasksPage() {
   );
 
   const createMembers = useQuery({
-    queryKey: ["org-members", organizationId, hasActiveJira ? "forJira" : "all"],
+    queryKey: ["org-members", organizationId, publishToJira ? "forJira" : "all"],
     enabled: !!organizationId && createOpen && !integrations.isPending,
-    queryFn: () => orgApi.members(organizationId!, hasActiveJira ? { forJira: true } : undefined),
+    queryFn: () =>
+      orgApi.members(organizationId!, publishToJira ? { forJira: true } : undefined),
   });
 
   useEffect(() => {
-    if (!createOpen || !hasActiveJira || !createMembers.data?.length || newAssignees.length) return;
+    if (!createOpen || !publishToJira || !createMembers.data?.length || newAssignees.length) return;
     const timur = createMembers.data.find((member) =>
       [member.full_name, member.username, member.jira_username].some((value) =>
         /(^|\s)(timur|тимур)(\s|$)/i.test(value ?? ""),
       ),
     );
     if (timur) setNewAssignees([timur.user_id]);
-  }, [createOpen, createMembers.data, hasActiveJira, newAssignees.length]);
+  }, [createOpen, createMembers.data, publishToJira, newAssignees.length]);
 
   const createTask = useMutation({
     mutationFn: async () => {
@@ -119,10 +121,10 @@ function TasksPage() {
         description: newDescription.trim() || undefined,
         priority: newPriority,
         deadline: newDeadline || null,
-        ...(hasActiveJira
+        ...(hasActiveJira && publishToJira
           ? {
               pushToJira: true,
-              projectKey: "DEV",
+              projectKey: "PREDEV",
               jiraAssignee: selectedMember?.jira_username ?? null,
             }
           : {}),
@@ -132,7 +134,7 @@ function TasksPage() {
           `Локальная задача создана, но Jira вернула ошибку: ${(created as Task & { jira_push_error?: string }).jira_push_error}`,
         );
       }
-      if (!hasActiveJira && newAssignees.length) {
+      if (!publishToJira && newAssignees.length) {
         return api.assign(created.id, organizationId, newAssignees, []);
       }
       return created;
@@ -144,9 +146,10 @@ function TasksPage() {
       setNewPriority("medium");
       setNewDeadline("");
       setNewAssignees([]);
+      setPublishToJira(false);
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: ["tasks-board"] });
-      toast.success(hasActiveJira ? "Задача создана и добавлена в Jira" : "Задача создана");
+      toast.success(publishToJira ? "Задача создана и добавлена в Jira" : "Задача создана");
     },
     onError: (error: Error) => {
       void qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -384,7 +387,10 @@ function TasksPage() {
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) setNewAssignees([]);
+          if (!open) {
+            setNewAssignees([]);
+            setPublishToJira(false);
+          }
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
@@ -395,9 +401,21 @@ function TasksPage() {
             {integrations.isPending ? (
               <p className="text-sm text-muted-foreground">Проверяем интеграции…</p>
             ) : hasActiveJira ? (
-              <p className="rounded-lg bg-[#0052CC]/10 px-3 py-2 text-sm text-[#0052CC]">
-                Задача будет автоматически добавлена в Jira, проект DEV.
-              </p>
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-[#0052CC]/10 px-3 py-2 text-[#0052CC]">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-primary"
+                  checked={publishToJira}
+                  onChange={(event) => {
+                    setPublishToJira(event.target.checked);
+                    setNewAssignees([]);
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-medium">Создать задачу в Jira</span>
+                  <span className="block text-xs">Проект PREDEV.</span>
+                </span>
+              </label>
             ) : (
               <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
                 Jira не подключена — задача будет создана только в TaskFlow.
@@ -447,8 +465,8 @@ function TasksPage() {
             </div>
 
             <div>
-              <p className="text-sm font-medium">Исполнитель{hasActiveJira ? " Jira" : "и"}</p>
-              {hasActiveJira ? (
+              <p className="text-sm font-medium">Исполнитель{publishToJira ? " Jira" : "и"}</p>
+              {publishToJira ? (
                 <p className="mt-1 text-xs text-muted-foreground">
                   По умолчанию выбирается Timur. Для Jira разрешён один исполнитель.
                 </p>
@@ -463,12 +481,12 @@ function TasksPage() {
                     className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
                   >
                     <input
-                      type={hasActiveJira ? "radio" : "checkbox"}
-                      name={hasActiveJira ? "create-jira-assignee" : undefined}
+                      type={publishToJira ? "radio" : "checkbox"}
+                      name={publishToJira ? "create-jira-assignee" : undefined}
                       checked={newAssignees.includes(member.user_id)}
                       onChange={(event) =>
                         setNewAssignees((previous) => {
-                          if (hasActiveJira) return event.target.checked ? [member.user_id] : [];
+                          if (publishToJira) return event.target.checked ? [member.user_id] : [];
                           return event.target.checked
                             ? [...previous, member.user_id]
                             : previous.filter((id) => id !== member.user_id);
@@ -481,7 +499,7 @@ function TasksPage() {
                         full_name: member.full_name,
                         username: member.username,
                       })}
-                      {hasActiveJira && member.jira_username ? (
+                      {publishToJira && member.jira_username ? (
                         <span className="ml-2 text-xs text-muted-foreground">
                           Jira: {member.jira_username}
                         </span>
@@ -491,7 +509,7 @@ function TasksPage() {
                 ))}
                 {!createMembers.isPending && !createMembers.data?.length ? (
                   <p className="px-2 py-1 text-xs text-muted-foreground">
-                    {hasActiveJira
+                    {publishToJira
                       ? "Нет участников с заполненным Jira username."
                       : "В организации нет доступных участников."}
                   </p>

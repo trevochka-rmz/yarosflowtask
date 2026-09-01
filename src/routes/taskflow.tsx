@@ -220,7 +220,7 @@ function PreviewCard({
             <span>
               <span className="block text-sm font-medium">Добавить задачу в Jira</span>
               <span className="block text-xs text-muted-foreground">
-                Проект DEV. Публикация включена по умолчанию.
+                Проект PREDEV. Публикация включена по умолчанию.
               </span>
             </span>
           </label>
@@ -344,7 +344,7 @@ function Index() {
         deadline: p.suggested_deadline,
         pushToJira: hasActiveJira && publishToJira,
         ...(hasActiveJira && publishToJira
-          ? { projectKey: "DEV", jiraAssignee: jiraMember?.jira_username ?? null }
+          ? { projectKey: "PREDEV", jiraAssignee: jiraMember?.jira_username ?? null }
           : {}),
       });
       if (created.jira_push_error) {
