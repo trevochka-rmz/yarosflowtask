@@ -192,20 +192,6 @@ function PreviewCard({
           </p>
           <p className="mt-1.5 whitespace-pre-wrap text-sm">{criteria}</p>
         </div>
-        {preview.suggested_deadline && (
-          <div className="px-5 py-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Предлагаемый дедлайн
-            </p>
-            <p className="mt-1 text-sm">
-              {new Date(preview.suggested_deadline).toLocaleDateString("ru-RU", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </p>
-          </div>
-        )}
       </div>
 
       {jiraEnabled ? (
@@ -341,7 +327,7 @@ function Index() {
         acceptanceCriteria: p.acceptance_criteria,
         priority: p.priority as Priority,
         category: p.category,
-        deadline: p.suggested_deadline,
+        deadline: null,
         pushToJira: hasActiveJira && publishToJira,
         ...(hasActiveJira && publishToJira
           ? { projectKey: "PREDEV", jiraAssignee: jiraMember?.jira_username ?? null }
