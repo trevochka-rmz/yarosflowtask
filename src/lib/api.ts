@@ -46,7 +46,7 @@ export interface Task {
   id: number;
   organization_id?: number;
   author_id: number;
-  raw_text: string;
+  raw_text?: string | null;
   title: string;
   description: string;
   acceptance_criteria: string;
@@ -106,6 +106,7 @@ export interface Task {
   last_synced_at?: string | null;
   /** Сырая нагрузка из внешней системы (например, весь объект Jira issue). */
   external_payload?: Record<string, unknown> | null;
+  jira_push_error?: string;
 }
 
 export type BoardColumnKey = TaskStatus;
@@ -408,10 +409,24 @@ export const api = {
       body: { organizationId, ...body },
     }),
   /** Создать задачу из AI-превью (шаг 2 TaskFlow) */
-  createTaskFromAi: (organizationId: number, aiActionId: number) =>
+  createTaskFromAi: (
+    organizationId: number,
+    aiActionId: number,
+    options?: {
+      title?: string;
+      description?: string;
+      acceptanceCriteria?: string;
+      priority?: Priority;
+      category?: string;
+      deadline?: string | null;
+      pushToJira?: boolean;
+      projectKey?: string;
+      jiraAssignee?: string | null;
+    },
+  ) =>
     apiFetch<Task>("/tasks", {
       method: "POST",
-      body: { organizationId, aiActionId },
+      body: { organizationId, aiActionId, ...options },
     }),
   /** Назначение исполнителей и отделов. userIds — ID пользователей (user_id из members). */
   assign: (id: number, organizationId: number, userIds: number[], departmentIds: number[]) =>

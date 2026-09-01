@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -19,9 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { api, userLabel, type Priority } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { useCurrentTenant, aiApi, type AiTaskPreview } from "@/lib/platform";
+import { useCurrentTenant, aiApi, integrationApi, type AiTaskPreview } from "@/lib/platform";
+import { orgApi } from "@/lib/org";
 import { useVoiceInput } from "@/lib/use-voice-input";
 
 export const Route = createFileRoute("/taskflow")({
@@ -75,12 +76,30 @@ function PreviewCard({
   onEdit,
   onCancel,
   isPending,
+  jiraEnabled,
+  publishToJira,
+  onPublishToJiraChange,
+  jiraMembers,
+  selectedJiraUserId,
+  onSelectedJiraUserIdChange,
 }: {
   preview: AiTaskPreview;
   onConfirm: (p: AiTaskPreview) => void;
   onEdit: (p: AiTaskPreview) => void;
   onCancel: () => void;
   isPending: boolean;
+  jiraEnabled: boolean;
+  publishToJira: boolean;
+  onPublishToJiraChange: (checked: boolean) => void;
+  jiraMembers: Array<{
+    id: number;
+    user_id: number;
+    full_name: string | null;
+    username: string | null;
+    jira_username?: string | null;
+  }>;
+  selectedJiraUserId: number | null;
+  onSelectedJiraUserIdChange: (userId: number | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(preview.title);
@@ -189,6 +208,49 @@ function PreviewCard({
         )}
       </div>
 
+      {jiraEnabled ? (
+        <div className="border-t border-border px-5 py-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-primary"
+              checked={publishToJira}
+              onChange={(event) => onPublishToJiraChange(event.target.checked)}
+            />
+            <span>
+              <span className="block text-sm font-medium">Добавить задачу в Jira</span>
+              <span className="block text-xs text-muted-foreground">
+                Проект DEV. Публикация включена по умолчанию.
+              </span>
+            </span>
+          </label>
+          {publishToJira ? (
+            <label className="mt-3 block space-y-1.5 text-sm font-medium">
+              Исполнитель Jira
+              <select
+                value={selectedJiraUserId ?? ""}
+                onChange={(event) =>
+                  onSelectedJiraUserIdChange(event.target.value ? Number(event.target.value) : null)
+                }
+                className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+              >
+                <option value="">Без исполнителя</option>
+                {jiraMembers.map((member) => (
+                  <option key={member.id} value={member.user_id}>
+                    {userLabel({
+                      id: member.user_id,
+                      full_name: member.full_name,
+                      username: member.username,
+                    })}
+                    {member.jira_username ? ` — ${member.jira_username}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Действия */}
       <div className="flex flex-wrap gap-2 rounded-b-2xl border-t border-border bg-muted/30 px-5 py-4">
         <Button disabled={isPending} onClick={() => onConfirm(current)}>
@@ -197,7 +259,7 @@ function PreviewCard({
           ) : (
             <Check className="mr-1 h-4 w-4" />
           )}
-          Создать задачу
+          {jiraEnabled && publishToJira ? "Создать и добавить в Jira" : "Создать задачу"}
         </Button>
         <Button variant="outline" disabled={isPending} onClick={() => setEditing(true)}>
           <Edit2 className="mr-1 h-4 w-4" /> Изменить
@@ -217,11 +279,46 @@ function Index() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<AiTaskPreview | null>(null);
+  const [publishToJira, setPublishToJira] = useState(true);
+  const [selectedJiraUserId, setSelectedJiraUserId] = useState<number | null>(null);
 
   const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
   const { tenant } = useCurrentTenant();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const integrations = useQuery({
+    queryKey: ["integrations", tenant?.id],
+    enabled: !!tenant?.id,
+    queryFn: () => integrationApi.list(tenant!.id),
+  });
+  const hasActiveJira = (integrations.data ?? []).some(
+    (integration) => integration.provider === "JIRA" && integration.status === "ACTIVE",
+  );
+  const jiraMembers = useQuery({
+    queryKey: ["org-members", tenant?.id, "forJira"],
+    enabled: !!tenant?.id && hasActiveJira,
+    queryFn: () => orgApi.members(tenant!.id, { forJira: true }),
+  });
+
+  useEffect(() => {
+    if (!hasActiveJira) {
+      setPublishToJira(false);
+      setSelectedJiraUserId(null);
+      return;
+    }
+    setPublishToJira(true);
+  }, [hasActiveJira, tenant?.id]);
+
+  useEffect(() => {
+    if (!hasActiveJira || selectedJiraUserId != null || !jiraMembers.data?.length) return;
+    const timur = jiraMembers.data.find((member) =>
+      [member.full_name, member.username, member.jira_username].some((value) =>
+        /(^|\s)(timur|тимур)(\s|$)/i.test(value ?? ""),
+      ),
+    );
+    if (timur) setSelectedJiraUserId(timur.user_id);
+  }, [hasActiveJira, jiraMembers.data, selectedJiraUserId]);
 
   /* Шаг 1: генерация превью */
   const generate = useMutation({
@@ -237,7 +334,24 @@ function Index() {
   const confirm = useMutation({
     mutationFn: async (p: AiTaskPreview) => {
       if (!tenant?.id) throw new Error("Организация не выбрана");
-      const created = await api.createTaskFromAi(tenant.id, p.ai_action_id);
+      const jiraMember = jiraMembers.data?.find((member) => member.user_id === selectedJiraUserId);
+      const created = await api.createTaskFromAi(tenant.id, p.ai_action_id, {
+        title: p.title,
+        description: p.description,
+        acceptanceCriteria: p.acceptance_criteria,
+        priority: p.priority as Priority,
+        category: p.category,
+        deadline: p.suggested_deadline,
+        pushToJira: hasActiveJira && publishToJira,
+        ...(hasActiveJira && publishToJira
+          ? { projectKey: "DEV", jiraAssignee: jiraMember?.jira_username ?? null }
+          : {}),
+      });
+      if (created.jira_push_error) {
+        throw new Error(
+          `Задача создана локально, но Jira вернула ошибку: ${created.jira_push_error}`,
+        );
+      }
       if (files.length && user?.id) {
         try {
           await api.uploadAttachments(created.id, user.id, files);
@@ -253,7 +367,12 @@ function Index() {
       setFiles([]);
       setPreview(null);
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success("Техническое задание создано");
+      void queryClient.invalidateQueries({ queryKey: ["tasks-board"] });
+      toast.success(
+        hasActiveJira && publishToJira
+          ? "Техническое задание создано и добавлено в Jira"
+          : "Техническое задание создано",
+      );
       void navigate({ to: "/tasks/$taskId", params: { taskId: String(created.id) } });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -448,6 +567,12 @@ function Index() {
           onEdit={(p) => setPreview(p)}
           onCancel={() => setPreview(null)}
           isPending={confirming}
+          jiraEnabled={hasActiveJira}
+          publishToJira={publishToJira}
+          onPublishToJiraChange={setPublishToJira}
+          jiraMembers={jiraMembers.data ?? []}
+          selectedJiraUserId={selectedJiraUserId}
+          onSelectedJiraUserIdChange={setSelectedJiraUserId}
         />
       )}
     </AppLayout>
