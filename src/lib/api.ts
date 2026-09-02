@@ -197,7 +197,9 @@ export async function apiFetch<T>(
     );
   }
 
-  if (res.status === 401 || res.status === 403) {
+  // 403 означает недостаток прав внутри организации, но JWT остаётся валидным.
+  // Удаляем сессию только когда backend явно вернул 401.
+  if (res.status === 401) {
     clearToken();
   }
 
@@ -227,6 +229,7 @@ async function uploadMyAvatar(file: File): Promise<User> {
   const payload = (await response.json().catch(() => null)) as
     | { success?: boolean; message?: string; data?: User }
     | null;
+  if (response.status === 401) clearToken();
   if (!response.ok || payload?.success === false || !payload?.data) {
     throw new Error(payload?.message || "Не удалось загрузить аватар");
   }
