@@ -62,6 +62,16 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
+Для распознавания голоса задайте серверные переменные окружения (без префикса
+`VITE_`, чтобы логин и пароль не попадали в браузер):
+
+```env
+STT_API_BASE_URL=https://admin-dialog.tmg.kg/api/v1
+STT_API_EMAIL=your_email
+STT_API_PASSWORD=your_password
+STT_API_TIMEOUT_SECONDS=600
+```
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
