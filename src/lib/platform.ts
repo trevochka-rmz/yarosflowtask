@@ -83,6 +83,7 @@ export interface Member {
   is_active: boolean;
   created_at: string;
   full_name: string | null;
+  avatar_url?: string | null;
   username: string | null;
   tg_id: number | null;
 }

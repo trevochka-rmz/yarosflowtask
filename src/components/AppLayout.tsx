@@ -25,7 +25,8 @@ import {
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { userHandle } from "@/lib/api";
+import { api, userHandle } from "@/lib/api";
+import { UserAvatar } from "@/components/UserAvatar";
 import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
 import {
@@ -210,6 +211,8 @@ function UserProfileSheet({
     full_name?: string | null;
     username?: string | null;
     first_name?: string | null;
+    avatar_url?: string | null;
+    has_custom_avatar?: boolean;
   };
   org: { id: number; name: string } | null;
   canAll: boolean;
@@ -221,11 +224,6 @@ function UserProfileSheet({
   const { myMember } = useMyMember(org?.id, user.id);
   const currentStatus = myMember?.availability_status ?? null;
   const statuses = canAll ? MANAGER_STATUSES : SELF_STATUSES;
-
-  const initials = (user.full_name || user.first_name || user.username || "?")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
 
   const displayName =
     user.full_name?.trim() ||
@@ -241,16 +239,34 @@ function UserProfileSheet({
     },
   });
 
+  const avatar = useMutation({
+    mutationFn: (file: File) => api.uploadMyAvatar(file),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["me"] });
+      void qc.invalidateQueries({ queryKey: ["users-me"] });
+      void qc.invalidateQueries({ queryKey: ["org-members"] });
+    },
+  });
+
+  const removeAvatar = useMutation({
+    mutationFn: () => api.removeMyAvatar(),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["me"] });
+      void qc.invalidateQueries({ queryKey: ["users-me"] });
+      void qc.invalidateQueries({ queryKey: ["org-members"] });
+    },
+  });
+
   return (
     <>
       {/* Кнопка аватара — кликабельная, с точкой статуса поверх */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+        className="relative h-8 w-8 shrink-0 rounded-full transition-opacity hover:opacity-90"
         aria-label="Профиль"
       >
-        {initials}
+        <UserAvatar avatarUrl={user.avatar_url} name={displayName} className="h-8 w-8" />
         {/* Точка статуса поверх аватара */}
         {myMember && (
           <span
@@ -265,8 +281,13 @@ function UserProfileSheet({
           {/* text-left переопределяет text-center из shadcn SheetHeader */}
           <SheetHeader className="px-5 pb-4 pt-2 [&>*]:text-left">
             <div className="flex items-start gap-4">
-              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-gradient text-xl font-bold text-primary-foreground">
-                {initials}
+              <div className="relative h-14 w-14 shrink-0">
+                <UserAvatar
+                  avatarUrl={user.avatar_url}
+                  name={displayName}
+                  className="h-14 w-14"
+                  fallbackClassName="text-xl font-bold"
+                />
                 {myMember && (
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-card ${statusDot(currentStatus)}`}
@@ -288,6 +309,37 @@ function UserProfileSheet({
                   </p>
                 )}
               </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <label className="inline-flex cursor-pointer items-center rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent">
+                {avatar.isPending ? "Загрузка…" : "Изменить фото"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={avatar.isPending}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) avatar.mutate(file);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              {user.has_custom_avatar ? (
+                <button
+                  type="button"
+                  disabled={removeAvatar.isPending}
+                  onClick={() => removeAvatar.mutate()}
+                  className="text-xs text-destructive hover:underline disabled:opacity-50"
+                >
+                  Удалить
+                </button>
+              ) : null}
+              {(avatar.error || removeAvatar.error) && (
+                <span className="text-xs text-destructive">
+                  {(avatar.error || removeAvatar.error)?.message}
+                </span>
+              )}
             </div>
           </SheetHeader>
 

@@ -59,6 +59,8 @@ export interface OrgMember {
   created_at: string;
   updated_at?: string;
   full_name: string | null;
+  avatar_url?: string | null;
+  has_custom_avatar?: boolean;
   username: string | null;
   /** Логин пользователя в Jira (jira_username). */
   jira_username?: string | null;
@@ -119,6 +121,7 @@ export interface PlatformUser {
   first_name: string | null;
   last_name: string | null;
   full_name: string | null;
+  avatar_url?: string | null;
   is_active: boolean;
   is_platform_admin?: boolean;
   last_activity: string | null;
@@ -517,6 +520,7 @@ export interface DashboardEmployee {
   user_id: number;
   full_name: string | null;
   username?: string | null;
+  avatar_url?: string | null;
   availability_status: AvailabilityStatus | null;
   role_name: string | null;
 }

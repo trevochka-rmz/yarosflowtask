@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Columns3, List, Loader2, Plus, RefreshCw, Search, UserRound } from "lucide-react";
+import { Columns3, List, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
 import { DeleteTaskButton } from "@/components/DeleteTaskButton";
 import { ExportMenu } from "@/components/ExportMenu";
+import { AssigneeAvatars } from "@/components/UserAvatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -775,7 +776,9 @@ function TasksPage() {
                       <PriorityBadge priority={task.priority} />
                       <AssignmentBadge count={assigneeCount(task)} />
                       {task.assignees?.length ? (
-                        <span className="max-w-full truncate">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <AssigneeAvatars assignees={task.assignees} />
+                          <span className="max-w-full truncate">
                           {task.assignees
                             .map((assignee) =>
                               userLabel({
@@ -785,6 +788,7 @@ function TasksPage() {
                               }),
                             )
                             .join(", ")}
+                          </span>
                         </span>
                       ) : null}
                     </div>
@@ -859,7 +863,9 @@ function TasksPage() {
                         <td className="px-4 py-3">
                           <AssignmentBadge count={assigneeCount(task)} />
                           {task.assignees?.length ? (
-                            <div className="mt-1 max-w-48 truncate text-xs text-muted-foreground">
+                            <div className="mt-1 flex max-w-52 items-center gap-1.5 text-xs text-muted-foreground">
+                              <AssigneeAvatars assignees={task.assignees} />
+                              <span className="min-w-0 truncate">
                               {task.assignees
                                 .map((assignee) =>
                                   userLabel({
@@ -869,6 +875,7 @@ function TasksPage() {
                                   }),
                                 )
                                 .join(", ")}
+                              </span>
                             </div>
                           ) : null}
                         </td>
@@ -1088,8 +1095,8 @@ function KanbanTaskCard({
         <p className="truncate" title={project}>
           Проект: <span className="font-medium text-foreground">{project}</span>
         </p>
-        <p className="flex items-start gap-1.5">
-          <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        <p className="flex items-center gap-1.5">
+          <AssigneeAvatars assignees={task.assignees} sizeClassName="h-6 w-6" />
           <span className="line-clamp-2">{getBoardAssignee(task)}</span>
         </p>
       </div>

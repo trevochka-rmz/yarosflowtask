@@ -13,6 +13,9 @@ export interface User {
   first_name: string | null;
   last_name: string | null;
   full_name: string | null;
+  avatar_url?: string | null;
+  telegram_photo_url?: string | null;
+  has_custom_avatar?: boolean;
   role: Role;
   is_active: boolean;
   last_activity: string | null;
@@ -25,6 +28,7 @@ export interface Assignee {
   tg_id?: number | string | null;
   full_name: string | null;
   username: string | null;
+  avatar_url?: string | null;
   jira_username?: string | null;
   department_name?: string | null;
   assignment_source?: "local" | "jira" | "local+jira" | "jira_external";
@@ -124,7 +128,12 @@ export interface BoardTask {
   external_key?: string | null;
   external_url?: string | null;
   external_status?: string | null;
-  assignees?: Array<{ id: number; full_name: string | null; username: string | null }>;
+  assignees?: Array<{
+    id: number | null;
+    full_name: string | null;
+    username: string | null;
+    avatar_url?: string | null;
+  }>;
   assignee_label?: string | null;
   external_assignee_name?: string | null;
 }
@@ -205,6 +214,23 @@ export async function apiFetch<T>(
     throw new Error(body?.message ?? `Ошибка запроса (${res.status})`);
   }
   return (body?.data ?? (payload as T)) as T;
+}
+
+async function uploadMyAvatar(file: File): Promise<User> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: form,
+  });
+  const payload = (await response.json().catch(() => null)) as
+    | { success?: boolean; message?: string; data?: User }
+    | null;
+  if (!response.ok || payload?.success === false || !payload?.data) {
+    throw new Error(payload?.message || "Не удалось загрузить аватар");
+  }
+  return payload.data;
 }
 
 /** Вход через виджет Telegram на обычном сайте. */
@@ -333,6 +359,8 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
 
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
+  uploadMyAvatar,
+  removeMyAvatar: () => apiFetch<User>("/users/me/avatar", { method: "DELETE" }),
   employees: (organizationId: number) =>
     apiFetch<User[]>(`/users/employees?organizationId=${organizationId}`),
   users: (organizationId?: number) =>

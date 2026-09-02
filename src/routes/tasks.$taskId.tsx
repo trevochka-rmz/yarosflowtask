@@ -19,6 +19,7 @@ import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/comp
 import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TaskEditForm } from "@/components/TaskEditForm";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -447,7 +448,13 @@ function TaskDetail() {
                     key={a.id ?? `jira-${a.jira_username ?? a.username ?? a.full_name}`}
                     className="flex items-center justify-between gap-2"
                   >
-                    <span className="min-w-0">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <UserAvatar
+                        avatarUrl={a.avatar_url}
+                        name={a.full_name || a.username}
+                        className="h-9 w-9"
+                      />
+                      <span className="min-w-0">
                       <span>{userLabel(a)}</span>
                       {a.jira_username ? (
                         <span className="ml-2 text-xs text-muted-foreground">
@@ -459,6 +466,7 @@ function TaskDetail() {
                           внешний Jira
                         </span>
                       ) : null}
+                      </span>
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {a.assigned_at ? formatDate(a.assigned_at) : null}

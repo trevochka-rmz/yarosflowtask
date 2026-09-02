@@ -5,6 +5,7 @@ import { Loader2, Lock, Trash2, UserPlus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/UserAvatar";
 import { formatDate } from "@/lib/api";
 import {
   orgApi,
@@ -354,7 +355,16 @@ function MembersPage() {
                   const isSelf = currentUser?.id === m.user_id;
                   return (
                     <tr key={m.id}>
-                      <td className="px-4 py-3 font-medium">{personLabel(m)}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <div className="flex items-center gap-2.5">
+                          <UserAvatar
+                            avatarUrl={m.avatar_url}
+                            name={m.full_name || m.username}
+                            className="h-9 w-9"
+                          />
+                          <span className="min-w-0 truncate">{personLabel(m)}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         {orgId ? (
                           <StatusSelect
@@ -421,7 +431,13 @@ function MembersPage() {
               return (
                 <li key={m.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                    <span className="min-w-0">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <UserAvatar
+                        avatarUrl={m.avatar_url}
+                        name={m.full_name || m.username}
+                        className="h-10 w-10"
+                      />
+                      <span className="min-w-0">
                       <span className="block truncate font-medium">{personLabel(m)}</span>
                       <div className="mt-0.5 flex items-center gap-2">
                         {orgId ? (
@@ -438,6 +454,7 @@ function MembersPage() {
                           {m.username ? `@${m.username}` : (m.tg_id ?? "")}
                         </span>
                       </div>
+                      </span>
                     </span>
                     {canDelete ? (
                       <Button
