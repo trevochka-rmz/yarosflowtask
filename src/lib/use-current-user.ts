@@ -5,7 +5,9 @@ import { hasAuth } from "./auth";
 
 /** Реагирует на появление/удаление token в localStorage. */
 export function useAuthPresence() {
-  const [authed, setAuthed] = useState<boolean>(() => hasAuth());
+  // SSR и первый браузерный render должны совпадать. localStorage/Telegram
+  // доступны только после mount, иначе React получает hydration mismatch (#418).
+  const [authed, setAuthed] = useState(false);
   useEffect(() => {
     const sync = () => setAuthed(hasAuth());
     sync();

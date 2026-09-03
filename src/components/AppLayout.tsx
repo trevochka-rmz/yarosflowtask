@@ -24,10 +24,10 @@ import {
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
 import logo from "@/assets/yaros-logo.png.asset.json";
-import { useCurrentUser } from "@/lib/use-current-user";
+import { useAuthPresence, useCurrentUser } from "@/lib/use-current-user";
 import { api, userHandle } from "@/lib/api";
 import { UserAvatar } from "@/components/UserAvatar";
-import { clearToken, getTelegramInitData, getToken } from "@/lib/auth";
+import { clearToken, getTelegramInitData } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
 import {
   useCurrentOrg,
@@ -545,11 +545,13 @@ export function AppLayout({
   wide?: boolean;
 }) {
   const { data: user, isLoading, isError } = useCurrentUser();
+  const authPresent = useAuthPresence();
   const { org, hasNoOrg, isPlatformAdmin, can } = useCurrentOrg();
   const locked = hasNoOrg && !isPlatformAdmin;
   const queryClient = useQueryClient();
-  const inMiniApp = getTelegramInitData() !== null;
-  const canUseSite = inMiniApp || getToken() !== null || import.meta.env.DEV;
+  const [inMiniApp, setInMiniApp] = React.useState(false);
+  React.useEffect(() => setInMiniApp(getTelegramInitData() !== null), []);
+  const canUseSite = authPresent || import.meta.env.DEV;
 
   if (!canUseSite || (isError && !inMiniApp)) {
     return <TelegramLoginPage />;
