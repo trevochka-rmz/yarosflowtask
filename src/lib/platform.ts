@@ -201,6 +201,13 @@ export interface IntegrationLog {
   created_at: string;
 }
 
+export interface JiraProject {
+  id: string | number;
+  key: string;
+  name: string;
+  projectTypeKey?: string;
+}
+
 export const INTEGRATION_PROVIDER_LABELS: Record<IntegrationProvider, string> = {
   BITRIX24: "Битрикс24",
   ONE_C: "1С",
@@ -250,6 +257,10 @@ export const integrationApi = {
   logs: (orgId: number, integrationId: number, limit = 50) =>
     apiFetch<IntegrationLog[]>(
       `/organizations/${orgId}/integrations/${integrationId}/logs?limit=${limit}`,
+    ),
+  jiraProjects: (orgId: number, integrationId: number) =>
+    apiFetch<{ ok: boolean; error?: string; projects: JiraProject[] }>(
+      `/organizations/${orgId}/integrations/${integrationId}/jira/projects`,
     ),
 };
 

@@ -80,6 +80,9 @@ function PreviewCard({
   publishToJira,
   onPublishToJiraChange,
   jiraMembers,
+  jiraProjects,
+  selectedProjectKey,
+  onSelectedProjectKeyChange,
   selectedJiraUserId,
   onSelectedJiraUserIdChange,
 }: {
@@ -98,6 +101,9 @@ function PreviewCard({
     username: string | null;
     jira_username?: string | null;
   }>;
+  jiraProjects: Array<{ key: string; name: string }>;
+  selectedProjectKey: string;
+  onSelectedProjectKeyChange: (projectKey: string) => void;
   selectedJiraUserId: number | null;
   onSelectedJiraUserIdChange: (userId: number | null) => void;
 }) {
@@ -206,33 +212,51 @@ function PreviewCard({
             <span>
               <span className="block text-sm font-medium">Добавить задачу в Jira</span>
               <span className="block text-xs text-muted-foreground">
-                Проект PREDEV. Публикация включена по умолчанию.
+                Проект по умолчанию — PREDEV. Публикация включена по умолчанию.
               </span>
             </span>
           </label>
           {publishToJira ? (
-            <label className="mt-3 block space-y-1.5 text-sm font-medium">
-              Исполнитель Jira
-              <select
-                value={selectedJiraUserId ?? ""}
-                onChange={(event) =>
-                  onSelectedJiraUserIdChange(event.target.value ? Number(event.target.value) : null)
-                }
-                className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-              >
-                <option value="">Без исполнителя</option>
-                {jiraMembers.map((member) => (
-                  <option key={member.id} value={member.user_id}>
-                    {userLabel({
-                      id: member.user_id,
-                      full_name: member.full_name,
-                      username: member.username,
-                    })}
-                    {member.jira_username ? ` — ${member.jira_username}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="mt-3 space-y-3">
+              <label className="block space-y-1.5 text-sm font-medium">
+                Проект Jira
+                <select
+                  value={selectedProjectKey}
+                  onChange={(event) => onSelectedProjectKeyChange(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                >
+                  {jiraProjects.map((project) => (
+                    <option key={project.key} value={project.key}>
+                      {project.name} ({project.key})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-1.5 text-sm font-medium">
+                Исполнитель Jira
+                <select
+                  value={selectedJiraUserId ?? ""}
+                  onChange={(event) =>
+                    onSelectedJiraUserIdChange(
+                      event.target.value ? Number(event.target.value) : null,
+                    )
+                  }
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                >
+                  <option value="">Без исполнителя</option>
+                  {jiraMembers.map((member) => (
+                    <option key={member.id} value={member.user_id}>
+                      {userLabel({
+                        id: member.user_id,
+                        full_name: member.full_name,
+                        username: member.username,
+                      })}
+                      {member.jira_username ? ` — ${member.jira_username}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -266,6 +290,7 @@ function Index() {
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<AiTaskPreview | null>(null);
   const [publishToJira, setPublishToJira] = useState(true);
+  const [selectedProjectKey, setSelectedProjectKey] = useState("PREDEV");
   const [selectedJiraUserId, setSelectedJiraUserId] = useState<number | null>(null);
 
   const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
@@ -281,6 +306,14 @@ function Index() {
   const hasActiveJira = (integrations.data ?? []).some(
     (integration) => integration.provider === "JIRA" && integration.status === "ACTIVE",
   );
+  const activeJira = (integrations.data ?? []).find(
+    (integration) => integration.provider === "JIRA" && integration.status === "ACTIVE",
+  );
+  const jiraProjects = useQuery({
+    queryKey: ["jira-projects", tenant?.id, activeJira?.id],
+    enabled: !!tenant?.id && !!activeJira?.id,
+    queryFn: () => integrationApi.jiraProjects(tenant!.id, activeJira!.id),
+  });
   const jiraMembers = useQuery({
     queryKey: ["org-members", tenant?.id, "forJira"],
     enabled: !!tenant?.id && hasActiveJira,
@@ -295,6 +328,16 @@ function Index() {
     }
     setPublishToJira(true);
   }, [hasActiveJira, tenant?.id]);
+
+  useEffect(() => {
+    const projects = jiraProjects.data?.projects ?? [];
+    if (!projects.length) return;
+    setSelectedProjectKey((current) =>
+      projects.some((project) => project.key === current)
+        ? current
+        : (projects.find((project) => project.key === "PREDEV")?.key ?? projects[0].key),
+    );
+  }, [jiraProjects.data]);
 
   useEffect(() => {
     if (!hasActiveJira || selectedJiraUserId != null || !jiraMembers.data?.length) return;
@@ -330,7 +373,7 @@ function Index() {
         deadline: null,
         pushToJira: hasActiveJira && publishToJira,
         ...(hasActiveJira && publishToJira
-          ? { projectKey: "PREDEV", jiraAssignee: jiraMember?.jira_username ?? null }
+          ? { projectKey: selectedProjectKey, jiraAssignee: jiraMember?.jira_username ?? null }
           : {}),
       });
       if (created.jira_push_error) {
@@ -557,6 +600,13 @@ function Index() {
           publishToJira={publishToJira}
           onPublishToJiraChange={setPublishToJira}
           jiraMembers={jiraMembers.data ?? []}
+          jiraProjects={
+            jiraProjects.data?.projects?.length
+              ? jiraProjects.data.projects
+              : [{ key: "PREDEV", name: "PREDEV" }]
+          }
+          selectedProjectKey={selectedProjectKey}
+          onSelectedProjectKeyChange={setSelectedProjectKey}
           selectedJiraUserId={selectedJiraUserId}
           onSelectedJiraUserIdChange={setSelectedJiraUserId}
         />
