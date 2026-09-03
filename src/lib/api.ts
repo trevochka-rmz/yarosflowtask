@@ -218,17 +218,19 @@ export async function apiFetch<T>(
   return (body?.data ?? (payload as T)) as T;
 }
 
-async function uploadMyAvatar(file: File): Promise<User> {
+async function uploadMyAvatar(file: File, organizationId: number): Promise<User> {
   const form = new FormData();
   form.append("file", file);
-  const response = await fetch(`${API_BASE_URL}/users/me/avatar`, {
+  const response = await fetch(`${API_BASE_URL}/users/me/avatar?organizationId=${organizationId}`, {
     method: "PUT",
     headers: authHeaders(),
     body: form,
   });
-  const payload = (await response.json().catch(() => null)) as
-    | { success?: boolean; message?: string; data?: User }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    success?: boolean;
+    message?: string;
+    data?: User;
+  } | null;
   if (response.status === 401) clearToken();
   if (!response.ok || payload?.success === false || !payload?.data) {
     throw new Error(payload?.message || "Не удалось загрузить аватар");
@@ -363,7 +365,8 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
   uploadMyAvatar,
-  removeMyAvatar: () => apiFetch<User>("/users/me/avatar", { method: "DELETE" }),
+  removeMyAvatar: (organizationId: number) =>
+    apiFetch<User>(`/users/me/avatar?organizationId=${organizationId}`, { method: "DELETE" }),
   employees: (organizationId: number) =>
     apiFetch<User[]>(`/users/employees?organizationId=${organizationId}`),
   users: (organizationId?: number) =>

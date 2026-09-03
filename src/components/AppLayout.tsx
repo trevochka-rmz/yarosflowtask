@@ -240,7 +240,10 @@ function UserProfileSheet({
   });
 
   const avatar = useMutation({
-    mutationFn: (file: File) => api.uploadMyAvatar(file),
+    mutationFn: (file: File) => {
+      if (!org) throw new Error("Организация не выбрана");
+      return api.uploadMyAvatar(file, org.id);
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["me"] });
       void qc.invalidateQueries({ queryKey: ["users-me"] });
@@ -249,7 +252,10 @@ function UserProfileSheet({
   });
 
   const removeAvatar = useMutation({
-    mutationFn: () => api.removeMyAvatar(),
+    mutationFn: () => {
+      if (!org) throw new Error("Организация не выбрана");
+      return api.removeMyAvatar(org.id);
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["me"] });
       void qc.invalidateQueries({ queryKey: ["users-me"] });
@@ -266,7 +272,11 @@ function UserProfileSheet({
         className="relative h-8 w-8 shrink-0 rounded-full transition-opacity hover:opacity-90"
         aria-label="Профиль"
       >
-        <UserAvatar avatarUrl={user.avatar_url} name={displayName} className="h-8 w-8" />
+        <UserAvatar
+          avatarUrl={myMember?.avatar_url || user.avatar_url}
+          name={displayName}
+          className="h-8 w-8"
+        />
         {/* Точка статуса поверх аватара */}
         {myMember && (
           <span
@@ -283,7 +293,7 @@ function UserProfileSheet({
             <div className="flex items-start gap-4">
               <div className="relative h-14 w-14 shrink-0">
                 <UserAvatar
-                  avatarUrl={user.avatar_url}
+                  avatarUrl={myMember?.avatar_url || user.avatar_url}
                   name={displayName}
                   className="h-14 w-14"
                   fallbackClassName="text-xl font-bold"
@@ -325,7 +335,7 @@ function UserProfileSheet({
                   }}
                 />
               </label>
-              {user.has_custom_avatar ? (
+              {myMember?.avatar_storage_path || user.has_custom_avatar ? (
                 <button
                   type="button"
                   disabled={removeAvatar.isPending}

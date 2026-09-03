@@ -60,6 +60,8 @@ export interface OrgMember {
   updated_at?: string;
   full_name: string | null;
   avatar_url?: string | null;
+  avatar_storage_path?: string | null;
+  avatar_updated_at?: string | null;
   has_custom_avatar?: boolean;
   username: string | null;
   /** Логин пользователя в Jira (jira_username). */
