@@ -199,12 +199,12 @@ export const orgApi = {
 
   /** Получить текущий статус сотрудника */
   getMemberStatus: (orgId: number, memberId: number) =>
-    apiFetch<{ status: AvailabilityStatus; note?: string | null }>(
+    apiFetch<{ availability_status: AvailabilityStatus; membership_id: number; user_id: number; is_active: boolean }>(
       `/organizations/${orgId}/members/${memberId}/status`,
     ),
   /** Обновить статус (self или employee.update) */
   setMemberStatus: (orgId: number, memberId: number, status: AvailabilityStatus, note?: string) =>
-    apiFetch<{ status: AvailabilityStatus; note?: string | null }>(
+    apiFetch<{ availability_status: AvailabilityStatus; membership_id: number; user_id: number; is_active: boolean }>(
       `/organizations/${orgId}/members/${memberId}/status`,
       { method: "PATCH", body: { status, ...(note ? { note } : {}) } },
     ),

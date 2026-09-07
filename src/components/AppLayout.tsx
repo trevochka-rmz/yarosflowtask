@@ -156,6 +156,7 @@ function UserStatusWidget({
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["org-members", orgId] });
+      void qc.invalidateQueries({ queryKey: ["member-status", orgId] });
       setOpen(false);
     },
   });
@@ -222,6 +223,24 @@ function UserProfileSheet({
   const qc = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const { myMember } = useMyMember(org?.id, user.id);
+  const profile = useQuery({
+    queryKey: ["my-profile", org?.id],
+    queryFn: () => api.myProfile(org!.id),
+    enabled: !!org && open,
+  });
+  const [jiraDraft, setJiraDraft] = React.useState<string | null>(null);
+  React.useEffect(() => { setJiraDraft(null); }, [org?.id, open]);
+  const jira = useMutation({
+    mutationFn: ({ organizationId, value }: { organizationId: number; value: string }) =>
+      api.updateMyProfile(organizationId, value.trim() || null),
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["my-profile", variables.organizationId] }),
+        qc.invalidateQueries({ queryKey: ["org-members", variables.organizationId] }),
+      ]);
+      setJiraDraft(null);
+    },
+  });
   const currentStatus = myMember?.availability_status ?? null;
   const statuses = canAll ? MANAGER_STATUSES : SELF_STATUSES;
 
@@ -236,17 +255,23 @@ function UserProfileSheet({
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["org-members", org?.id] });
+      void qc.invalidateQueries({ queryKey: ["member-status", org?.id] });
     },
   });
 
   const avatar = useMutation({
     mutationFn: (file: File) => {
       if (!org) throw new Error("Организация не выбрана");
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        throw new Error("Выберите JPEG, PNG или WebP");
+      }
+      if (file.size > 5 * 1024 * 1024) throw new Error("Размер фото не должен превышать 5 МБ");
       return api.uploadMyAvatar(file, org.id);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["me"] });
       void qc.invalidateQueries({ queryKey: ["users-me"] });
+      void qc.invalidateQueries({ queryKey: ["my-profile"] });
       void qc.invalidateQueries({ queryKey: ["org-members"] });
     },
   });
@@ -259,6 +284,7 @@ function UserProfileSheet({
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["me"] });
       void qc.invalidateQueries({ queryKey: ["users-me"] });
+      void qc.invalidateQueries({ queryKey: ["my-profile"] });
       void qc.invalidateQueries({ queryKey: ["org-members"] });
     },
   });
@@ -273,7 +299,7 @@ function UserProfileSheet({
         aria-label="Профиль"
       >
         <UserAvatar
-          avatarUrl={myMember?.avatar_url || user.avatar_url}
+          avatarUrl={profile.data?.avatar_url || myMember?.avatar_url || user.avatar_url || null}
           name={displayName}
           className="h-8 w-8"
         />
@@ -286,14 +312,14 @@ function UserProfileSheet({
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-safe">
+        <SheetContent side="bottom" className="max-h-[90dvh] overflow-y-auto rounded-t-2xl px-0 pb-safe">
           {/* Профиль */}
           {/* text-left переопределяет text-center из shadcn SheetHeader */}
           <SheetHeader className="px-5 pb-4 pt-2 [&>*]:text-left">
             <div className="flex items-start gap-4">
               <div className="relative h-14 w-14 shrink-0">
                 <UserAvatar
-                  avatarUrl={myMember?.avatar_url || user.avatar_url}
+                  avatarUrl={profile.data?.avatar_url || myMember?.avatar_url || user.avatar_url || null}
                   name={displayName}
                   className="h-14 w-14"
                   fallbackClassName="text-xl font-bold"
@@ -320,6 +346,10 @@ function UserProfileSheet({
                 )}
               </div>
             </div>
+            {profile.data?.jira_username && <p className="mt-2 text-sm text-muted-foreground">Jira: <span className="font-medium text-foreground">{profile.data.jira_username}</span></p>}
+            <Link to="/profile" onClick={() => setOpen(false)} className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground">
+              <UserCog className="h-4 w-4" /> Открыть страницу профиля
+            </Link>
             <div className="mt-3 flex items-center gap-2">
               <label className="inline-flex cursor-pointer items-center rounded-md border border-input bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent">
                 {avatar.isPending ? "Загрузка…" : "Изменить фото"}
@@ -327,7 +357,7 @@ function UserProfileSheet({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
-                  disabled={avatar.isPending}
+                  disabled={!org || avatar.isPending || removeAvatar.isPending}
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     if (file) avatar.mutate(file);
@@ -335,10 +365,10 @@ function UserProfileSheet({
                   }}
                 />
               </label>
-              {myMember?.avatar_storage_path || user.has_custom_avatar ? (
+              {profile.data?.has_custom_avatar ?? Boolean(myMember?.avatar_storage_path) ? (
                 <button
                   type="button"
-                  disabled={removeAvatar.isPending}
+                  disabled={!org || avatar.isPending || removeAvatar.isPending}
                   onClick={() => removeAvatar.mutate()}
                   className="text-xs text-destructive hover:underline disabled:opacity-50"
                 >
@@ -351,6 +381,29 @@ function UserProfileSheet({
                 </span>
               )}
             </div>
+            {org ? (
+              <form className="mt-4 space-y-2" onSubmit={(event) => {
+                event.preventDefault();
+                jira.mutate({ organizationId: org.id, value: jiraDraft ?? profile.data?.jira_username ?? "" });
+              }}>
+                <label htmlFor="profile-jira" className="text-sm font-medium">Jira username</label>
+                <p className="text-xs text-muted-foreground">Логин и фото сохраняются для {org.name}. Пустое поле удалит Jira-логин.</p>
+                <div className="flex gap-2">
+                  <input id="profile-jira" type="text" maxLength={255}
+                    value={jiraDraft ?? profile.data?.jira_username ?? ""}
+                    disabled={profile.isPending || profile.isError || jira.isPending}
+                    onChange={(event) => { setJiraDraft(event.target.value); jira.reset(); }}
+                    className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Введите логин Jira" />
+                  <button type="submit" disabled={profile.isPending || profile.isError || jira.isPending || jiraDraft === null}
+                    className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">
+                    {jira.isPending ? "Сохранение…" : "Сохранить"}
+                  </button>
+                </div>
+                {(jira.error || profile.error) && <p role="alert" className="text-xs text-destructive">{(jira.error || profile.error)?.message}</p>}
+                {jira.isSuccess && <p role="status" className="text-xs text-muted-foreground">Jira-логин сохранён</p>}
+              </form>
+            ) : <p className="mt-2 text-xs text-muted-foreground">Выберите организацию для изменения фото и Jira-логина.</p>}
           </SheetHeader>
 
           <div className="border-t border-border" />
@@ -428,6 +481,7 @@ const GROUPS: NavGroup[] = [
   {
     label: "Организация",
     items: [
+      { title: "Мой профиль", url: "/profile", icon: UserCog },
       { title: "Сотрудники", url: "/members", icon: UserCog, perm: "employee.read" },
       { title: "Роли и права", url: "/roles", icon: KeyRound, perm: "role.read" },
       { title: "Отделы", url: "/departments", icon: Building },
@@ -549,10 +603,12 @@ export function AppLayout({
   children,
   fullscreen,
   wide,
+  allowWithoutOrg = false,
 }: {
   children: ReactNode;
   fullscreen?: boolean;
   wide?: boolean;
+  allowWithoutOrg?: boolean;
 }) {
   const { data: user, isLoading, isError } = useCurrentUser();
   const authPresent = useAuthPresence();
@@ -650,7 +706,7 @@ export function AppLayout({
                   : "mx-auto w-full max-w-6xl px-4 py-6 sm:py-8"
             }
           >
-            {locked ? <NoTenantScreen /> : children}
+            {locked && !allowWithoutOrg ? <NoTenantScreen /> : children}
           </main>
         </SidebarInset>
       </div>

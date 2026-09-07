@@ -23,6 +23,17 @@ export interface User {
   updated_at: string;
 }
 
+export type MyProfile = Pick<User,
+  "username" | "first_name" | "last_name" | "full_name" | "avatar_url" |
+  "telegram_photo_url" | "has_custom_avatar" | "is_active" | "last_activity" |
+  "created_at" | "updated_at"
+> & {
+  organization_id?: number;
+  jira_username?: string | null;
+  avatar_storage_path?: string | null;
+  is_platform_admin: boolean;
+};
+
 export interface Assignee {
   id: number | null;
   tg_id?: number | string | null;
@@ -364,6 +375,12 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
 
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
+  myProfile: (organizationId: number) =>
+    apiFetch<MyProfile>(`/users/me?organizationId=${organizationId}`),
+  updateMyProfile: (organizationId: number, jira_username: string | null) =>
+    apiFetch<MyProfile>(`/users/me?organizationId=${organizationId}`, {
+      method: "PATCH", body: { jira_username },
+    }),
   uploadMyAvatar,
   removeMyAvatar: (organizationId: number) =>
     apiFetch<User>(`/users/me/avatar?organizationId=${organizationId}`, { method: "DELETE" }),
