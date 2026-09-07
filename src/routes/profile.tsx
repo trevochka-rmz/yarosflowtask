@@ -5,6 +5,7 @@ import { Building2, Camera, Check, Link2, Loader2, ShieldCheck, UserRound } from
 import { AppLayout } from "@/components/AppLayout";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, formatDate, type User } from "@/lib/api";
@@ -86,13 +87,7 @@ function ProfilePage() {
           <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div className="h-20 bg-gradient-to-r from-primary/25 via-primary/10 to-background sm:h-24" />
             <div className="relative px-5 pb-6 sm:px-6">
-              <UserAvatar
-                avatarUrl={user.data.avatar_url ?? null}
-                name={user.data.full_name || user.data.first_name || "Пользователь"}
-                className="-mt-10 h-20 w-20 border-4 border-card"
-                fallbackClassName="text-2xl"
-              />
-              <h2 className="mt-3 text-xl font-semibold">
+              <h2 className="mt-5 text-xl font-semibold">
                 {user.data.full_name ||
                   [user.data.first_name, user.data.last_name].filter(Boolean).join(" ") ||
                   "Пользователь"}
@@ -205,6 +200,7 @@ function OrganizationProfile({
   const qc = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [jiraDraft, setJiraDraft] = useState<string | null>(null);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const profile = useQuery({
     queryKey: ["my-profile", org.id],
     queryFn: () => api.myProfile(org.id),
@@ -280,12 +276,29 @@ function OrganizationProfile({
           icon={<Camera className="h-5 w-5" />}
         >
           <div className="flex flex-wrap items-center gap-5">
-            <UserAvatar
-              avatarUrl={profile.data.avatar_url ?? null}
-              name={user.full_name || user.first_name || "Пользователь"}
-              className="h-24 w-24 ring-4 ring-primary/10"
-              fallbackClassName="text-3xl"
-            />
+            {profile.data.avatar_url ? (
+              <button
+                type="button"
+                className="rounded-full ring-4 ring-primary/10 transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onClick={() => setAvatarOpen(true)}
+                aria-label="Открыть фото на весь экран"
+                title="Открыть фото"
+              >
+                <UserAvatar
+                  avatarUrl={profile.data.avatar_url}
+                  name={user.full_name || user.first_name || "Пользователь"}
+                  className="h-24 w-24"
+                  fallbackClassName="text-3xl"
+                />
+              </button>
+            ) : (
+              <UserAvatar
+                avatarUrl={null}
+                name={user.full_name || user.first_name || "Пользователь"}
+                className="h-24 w-24 ring-4 ring-primary/10"
+                fallbackClassName="text-3xl"
+              />
+            )}
             <div className="space-y-2">
               <input
                 ref={fileInput}
@@ -327,6 +340,18 @@ function OrganizationProfile({
             JPEG, PNG или WebP, до 5 МБ. После удаления используется фото аккаунта.
           </p>
           <Feedback error={avatar.error} success={avatar.isSuccess} />
+          {profile.data.avatar_url && (
+            <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
+              <DialogContent className="h-dvh max-w-none border-0 bg-black p-5 sm:rounded-none">
+                <DialogTitle className="sr-only">Фото сотрудника</DialogTitle>
+                <img
+                  src={profile.data.avatar_url}
+                  alt={`Фото: ${user.full_name || user.first_name || "сотрудник"}`}
+                  className="h-full w-full object-contain"
+                />
+              </DialogContent>
+            </Dialog>
+          )}
         </Card>
         <Card
           title="Мой статус"
