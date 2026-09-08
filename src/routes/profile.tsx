@@ -199,39 +199,6 @@ function ProfilePage() {
             Ваш аккаунт и рабочие настройки в одном месте.
           </p>
         </header>
-        {user.data && (
-          <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
-            <div className="h-20 bg-gradient-to-r from-primary/25 via-primary/10 to-background sm:h-24" />
-            <div className="relative px-5 pb-6 sm:px-6">
-              <h2 className="mt-5 text-xl font-semibold">
-                {user.data.full_name ||
-                  [user.data.first_name, user.data.last_name].filter(Boolean).join(" ") ||
-                  "Пользователь"}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {user.data.username ? `@${user.data.username}` : "Telegram username не указан"}
-              </p>
-              <div className="mt-5 grid gap-4 border-t border-border pt-4 text-sm sm:grid-cols-3">
-                <div>
-                  <p className="text-muted-foreground">Аккаунт</p>
-                  <p className="mt-1">{user.data.is_active ? "Активен" : "Неактивен"}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Дата регистрации</p>
-                  <p className="mt-1">{formatDate(user.data.created_at)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Организаций</p>
-                  <p className="mt-1">{orgs.length}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Имя и Telegram username обновляются при входе через Telegram. Рабочее фото можно
-                изменить ниже для каждой организации.
-              </p>
-            </div>
-          </section>
-        )}
         {(user.isPending || isLoading) && (
           <p role="status" className="text-sm text-muted-foreground">
             Загружаем профиль…
@@ -384,242 +351,469 @@ function OrganizationProfile({
     );
   const currentJira = profile.data.jira_username ?? "";
   const dirty = (jiraDraft ?? currentJira).trim() !== currentJira;
+  const fullName =
+    user.full_name || [user.first_name, user.last_name].filter(Boolean).join(" ") || "Пользователь";
+  const departmentName = org.department_id
+    ? (departments.data?.find((item) => item.id === org.department_id)?.name ??
+      (departments.isError ? "Не удалось загрузить" : "Загрузка…"))
+    : "Не назначен";
+  const showLegacyProfile = import.meta.env.VITE_SHOW_LEGACY_PROFILE === "true";
   return (
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-      <div className="space-y-5">
-        <Card
-          title="Фото сотрудника"
-          description={`Так вас видят коллеги в ${org.name}.`}
-          icon={<Camera className="h-5 w-5" />}
-        >
-          <div className="flex flex-wrap items-center gap-5">
-            {profile.data.avatar_url ? (
-              <button
-                type="button"
-                className="rounded-full ring-4 ring-primary/10 transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                onClick={() => setAvatarOpen(true)}
-                aria-label="Открыть фото на весь экран"
-                title="Открыть фото"
-              >
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+        <div className="h-20 bg-gradient-to-r from-primary/30 via-primary/10 to-background sm:h-24" />
+        <div className="relative px-5 pb-6 sm:px-6">
+          <div className="-mt-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex items-end gap-4">
+              {profile.data.avatar_url ? (
+                <button
+                  type="button"
+                  className="rounded-full ring-4 ring-card transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  onClick={() => setAvatarOpen(true)}
+                  aria-label="Открыть фото на весь экран"
+                >
+                  <UserAvatar
+                    avatarUrl={profile.data.avatar_url}
+                    name={fullName}
+                    className="h-24 w-24"
+                    fallbackClassName="text-3xl"
+                  />
+                </button>
+              ) : (
                 <UserAvatar
-                  avatarUrl={profile.data.avatar_url}
-                  name={user.full_name || user.first_name || "Пользователь"}
-                  className="h-24 w-24"
+                  avatarUrl={null}
+                  name={fullName}
+                  className="h-24 w-24 ring-4 ring-card"
                   fallbackClassName="text-3xl"
                 />
-              </button>
-            ) : (
-              <UserAvatar
-                avatarUrl={null}
-                name={user.full_name || user.first_name || "Пользователь"}
-                className="h-24 w-24 ring-4 ring-primary/10"
-                fallbackClassName="text-3xl"
-              />
-            )}
-            <div className="space-y-2">
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                aria-label="Фото сотрудника"
-                disabled={avatar.isPending}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) avatar.mutate(file);
-                  event.target.value = "";
-                }}
-              />
-              <Button
-                variant="outline"
-                disabled={avatar.isPending}
-                onClick={() => fileInput.current?.click()}
-              >
-                {avatar.isPending
-                  ? "Сохраняем…"
-                  : profile.data.has_custom_avatar
-                    ? "Изменить фото"
-                    : "Добавить фото"}
-              </Button>
-              <Button
-                variant="outline"
-                disabled={avatar.isPending}
-                onClick={() => setCameraOpen(true)}
-              >
-                <Camera className="h-4 w-4" /> Сфотографироваться
-              </Button>
-              {profile.data.has_custom_avatar && (
-                <Button
-                  variant="ghost"
-                  className="block text-destructive"
+              )}
+              <div className="pb-1">
+                <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                  {org.name}
+                </p>
+                <h2 className="mt-1 text-xl font-semibold">{fullName}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {user.username ? `@${user.username}` : "Telegram username не указан"}
+                </p>
+              </div>
+            </div>
+            <span className="w-fit rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-700">
+              {user.is_active ? "Аккаунт активен" : "Аккаунт неактивен"}
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-5 border-t border-border pt-5 lg:grid-cols-2">
+            <div className="space-y-5">
+              <div>
+                <p className="text-sm font-medium">Фото профиля</p>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
                   disabled={avatar.isPending}
-                  onClick={() => avatar.mutate(null)}
-                >
-                  Удалить фото
-                </Button>
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) avatar.mutate(file);
+                    event.target.value = "";
+                  }}
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={avatar.isPending}
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    {avatar.isPending ? "Сохраняем…" : "Выбрать файл"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={avatar.isPending}
+                    onClick={() => setCameraOpen(true)}
+                  >
+                    <Camera className="h-4 w-4" /> Сфотографироваться
+                  </Button>
+                  {profile.data.has_custom_avatar ? (
+                    <Button
+                      variant="ghost"
+                      disabled={avatar.isPending}
+                      onClick={() => avatar.mutate(null)}
+                    >
+                      Удалить
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">JPEG, PNG или WebP, до 5 МБ.</p>
+                <Feedback error={avatar.error} success={avatar.isSuccess} />
+              </div>
+              <form
+                className="border-t border-border pt-5"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (dirty) jira.mutate(jiraDraft ?? currentJira);
+                }}
+              >
+                <Label htmlFor="profile-jira">Jira username</Label>
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    id="profile-jira"
+                    autoComplete="off"
+                    placeholder="Например, ivan.petrov"
+                    maxLength={255}
+                    value={jiraDraft ?? currentJira}
+                    disabled={jira.isPending}
+                    onChange={(event) => {
+                      setJiraDraft(event.target.value);
+                      jira.reset();
+                    }}
+                  />
+                  <Button type="submit" disabled={!dirty || jira.isPending}>
+                    {jira.isPending ? "…" : "Сохранить"}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Логин нужен для точного назначения задач из Jira.
+                </p>
+                <Feedback error={jira.error} success={jira.isSuccess} />
+              </form>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <p className="text-sm font-medium">Мой статус</p>
+                {status.isPending ? (
+                  <p className="mt-2 text-sm text-muted-foreground">Загружаем статус…</p>
+                ) : status.isError ? (
+                  <Button variant="ghost" className="mt-2" onClick={() => void status.refetch()}>
+                    Повторить загрузку статуса
+                  </Button>
+                ) : (
+                  <>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Сейчас:{" "}
+                      {status.data?.availability_status
+                        ? AVAILABILITY_LABELS[status.data.availability_status]
+                        : "Не указан"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {SELF_STATUSES.map((value) => (
+                        <Button
+                          key={value}
+                          variant={
+                            status.data?.availability_status === value ? "default" : "outline"
+                          }
+                          disabled={availability.isPending}
+                          onClick={() => availability.mutate(value)}
+                        >
+                          {AVAILABILITY_LABELS[value]}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <Feedback
+                  error={status.error || availability.error}
+                  success={availability.isSuccess}
+                />
+              </div>
+              <dl className="grid grid-cols-2 gap-4 border-t border-border pt-5 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Роль</dt>
+                  <dd className="mt-1 font-medium">{org.role_name}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Отдел</dt>
+                  <dd className="mt-1 font-medium">{departmentName}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Дата регистрации</dt>
+                  <dd className="mt-1 font-medium">{formatDate(user.created_at)}</dd>
+                </div>
+              </dl>
+              {canEditEmployee ? (
+                <EmployeeForm org={org} canReadRoles={canReadRoles} />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Роль и отдел назначает администратор организации.
+                </p>
               )}
             </div>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            JPEG, PNG или WebP, до 5 МБ. После удаления используется фото аккаунта.
-          </p>
-          <Feedback error={avatar.error} success={avatar.isSuccess} />
-          <CameraCaptureDialog
-            open={cameraOpen}
-            onOpenChange={setCameraOpen}
-            onCapture={(file) => avatar.mutate(file)}
-          />
-          {profile.data.avatar_url && (
-            <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
-              <DialogContent className="h-dvh max-w-none border-0 bg-black p-5 sm:rounded-none">
-                <DialogTitle className="sr-only">Фото сотрудника</DialogTitle>
-                <img
-                  src={profile.data.avatar_url}
-                  alt={`Фото: ${user.full_name || user.first_name || "сотрудник"}`}
-                  className="h-full w-full object-contain"
-                />
-              </DialogContent>
-            </Dialog>
-          )}
-        </Card>
-        <Card
-          title="Мой статус"
-          description="Сообщите команде, готовы ли вы к новым задачам."
-          icon={<UserRound className="h-5 w-5" />}
-        >
-          {status.isPending ? (
-            <p className="text-sm text-muted-foreground">Загружаем статус…</p>
-          ) : status.isError ? (
-            <>
-              <Feedback error={status.error} success={false} />
-              <Button variant="ghost" onClick={() => void status.refetch()}>
-                Повторить
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="mb-3 text-sm">
-                Сейчас:{" "}
-                <strong>
-                  {status.data?.availability_status
-                    ? AVAILABILITY_LABELS[status.data.availability_status]
-                    : "Не указан"}
-                </strong>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {SELF_STATUSES.map((value) => (
-                  <Button
-                    key={value}
-                    variant={status.data?.availability_status === value ? "default" : "outline"}
-                    disabled={availability.isPending}
-                    onClick={() => availability.mutate(value)}
-                  >
-                    {AVAILABILITY_LABELS[value]}
-                  </Button>
-                ))}
-              </div>
-            </>
-          )}
-          <Feedback error={availability.error} success={availability.isSuccess} />
-        </Card>
-      </div>
-      <div className="space-y-5">
-        <Card
-          title="Аккаунт Jira"
-          description="Укажите рабочий логин для связи с задачами Jira."
-          icon={<Link2 className="h-5 w-5" />}
-        >
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (dirty) jira.mutate(jiraDraft ?? currentJira);
-            }}
-          >
-            <Label htmlFor="page-jira">Jira username</Label>
-            <Input
-              id="page-jira"
-              className="mt-2"
-              autoComplete="off"
-              placeholder="Например, ivan.petrov"
-              maxLength={255}
-              value={jiraDraft ?? currentJira}
-              disabled={jira.isPending}
-              onChange={(event) => {
-                setJiraDraft(event.target.value);
-                jira.reset();
-              }}
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              {currentJira
-                ? `Сохранённый логин: ${currentJira}. Очистите поле, чтобы удалить привязку.`
-                : "Jira-логин пока не добавлен."}
+        </div>
+      </section>
+
+      <Card
+        title="Организация"
+        description="Общие сведения вашей команды."
+        icon={<Building2 className="h-5 w-5" />}
+      >
+        {canEditOrganization ? (
+          <OrganizationForm org={org} />
+        ) : (
+          <>
+            <p className="font-medium">{org.name}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+              {org.description || "Описание пока не добавлено."}
             </p>
-            <div className="mt-4 flex gap-2">
-              <Button type="submit" disabled={!dirty || jira.isPending}>
-                {jira.isPending ? "Сохраняем…" : "Сохранить"}
-              </Button>
-              {dirty && (
-                <Button
-                  type="button"
-                  variant="ghost"
+          </>
+        )}
+      </Card>
+      <CameraCaptureDialog
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onCapture={(file) => avatar.mutate(file)}
+      />
+      {profile.data.avatar_url ? (
+        <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
+          <DialogContent className="h-dvh max-w-none border-0 bg-black p-5 sm:rounded-none">
+            <DialogTitle className="sr-only">Фото сотрудника</DialogTitle>
+            <img
+              src={profile.data.avatar_url}
+              alt={`Фото: ${fullName}`}
+              className="h-full w-full object-contain"
+            />
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {showLegacyProfile && (
+        <div className="hidden">
+          <div className="space-y-5">
+            <Card
+              title="Фото сотрудника"
+              description={`Так вас видят коллеги в ${org.name}.`}
+              icon={<Camera className="h-5 w-5" />}
+            >
+              <div className="flex flex-wrap items-center gap-5">
+                {profile.data.avatar_url ? (
+                  <button
+                    type="button"
+                    className="rounded-full ring-4 ring-primary/10 transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    onClick={() => setAvatarOpen(true)}
+                    aria-label="Открыть фото на весь экран"
+                    title="Открыть фото"
+                  >
+                    <UserAvatar
+                      avatarUrl={profile.data.avatar_url}
+                      name={user.full_name || user.first_name || "Пользователь"}
+                      className="h-24 w-24"
+                      fallbackClassName="text-3xl"
+                    />
+                  </button>
+                ) : (
+                  <UserAvatar
+                    avatarUrl={null}
+                    name={user.full_name || user.first_name || "Пользователь"}
+                    className="h-24 w-24 ring-4 ring-primary/10"
+                    fallbackClassName="text-3xl"
+                  />
+                )}
+                <div className="space-y-2">
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    aria-label="Фото сотрудника"
+                    disabled={avatar.isPending}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) avatar.mutate(file);
+                      event.target.value = "";
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={avatar.isPending}
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    {avatar.isPending
+                      ? "Сохраняем…"
+                      : profile.data.has_custom_avatar
+                        ? "Изменить фото"
+                        : "Добавить фото"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={avatar.isPending}
+                    onClick={() => setCameraOpen(true)}
+                  >
+                    <Camera className="h-4 w-4" /> Сфотографироваться
+                  </Button>
+                  {profile.data.has_custom_avatar && (
+                    <Button
+                      variant="ghost"
+                      className="block text-destructive"
+                      disabled={avatar.isPending}
+                      onClick={() => avatar.mutate(null)}
+                    >
+                      Удалить фото
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                JPEG, PNG или WebP, до 5 МБ. После удаления используется фото аккаунта.
+              </p>
+              <Feedback error={avatar.error} success={avatar.isSuccess} />
+              <CameraCaptureDialog
+                open={cameraOpen}
+                onOpenChange={setCameraOpen}
+                onCapture={(file) => avatar.mutate(file)}
+              />
+              {profile.data.avatar_url && (
+                <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
+                  <DialogContent className="h-dvh max-w-none border-0 bg-black p-5 sm:rounded-none">
+                    <DialogTitle className="sr-only">Фото сотрудника</DialogTitle>
+                    <img
+                      src={profile.data.avatar_url}
+                      alt={`Фото: ${user.full_name || user.first_name || "сотрудник"}`}
+                      className="h-full w-full object-contain"
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
+            </Card>
+            <Card
+              title="Мой статус"
+              description="Сообщите команде, готовы ли вы к новым задачам."
+              icon={<UserRound className="h-5 w-5" />}
+            >
+              {status.isPending ? (
+                <p className="text-sm text-muted-foreground">Загружаем статус…</p>
+              ) : status.isError ? (
+                <>
+                  <Feedback error={status.error} success={false} />
+                  <Button variant="ghost" onClick={() => void status.refetch()}>
+                    Повторить
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="mb-3 text-sm">
+                    Сейчас:{" "}
+                    <strong>
+                      {status.data?.availability_status
+                        ? AVAILABILITY_LABELS[status.data.availability_status]
+                        : "Не указан"}
+                    </strong>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SELF_STATUSES.map((value) => (
+                      <Button
+                        key={value}
+                        variant={status.data?.availability_status === value ? "default" : "outline"}
+                        disabled={availability.isPending}
+                        onClick={() => availability.mutate(value)}
+                      >
+                        {AVAILABILITY_LABELS[value]}
+                      </Button>
+                    ))}
+                  </div>
+                </>
+              )}
+              <Feedback error={availability.error} success={availability.isSuccess} />
+            </Card>
+          </div>
+          <div className="space-y-5">
+            <Card
+              title="Аккаунт Jira"
+              description="Укажите рабочий логин для связи с задачами Jira."
+              icon={<Link2 className="h-5 w-5" />}
+            >
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (dirty) jira.mutate(jiraDraft ?? currentJira);
+                }}
+              >
+                <Label htmlFor="page-jira">Jira username</Label>
+                <Input
+                  id="page-jira"
+                  className="mt-2"
+                  autoComplete="off"
+                  placeholder="Например, ivan.petrov"
+                  maxLength={255}
+                  value={jiraDraft ?? currentJira}
                   disabled={jira.isPending}
-                  onClick={() => {
-                    setJiraDraft(null);
+                  onChange={(event) => {
+                    setJiraDraft(event.target.value);
                     jira.reset();
                   }}
-                >
-                  Отменить
-                </Button>
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {currentJira
+                    ? `Сохранённый логин: ${currentJira}. Очистите поле, чтобы удалить привязку.`
+                    : "Jira-логин пока не добавлен."}
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <Button type="submit" disabled={!dirty || jira.isPending}>
+                    {jira.isPending ? "Сохраняем…" : "Сохранить"}
+                  </Button>
+                  {dirty && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={jira.isPending}
+                      onClick={() => {
+                        setJiraDraft(null);
+                        jira.reset();
+                      }}
+                    >
+                      Отменить
+                    </Button>
+                  )}
+                </div>
+                <Feedback error={jira.error} success={jira.isSuccess} />
+              </form>
+            </Card>
+            <Card
+              title="Данные сотрудника"
+              description="Ваша роль и отдел в организации."
+              icon={<ShieldCheck className="h-5 w-5" />}
+            >
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="text-muted-foreground">Роль</dt>
+                  <dd className="mt-1 font-medium">{org.role_name}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Отдел</dt>
+                  <dd className="mt-1 font-medium">
+                    {org.department_id
+                      ? (departments.data?.find((item) => item.id === org.department_id)?.name ??
+                        (departments.isError ? "Не удалось загрузить" : "Загрузка…"))
+                      : "Не назначен"}
+                  </dd>
+                </div>
+              </dl>
+              {canEditEmployee ? (
+                <EmployeeForm org={org} canReadRoles={canReadRoles} />
+              ) : (
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Роль и отдел назначает администратор организации.
+                </p>
               )}
-            </div>
-            <Feedback error={jira.error} success={jira.isSuccess} />
-          </form>
-        </Card>
-        <Card
-          title="Данные сотрудника"
-          description="Ваша роль и отдел в организации."
-          icon={<ShieldCheck className="h-5 w-5" />}
-        >
-          <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Роль</dt>
-              <dd className="mt-1 font-medium">{org.role_name}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Отдел</dt>
-              <dd className="mt-1 font-medium">
-                {org.department_id
-                  ? (departments.data?.find((item) => item.id === org.department_id)?.name ??
-                    (departments.isError ? "Не удалось загрузить" : "Загрузка…"))
-                  : "Не назначен"}
-              </dd>
-            </div>
-          </dl>
-          {canEditEmployee ? (
-            <EmployeeForm org={org} canReadRoles={canReadRoles} />
-          ) : (
-            <p className="mt-4 text-xs text-muted-foreground">
-              Роль и отдел назначает администратор организации.
-            </p>
-          )}
-        </Card>
-        <Card
-          title="Организация"
-          description="Общие сведения вашей команды."
-          icon={<Building2 className="h-5 w-5" />}
-        >
-          {canEditOrganization ? (
-            <OrganizationForm org={org} />
-          ) : (
-            <>
-              <p className="font-medium">{org.name}</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                {org.description || "Описание пока не добавлено."}
-              </p>
-            </>
-          )}
-        </Card>
-      </div>
+            </Card>
+            <Card
+              title="Организация"
+              description="Общие сведения вашей команды."
+              icon={<Building2 className="h-5 w-5" />}
+            >
+              {canEditOrganization ? (
+                <OrganizationForm org={org} />
+              ) : (
+                <>
+                  <p className="font-medium">{org.name}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                    {org.description || "Описание пока не добавлено."}
+                  </p>
+                </>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
