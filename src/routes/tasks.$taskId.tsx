@@ -84,7 +84,9 @@ function TaskDetail() {
   });
 
   const task = taskQuery.data;
-  const isJiraTask = Boolean(task && (task.is_jira || task.source === "jira"));
+  const isJiraTask = Boolean(
+    task && (task.is_jira || task.source === "jira" || (task.external_key && task.integration_id)),
+  );
 
   const members = useQuery({
     queryKey: ["org-members", organizationId, isJiraTask ? "forJira" : "all"],
@@ -185,7 +187,7 @@ function TaskDetail() {
   }
 
   const transitions = nextStatuses(task.status, role);
-  const isJira = task.is_jira || task.source === "jira";
+  const isJira = isJiraTask;
   const jiraKey = task.jira_key || task.external_key;
   const jiraUrl = task.jira_url || task.external_url;
   const jiraStatus = task.jira_status || task.external_status;
