@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Camera, Check, Link2, Loader2, ShieldCheck, UserRound } from "lucide-react";
@@ -66,6 +66,122 @@ function Feedback({ error, success }: { error: Error | null; success: boolean })
       Изменения сохранены
     </p>
   ) : null;
+}
+
+function CameraCaptureDialog({
+  open,
+  onOpenChange,
+  onCapture,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCapture: (file: File) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    setError(null);
+    setReady(false);
+
+    const startCamera = async () => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Камера не поддерживается этим браузером.");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (cameraError) {
+        const message =
+          cameraError instanceof Error ? cameraError.message : "Не удалось открыть камеру.";
+        setError(`Не удалось открыть камеру: ${message}`);
+      }
+    };
+
+    void startCamera();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    };
+  }, [open]);
+
+  const takePhoto = () => {
+    const video = videoRef.current;
+    if (!video?.videoWidth || !video.videoHeight) {
+      setError("Подождите, камера ещё запускается.");
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      setError("Не удалось подготовить снимок.");
+      return;
+    }
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setError("Не удалось создать снимок.");
+          return;
+        }
+        onCapture(new File([blob], `avatar-${Date.now()}.jpg`, { type: "image/jpeg" }));
+        onOpenChange(false);
+      },
+      "image/jpeg",
+      0.9,
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogTitle>Сфотографироваться</DialogTitle>
+        <div className="overflow-hidden rounded-xl bg-black">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedMetadata={() => setReady(true)}
+            className="aspect-square w-full object-cover"
+          />
+        </div>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Отмена
+          </Button>
+          <Button disabled={!ready || !!error} onClick={takePhoto}>
+            <Camera className="h-4 w-4" /> Сделать снимок
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function ProfilePage() {
@@ -201,6 +317,7 @@ function OrganizationProfile({
   const fileInput = useRef<HTMLInputElement>(null);
   const [jiraDraft, setJiraDraft] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const profile = useQuery({
     queryKey: ["my-profile", org.id],
     queryFn: () => api.myProfile(org.id),
@@ -324,6 +441,13 @@ function OrganizationProfile({
                     ? "Изменить фото"
                     : "Добавить фото"}
               </Button>
+              <Button
+                variant="outline"
+                disabled={avatar.isPending}
+                onClick={() => setCameraOpen(true)}
+              >
+                <Camera className="h-4 w-4" /> Сфотографироваться
+              </Button>
               {profile.data.has_custom_avatar && (
                 <Button
                   variant="ghost"
@@ -340,6 +464,11 @@ function OrganizationProfile({
             JPEG, PNG или WebP, до 5 МБ. После удаления используется фото аккаунта.
           </p>
           <Feedback error={avatar.error} success={avatar.isSuccess} />
+          <CameraCaptureDialog
+            open={cameraOpen}
+            onOpenChange={setCameraOpen}
+            onCapture={(file) => avatar.mutate(file)}
+          />
           {profile.data.avatar_url && (
             <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
               <DialogContent className="h-dvh max-w-none border-0 bg-black p-5 sm:rounded-none">
