@@ -58,6 +58,14 @@ type TasksView = "table" | "board";
 type DateMode = "week" | "month" | "all" | "date" | "range";
 type DateField = "updated_at" | "created_at" | "deadline" | "last_synced_at";
 
+function isManagerRole(role?: string | null) {
+  return ["manager", "менеджер", "руководитель"].includes(
+    String(role ?? "")
+      .trim()
+      .toLowerCase(),
+  );
+}
+
 function TasksPage() {
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
@@ -83,6 +91,7 @@ function TasksPage() {
   const [publishToJira, setPublishToJira] = useState(false);
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
+  const canModifyTasks = !isManagerRole(tenant?.role_name ?? user?.role);
 
   const integrations = useQuery({
     queryKey: ["integrations", organizationId],
@@ -97,8 +106,7 @@ function TasksPage() {
   const createMembers = useQuery({
     queryKey: ["org-members", organizationId, publishToJira ? "forJira" : "all"],
     enabled: !!organizationId && createOpen && !integrations.isPending,
-    queryFn: () =>
-      orgApi.members(organizationId!, publishToJira ? { forJira: true } : undefined),
+    queryFn: () => orgApi.members(organizationId!, publishToJira ? { forJira: true } : undefined),
   });
 
   useEffect(() => {
@@ -361,7 +369,7 @@ function TasksPage() {
               <span className="sm:hidden">Добавить</span>
             </Button>
           </div>
-          {hasActiveJira && (
+          {hasActiveJira && canModifyTasks && (
             <button
               type="button"
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground sm:w-auto"
@@ -712,6 +720,7 @@ function TasksPage() {
             <KanbanBoard
               board={board}
               movingTaskId={moveTask.isPending ? moveTask.variables?.taskId : undefined}
+              canMove={canModifyTasks}
               onMove={(taskId, column) =>
                 moveTask.mutate({ taskId, status: BOARD_COLUMN_STATUS[column] })
               }
@@ -758,11 +767,13 @@ function TasksPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <ExportMenu taskId={task.id} />
-                      <DeleteTaskButton
-                        taskId={task.id}
-                        title={task.title}
-                        tenantId={organizationId}
-                      />
+                      {canModifyTasks ? (
+                        <DeleteTaskButton
+                          taskId={task.id}
+                          title={task.title}
+                          tenantId={organizationId}
+                        />
+                      ) : null}
                     </div>
                   </div>
                   <Link to="/tasks/$taskId" params={{ taskId: String(task.id) }} className="block">
@@ -779,15 +790,15 @@ function TasksPage() {
                         <span className="flex min-w-0 items-center gap-1.5">
                           <AssigneeAvatars assignees={task.assignees} />
                           <span className="max-w-full truncate">
-                          {task.assignees
-                            .map((assignee) =>
-                              userLabel({
-                                id: assignee.id,
-                                full_name: assignee.full_name,
-                                username: assignee.username,
-                              }),
-                            )
-                            .join(", ")}
+                            {task.assignees
+                              .map((assignee) =>
+                                userLabel({
+                                  id: assignee.id,
+                                  full_name: assignee.full_name,
+                                  username: assignee.username,
+                                }),
+                              )
+                              .join(", ")}
                           </span>
                         </span>
                       ) : null}
@@ -866,15 +877,15 @@ function TasksPage() {
                             <div className="mt-1 flex max-w-52 items-center gap-1.5 text-xs text-muted-foreground">
                               <AssigneeAvatars assignees={task.assignees} />
                               <span className="min-w-0 truncate">
-                              {task.assignees
-                                .map((assignee) =>
-                                  userLabel({
-                                    id: assignee.id,
-                                    full_name: assignee.full_name,
-                                    username: assignee.username,
-                                  }),
-                                )
-                                .join(", ")}
+                                {task.assignees
+                                  .map((assignee) =>
+                                    userLabel({
+                                      id: assignee.id,
+                                      full_name: assignee.full_name,
+                                      username: assignee.username,
+                                    }),
+                                  )
+                                  .join(", ")}
                               </span>
                             </div>
                           ) : null}
@@ -900,11 +911,13 @@ function TasksPage() {
                               </a>
                             ) : null}
                             <ExportMenu taskId={task.id} />
-                            <DeleteTaskButton
-                              taskId={task.id}
-                              title={task.title}
-                              tenantId={organizationId}
-                            />
+                            {canModifyTasks ? (
+                              <DeleteTaskButton
+                                taskId={task.id}
+                                title={task.title}
+                                tenantId={organizationId}
+                              />
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -979,10 +992,12 @@ function getBoardAssignee(task: BoardTask) {
 function KanbanBoard({
   board,
   movingTaskId,
+  canMove,
   onMove,
 }: {
   board: TasksBoard;
   movingTaskId?: number;
+  canMove: boolean;
   onMove: (taskId: number, column: BoardColumnKey) => void;
 }) {
   const [dragOverColumn, setDragOverColumn] = useState<BoardColumnKey | null>(null);
@@ -993,6 +1008,11 @@ function KanbanBoard({
   return (
     <div>
       <p className="mb-3 text-sm text-muted-foreground">Всего задач: {board.total}</p>
+      {!canMove ? (
+        <p className="mb-3 text-sm text-muted-foreground">
+          Перемещение и изменение задач недоступны для роли manager.
+        </p>
+      ) : null}
       <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6">
         <div className="grid w-full min-w-[83.25rem] grid-cols-7 items-start gap-3">
           {BOARD_COLUMNS.map((columnKey) => {
@@ -1001,6 +1021,7 @@ function KanbanBoard({
               <section
                 key={columnKey}
                 onDragOver={(event) => {
+                  if (!canMove) return;
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
                   setDragOverColumn(columnKey);
@@ -1011,6 +1032,7 @@ function KanbanBoard({
                   }
                 }}
                 onDrop={(event) => {
+                  if (!canMove) return;
                   event.preventDefault();
                   setDragOverColumn(null);
                   const taskId = Number(event.dataTransfer.getData("text/plain"));
@@ -1043,6 +1065,7 @@ function KanbanBoard({
                         key={task.id}
                         task={task}
                         isMoving={movingTaskId === task.id}
+                        canMove={canMove}
                         onMove={(column) => onMove(task.id, column)}
                       />
                     ))
@@ -1060,23 +1083,27 @@ function KanbanBoard({
 function KanbanTaskCard({
   task,
   isMoving,
+  canMove,
   onMove,
 }: {
   task: BoardTask;
   isMoving: boolean;
+  canMove: boolean;
   onMove: (column: BoardColumnKey) => void;
 }) {
   const project = task.project_name || task.project_key || "Без проекта";
 
   return (
     <article
-      draggable={!isMoving}
+      draggable={canMove && !isMoving}
       onDragStart={(event) => {
+        if (!canMove) return;
         event.dataTransfer.setData("text/plain", String(task.id));
         event.dataTransfer.effectAllowed = "move";
       }}
       className={cn(
-        "cursor-grab rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md active:cursor-grabbing",
+        "rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md",
+        canMove && "cursor-grab active:cursor-grabbing",
         isMoving && "pointer-events-none opacity-60",
       )}
     >
@@ -1113,21 +1140,23 @@ function KanbanTaskCard({
           </a>
         ) : null}
       </div>
-      <label className="mt-3 block border-t border-border pt-2 text-xs text-muted-foreground lg:hidden">
-        Переместить в
-        <select
-          value={task.board_column}
-          disabled={isMoving}
-          onChange={(event) => onMove(event.target.value as BoardColumnKey)}
-          className="mt-1 h-9 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground"
-        >
-          {BOARD_COLUMNS.map((column) => (
-            <option key={column} value={column}>
-              {BOARD_LABELS[column]}
-            </option>
-          ))}
-        </select>
-      </label>
+      {canMove ? (
+        <label className="mt-3 block border-t border-border pt-2 text-xs text-muted-foreground lg:hidden">
+          Переместить в
+          <select
+            value={task.board_column}
+            disabled={isMoving}
+            onChange={(event) => onMove(event.target.value as BoardColumnKey)}
+            className="mt-1 h-9 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground"
+          >
+            {BOARD_COLUMNS.map((column) => (
+              <option key={column} value={column}>
+                {BOARD_LABELS[column]}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
     </article>
   );
 }

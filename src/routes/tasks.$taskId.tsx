@@ -49,13 +49,24 @@ export const Route = createFileRoute("/tasks/$taskId")({
   component: TaskDetail,
 });
 
+function isManagerRole(role?: string | null) {
+  return ["manager", "менеджер", "руководитель"].includes(
+    String(role ?? "")
+      .trim()
+      .toLowerCase(),
+  );
+}
+
 function TaskDetail() {
   const { taskId } = Route.useParams();
   const id = Number(taskId);
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
   const currentId = user?.id ?? 0;
-  const role = user?.role ?? "manager";
+  const membershipRole = tenant?.role_name ?? user?.role;
+  const isManager = isManagerRole(membershipRole);
+  const role = membershipRole === "employee" ? "employee" : "manager";
+  const canModifyTask = !isManager;
   const organizationId = tenant?.id;
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
@@ -186,7 +197,7 @@ function TaskDetail() {
     );
   }
 
-  const transitions = nextStatuses(task.status, role);
+  const transitions = canModifyTask ? nextStatuses(task.status, role) : [];
   const isJira = isJiraTask;
   const jiraKey = task.jira_key || task.external_key;
   const jiraUrl = task.jira_url || task.external_url;
@@ -222,16 +233,18 @@ function TaskDetail() {
                     {task.title}
                   </h1>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
-                  title={editing ? "Отменить редактирование" : "Редактировать задачу"}
-                  className="h-9 w-9 shrink-0 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
-                  onClick={() => setEditing((v) => !v)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                {canModifyTask ? (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                    title={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                    className="h-9 w-9 shrink-0 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+                    onClick={() => setEditing((v) => !v)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                ) : null}
               </div>
             </div>
             {editing ? (
@@ -457,7 +470,7 @@ function TaskDetail() {
                 <TaskMeta label="Тип задачи" value={jiraIssueType} />
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">Проект</dt>
-                  {activeJira && role === "manager" ? (
+                  {activeJira && canModifyTask && role === "manager" ? (
                     <select
                       value={selectedProjectKey}
                       disabled={jiraProjects.isPending || projectMutation.isPending}
@@ -571,7 +584,7 @@ function TaskDetail() {
               <p className="mt-2 text-sm text-muted-foreground">Отделы не назначены.</p>
             )}
 
-            {role === "manager" ? (
+            {canModifyTask && role === "manager" ? (
               <div className="mt-4 border-t border-border pt-4 space-y-4">
                 <div>
                   <p className="text-sm font-medium">Назначить сотрудников</p>
