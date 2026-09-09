@@ -55,7 +55,7 @@ type Scope = "all" | "author" | "assigned";
 type Assignment = "any" | "yes" | "no";
 type SourceFilter = "all" | "internal" | "jira";
 type TasksView = "table" | "board";
-type DateMode = "week" | "month" | "all" | "date" | "range";
+type DateMode = "week" | "today" | "month" | "all" | "date" | "range";
 type DateField = "updated_at" | "created_at" | "deadline" | "last_synced_at";
 
 function isManagerRole(role?: string | null) {
@@ -76,6 +76,7 @@ function TasksPage() {
   const [source, setSource] = useState<SourceFilter>("all");
   const [search, setSearch] = useState("");
   const [projectKey, setProjectKey] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [dateMode, setDateMode] = useState<DateMode>("week");
   const [dateField, setDateField] = useState<DateField>("updated_at");
   const [exactDate, setExactDate] = useState("");
@@ -173,6 +174,12 @@ function TasksPage() {
     queryFn: () => api.taskProjects(organizationId!),
   });
 
+  const assigneeMembers = useQuery({
+    queryKey: ["org-members", organizationId, "withJiraUsername"],
+    enabled: !!organizationId,
+    queryFn: () => orgApi.members(organizationId!, { hasJiraUsername: true }),
+  });
+
   const query = useQuery({
     queryKey: [
       "tasks",
@@ -182,6 +189,7 @@ function TasksPage() {
       source,
       search,
       projectKey,
+      assigneeId,
       dateMode,
       dateField,
       exactDate,
@@ -199,6 +207,7 @@ function TasksPage() {
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
+      if (assigneeId) params.set("assigneeId", assigneeId);
       appendDateParams(params, dateMode, dateField, exactDate, dateFrom, dateTo);
       const qs = params.toString() ? `?${params.toString()}` : "";
       if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
@@ -214,6 +223,7 @@ function TasksPage() {
     source,
     search,
     projectKey,
+    assigneeId,
     dateMode,
     dateField,
     exactDate,
@@ -234,6 +244,7 @@ function TasksPage() {
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
+      if (assigneeId) params.set("assigneeId", assigneeId);
       appendDateParams(params, dateMode, dateField, exactDate, dateFrom, dateTo);
       const qs = params.toString() ? `?${params.toString()}` : "";
       return api.tasksBoard(organizationId, qs);
@@ -588,14 +599,43 @@ function TasksPage() {
           </select>
         )}
 
+        <select
+          value={assigneeId}
+          disabled={assigneeMembers.isPending}
+          onChange={(event) => {
+            setAssigneeId(event.target.value);
+            if (event.target.value) setScope("all");
+          }}
+          aria-label="Фильтр задач по исполнителю Jira"
+          className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm disabled:cursor-wait disabled:opacity-60"
+        >
+          <option value="">
+            {assigneeMembers.isPending ? "Загрузка пользователей…" : "Все пользователи"}
+          </option>
+          {(assigneeMembers.data ?? [])
+            .filter((member) => member.jira_username)
+            .sort((a, b) => (a.jira_username ?? "").localeCompare(b.jira_username ?? "", "ru"))
+            .map((member) => (
+              <option key={member.user_id} value={member.user_id}>
+                {member.jira_username}
+                {member.full_name || member.username
+                  ? ` — ${member.full_name || member.username}`
+                  : ""}
+              </option>
+            ))}
+        </select>
+
         <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap">
-          <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
+          <div className="flex w-full rounded-lg border border-border bg-card p-1">
             {scopes.map((s) => (
               <button
                 key={s.key}
-                onClick={() => setScope(s.key)}
+                onClick={() => {
+                  setScope(s.key);
+                  setAssigneeId("");
+                }}
                 className={cn(
-                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm md:flex-none",
+                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
                   scope === s.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground",
@@ -648,6 +688,7 @@ function TasksPage() {
               className="h-8 min-w-0 rounded-md border-0 bg-transparent px-2 text-xs font-medium text-foreground sm:text-sm md:w-40"
             >
               <option value="week">За неделю</option>
+              <option value="today">За сегодня</option>
               <option value="month">За месяц</option>
               <option value="all">За всё время</option>
               <option value="date">Конкретная дата</option>
@@ -933,6 +974,12 @@ function appendDateParams(
 ) {
   if (mode === "week" || mode === "month" || mode === "all") {
     params.set("period", mode);
+  } else if (mode === "today") {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+      now.getDate(),
+    ).padStart(2, "0")}`;
+    params.set("date", today);
   } else if (mode === "date" && exactDate) {
     params.set("date", exactDate);
   } else if (mode === "range") {
