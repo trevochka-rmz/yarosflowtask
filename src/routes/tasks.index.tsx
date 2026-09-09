@@ -51,7 +51,6 @@ export const Route = createFileRoute("/tasks/")({
   component: TasksPage,
 });
 
-type Scope = "all" | "author" | "assigned";
 type Assignment = "any" | "yes" | "no";
 type SourceFilter = "all" | "internal" | "jira";
 type TasksView = "table" | "board";
@@ -70,7 +69,6 @@ function TasksPage() {
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
   const qc = useQueryClient();
-  const [scope, setScope] = useState<Scope>("all");
   const [status, setStatus] = useState<TaskStatus | "">("");
   const [assignment, setAssignment] = useState<Assignment>("any");
   const [source, setSource] = useState<SourceFilter>("all");
@@ -93,6 +91,14 @@ function TasksPage() {
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
   const canModifyTasks = !isManagerRole(tenant?.role_name ?? user?.role);
+  const isEmployee =
+    user?.role === "employee" ||
+    ["employee", "сотрудник"].includes(
+      String(tenant?.role_name ?? "")
+        .trim()
+        .toLowerCase(),
+    );
+  const selectedAssigneeId = assigneeId === "me" ? String(userId) : assigneeId;
 
   const integrations = useQuery({
     queryKey: ["integrations", organizationId],
@@ -183,7 +189,6 @@ function TasksPage() {
   const query = useQuery({
     queryKey: [
       "tasks",
-      scope,
       status,
       assignment,
       source,
@@ -207,18 +212,15 @@ function TasksPage() {
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
-      if (assigneeId) params.set("assigneeId", assigneeId);
+      if (selectedAssigneeId) params.set("assigneeId", selectedAssigneeId);
       appendDateParams(params, dateMode, dateField, exactDate, dateFrom, dateTo);
       const qs = params.toString() ? `?${params.toString()}` : "";
-      if (scope === "author") return api.tasksByAuthor(userId, organizationId, qs);
-      if (scope === "assigned") return api.tasksMine(organizationId, qs);
       return api.tasks(organizationId, qs);
     },
   });
 
   const boardQueryKey = [
     "tasks-board",
-    scope,
     assignment,
     source,
     search,
@@ -238,13 +240,11 @@ function TasksPage() {
     queryFn: () => {
       if (!organizationId) throw new Error("Организация не выбрана");
       const params = new URLSearchParams();
-      if (scope === "author") params.set("authorId", String(userId));
-      if (scope === "assigned") params.set("assigned", "me");
-      else if (assignment !== "any") params.set("assigned", assignment);
+      if (assignment !== "any") params.set("assigned", assignment);
       if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
-      if (assigneeId) params.set("assigneeId", assigneeId);
+      if (selectedAssigneeId) params.set("assigneeId", selectedAssigneeId);
       appendDateParams(params, dateMode, dateField, exactDate, dateFrom, dateTo);
       const qs = params.toString() ? `?${params.toString()}` : "";
       return api.tasksBoard(organizationId, qs);
@@ -317,12 +317,6 @@ function TasksPage() {
 
   const tasks = query.data ?? [];
   const board = boardQuery.data;
-
-  const scopes: { key: Scope; label: string }[] = [
-    { key: "all", label: "Все" },
-    { key: "author", label: "Мои созданные" },
-    { key: "assigned", label: "Назначенные мне" },
-  ];
 
   const assignments: { key: Assignment; label: string }[] = [
     { key: "any", label: "Все" },
@@ -602,18 +596,16 @@ function TasksPage() {
         <select
           value={assigneeId}
           disabled={assigneeMembers.isPending}
-          onChange={(event) => {
-            setAssigneeId(event.target.value);
-            if (event.target.value) setScope("all");
-          }}
+          onChange={(event) => setAssigneeId(event.target.value)}
           aria-label="Фильтр задач по исполнителю Jira"
           className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm disabled:cursor-wait disabled:opacity-60"
         >
           <option value="">
             {assigneeMembers.isPending ? "Загрузка пользователей…" : "Все пользователи"}
           </option>
+          {isEmployee && userId ? <option value="me">Назначенные мне</option> : null}
           {(assigneeMembers.data ?? [])
-            .filter((member) => member.jira_username)
+            .filter((member) => member.jira_username && member.user_id !== userId)
             .sort((a, b) => (a.jira_username ?? "").localeCompare(b.jira_username ?? "", "ru"))
             .map((member) => (
               <option key={member.user_id} value={member.user_id}>
@@ -626,26 +618,6 @@ function TasksPage() {
         </select>
 
         <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap">
-          <div className="flex w-full rounded-lg border border-border bg-card p-1">
-            {scopes.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => {
-                  setScope(s.key);
-                  setAssigneeId("");
-                }}
-                className={cn(
-                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
-                  scope === s.key
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
           <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
             {sources.map((s) => (
               <button

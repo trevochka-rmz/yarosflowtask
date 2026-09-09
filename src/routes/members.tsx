@@ -181,6 +181,7 @@ function MembersPage() {
         departmentId?: number | null;
         is_active?: boolean;
         jiraUsername?: string | null;
+        organizationFullName?: string | null;
       };
     }) => orgApi.updateMember(orgId!, v.member.id, v.body),
     onSuccess: () => {
@@ -362,7 +363,22 @@ function MembersPage() {
                             name={m.full_name || m.username}
                             className="h-9 w-9"
                           />
-                          <span className="min-w-0 truncate">{personLabel(m)}</span>
+                          {canUpdate ? (
+                            <input
+                              className="h-9 min-w-0 w-full rounded-md border border-input bg-card px-2 text-sm"
+                              defaultValue={m.organization_full_name ?? ""}
+                              placeholder={personLabel(m)}
+                              aria-label={`Имя и фамилия ${personLabel(m)}`}
+                              onBlur={(e) => {
+                                const value = e.target.value.trim();
+                                const next = value || null;
+                                if (next === (m.organization_full_name ?? null)) return;
+                                patch.mutate({ member: m, body: { organizationFullName: next } });
+                              }}
+                            />
+                          ) : (
+                            <span className="min-w-0 truncate">{personLabel(m)}</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -469,6 +485,22 @@ function MembersPage() {
                     ) : null}
                   </div>
                   <div className="mt-2 grid gap-2">
+                    {canUpdate ? (
+                      <label className="grid gap-1 text-xs text-muted-foreground">
+                        Имя и фамилия
+                        <input
+                          className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground"
+                          defaultValue={m.organization_full_name ?? ""}
+                          placeholder={personLabel(m)}
+                          onBlur={(e) => {
+                            const value = e.target.value.trim();
+                            const next = value || null;
+                            if (next === (m.organization_full_name ?? null)) return;
+                            patch.mutate({ member: m, body: { organizationFullName: next } });
+                          }}
+                        />
+                      </label>
+                    ) : null}
                     <RoleSelect m={m} />
                     <DeptSelect m={m} />
                     <div className="text-xs text-muted-foreground">
