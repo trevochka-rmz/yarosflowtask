@@ -605,7 +605,7 @@ function TasksPage() {
           </option>
           {isEmployee && userId ? <option value="me">Назначенные мне</option> : null}
           {(assigneeMembers.data ?? [])
-            .filter((member) => member.jira_username && member.user_id !== userId)
+            .filter((member) => member.jira_username && (!isEmployee || member.user_id !== userId))
             .sort((a, b) => (a.jira_username ?? "").localeCompare(b.jira_username ?? "", "ru"))
             .map((member) => (
               <option key={member.user_id} value={member.user_id}>
