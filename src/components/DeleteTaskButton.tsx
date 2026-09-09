@@ -29,8 +29,12 @@ export function DeleteTaskButton({
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => api.deleteTask(taskId, tenantId ?? 0),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["tasks-board"] }),
+        queryClient.removeQueries({ queryKey: ["task", taskId] }),
+      ]);
       toast.success("Задача удалена");
       onDeleted?.();
     },
@@ -47,7 +51,6 @@ export function DeleteTaskButton({
           title="Удалить задачу"
           className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
           onClick={(e) => {
-            e.preventDefault();
             e.stopPropagation();
           }}
         >
