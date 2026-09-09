@@ -37,6 +37,9 @@ import { orgApi } from "@/lib/org";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    period: search.period === "today" || search.period === "week" ? search.period : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Задачи — Yaya.ЦифровойБот" },
@@ -66,6 +69,7 @@ function isManagerRole(role?: string | null) {
 }
 
 function TasksPage() {
+  const { period } = Route.useSearch();
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
   const qc = useQueryClient();
@@ -75,7 +79,7 @@ function TasksPage() {
   const [search, setSearch] = useState("");
   const [projectKey, setProjectKey] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
-  const [dateMode, setDateMode] = useState<DateMode>("week");
+  const [dateMode, setDateMode] = useState<DateMode>(period ?? "week");
   const [dateField, setDateField] = useState<DateField>("updated_at");
   const [exactDate, setExactDate] = useState("");
   const [dateFrom, setDateFrom] = useState("");
