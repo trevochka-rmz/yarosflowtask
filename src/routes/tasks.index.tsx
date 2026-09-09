@@ -805,7 +805,7 @@ function TasksPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
-                        #{task.id} · {task.category ?? "Без категории"} ·{" "}
+                        #{task.id} · {task.category ?? "Без проекта"} ·{" "}
                         {formatDate(task.created_at)}
                       </span>
                       {task.source === "jira" && task.external_url ? (
@@ -837,7 +837,7 @@ function TasksPage() {
                       <th className="px-4 py-3 font-medium">Статус</th>
                       <th className="px-4 py-3 font-medium">Исполнители</th>
                       <th className="px-4 py-3 font-medium">Приоритет</th>
-                      <th className="px-4 py-3 font-medium">Категория</th>
+                      <th className="px-4 py-3 font-medium">Проект</th>
                       <th className="px-4 py-3 font-medium">Создана</th>
                       <th className="px-4 py-3 font-medium text-right">Действия</th>
                     </tr>
@@ -873,20 +873,10 @@ function TasksPage() {
                         </td>
                         <td className="px-4 py-3">
                           <AssignmentBadge count={assigneeCount(task)} />
-                          {task.assignees?.length ? (
+                          {getTaskAssignee(task) !== "Без исполнителя" ? (
                             <div className="mt-1 flex max-w-52 items-center gap-1.5 text-xs text-muted-foreground">
                               <AssigneeAvatars assignees={task.assignees} />
-                              <span className="min-w-0 truncate">
-                                {task.assignees
-                                  .map((assignee) =>
-                                    userLabel({
-                                      id: assignee.id,
-                                      full_name: assignee.full_name,
-                                      username: assignee.username,
-                                    }),
-                                  )
-                                  .join(", ")}
-                              </span>
+                              <span className="min-w-0 truncate">{getTaskAssignee(task)}</span>
                             </div>
                           ) : null}
                         </td>
@@ -980,7 +970,9 @@ const BOARD_LABELS: Record<BoardColumnKey, string> = {
   CANCELLED: "Отменено",
 };
 
-function getBoardAssignee(task: BoardTask) {
+function getTaskAssignee(
+  task: Pick<Task, "assignees" | "external_assignee_name"> & { assignee_label?: string | null },
+) {
   if (task.assignee_label) return task.assignee_label;
   const internalNames = (task.assignees ?? [])
     .map((assignee) => assignee.full_name || assignee.username)
@@ -1124,7 +1116,7 @@ function KanbanTaskCard({
         </p>
         <p className="flex items-center gap-1.5">
           <AssigneeAvatars assignees={task.assignees} sizeClassName="h-6 w-6" />
-          <span className="line-clamp-2">{getBoardAssignee(task)}</span>
+          <span className="line-clamp-2">{getTaskAssignee(task)}</span>
         </p>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
