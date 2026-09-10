@@ -532,7 +532,9 @@ function TasksPage() {
             </div>
 
             <div>
-              <p className="text-sm font-medium">Исполнитель{publishToJira ? " Jira" : "и"}</p>
+              <p className="text-sm font-medium">
+                {publishToJira ? "Исполнитель Jira" : "Исполнители"}
+              </p>
               {publishToJira ? (
                 <p className="mt-1 text-xs text-muted-foreground">
                   По умолчанию выбирается Timur. Для Jira разрешён один исполнитель.
@@ -901,7 +903,7 @@ function TasksPage() {
                       <th className="px-4 py-3 font-medium">Источник</th>
                       <th className="px-4 py-3 font-medium">Название</th>
                       <th className="px-4 py-3 font-medium">Статус</th>
-                      <th className="px-4 py-3 font-medium">Исполнители</th>
+                      <th className="px-4 py-3 font-medium">Исполнитель</th>
                       <th className="px-4 py-3 font-medium">Приоритет</th>
                       <th className="px-4 py-3 font-medium">Проект</th>
                       <th className="px-4 py-3 font-medium">Создана</th>

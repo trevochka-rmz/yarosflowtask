@@ -130,7 +130,7 @@ function TaskDetail() {
       api.assign(id, organizationId ?? 0, payload.userIds, payload.departmentIds),
     onSuccess: () => {
       invalidate();
-      toast.success("Исполнители обновлены");
+      toast.success("Исполнитель обновлён");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -461,7 +461,9 @@ function TaskDetail() {
           ) : null}
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
-            <h2 className="text-lg font-semibold">Исполнители</h2>
+            <h2 className="text-lg font-semibold">
+              {task.source === "jira" ? "Исполнитель" : "Исполнители"}
+            </h2>
             {task.assignees?.length ? (
               <ul className="mt-3 space-y-1 text-sm">
                 {task.assignees.map((a) => (
