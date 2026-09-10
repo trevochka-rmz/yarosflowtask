@@ -38,7 +38,6 @@ export function TaskEditForm({
     acceptance_criteria: task.acceptance_criteria ?? "",
     priority: task.priority,
     status: task.status,
-    category: task.category ?? "",
     deadline: toDateInput(task.deadline),
   });
 
@@ -50,7 +49,6 @@ export function TaskEditForm({
         acceptance_criteria: form.acceptance_criteria,
         priority: form.priority,
         status: form.status,
-        category: form.category || null,
         deadline: form.deadline ? new Date(`${form.deadline}T00:00:00.000Z`).toISOString() : null,
         changedBy: userId,
       }),
@@ -121,14 +119,6 @@ export function TaskEditForm({
               </option>
             ))}
           </select>
-        </label>
-        <label className="block text-sm">
-          <span className="font-medium text-muted-foreground">Категория</span>
-          <Input
-            className="mt-1"
-            value={form.category}
-            onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-          />
         </label>
         <label className="block text-sm">
           <span className="font-medium text-muted-foreground">Дедлайн</span>

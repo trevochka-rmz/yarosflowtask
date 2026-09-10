@@ -47,6 +47,7 @@ export interface Assignee {
   role?: Role;
   assigned_at?: string | null;
   assigned_by?: number | null;
+  assigned_by_name?: string | null;
 }
 
 export interface Task {
@@ -59,7 +60,6 @@ export interface Task {
   acceptance_criteria: string;
   priority: Priority;
   status: TaskStatus;
-  category: string | null;
   deadline: string | null;
   result?: string | null;
   department_id?: number | null;

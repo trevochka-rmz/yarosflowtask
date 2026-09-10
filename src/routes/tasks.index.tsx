@@ -873,7 +873,8 @@ function TasksPage() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
-                        #{task.id} · {task.category ?? "Без проекта"} ·{" "}
+                        #{task.id} ·{" "}
+                        {task.external_project_name || task.external_project_key || "Без проекта"} ·{" "}
                         {formatDate(task.created_at)}
                       </span>
                       {task.source === "jira" && task.external_url ? (
@@ -951,7 +952,9 @@ function TasksPage() {
                         <td className="px-4 py-3">
                           <PriorityBadge priority={task.priority} />
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{task.category ?? "—"}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {task.external_project_name || task.external_project_key || "—"}
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {formatDate(task.created_at)}
                         </td>

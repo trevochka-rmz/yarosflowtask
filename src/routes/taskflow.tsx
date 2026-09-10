@@ -51,7 +51,7 @@ const EXAMPLES = [
 ];
 
 /* ===================================================================
-   Индикаторы приоритета и категории
+   Индикаторы приоритета
    =================================================================== */
 const PRIORITY_LABELS: Record<string, string> = {
   low: "Низкий",
@@ -176,11 +176,6 @@ function PreviewCard({
           >
             {PRIORITY_LABELS[preview.priority] ?? preview.priority}
           </span>
-          {preview.category && (
-            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs">
-              {preview.category}
-            </span>
-          )}
         </div>
       </div>
 
@@ -369,7 +364,6 @@ function Index() {
         description: p.description,
         acceptanceCriteria: p.acceptance_criteria,
         priority: p.priority as Priority,
-        category: p.category,
         deadline: null,
         pushToJira: hasActiveJira && publishToJira,
         ...(hasActiveJira && publishToJira

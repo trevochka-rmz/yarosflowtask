@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export function ExpandableText({ text, lines = 4 }: { text: string; lines?: number }) {
   const [open, setOpen] = useState(false);
   const normalized = String(text ?? "")
-    .replace(/(?:^|\n)\s*Требует уточнения\s*:[^\n]*(?=\n|$)/gi, "\n")
+    .replace(/\s*Требует уточнения\s*:[\s\S]*$/gi, "")
     .trim();
   const long = normalized.length > 180;
   const blocks = normalized.split(/^(h3\.\s*.+)$/gim).filter(Boolean);

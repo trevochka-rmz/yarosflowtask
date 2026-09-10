@@ -303,12 +303,6 @@ function TaskDetail() {
                     ) : null}
                     <tr className="max-sm:block">
                       <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
-                        Категория
-                      </th>
-                      <td className="px-4 py-3 sm:px-6">{task.category ?? "—"}</td>
-                    </tr>
-                    <tr className="max-sm:block">
-                      <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                         Описание
                       </th>
                       <td className="px-4 py-3 sm:px-6">
@@ -452,7 +446,7 @@ function TaskDetail() {
               <div className="flex items-center justify-between gap-3 bg-[#0052CC]/10 px-4 py-3 sm:px-6">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-[#0052CC]">Jira</p>
-                  <h2 className="font-semibold text-foreground">
+                  <h2 className="font-semibold text-[#0052CC]">
                     {[jiraProjectName, jiraKey].filter(Boolean).join(" · ") || "Данные Jira"}
                   </h2>
                 </div>
@@ -476,11 +470,6 @@ function TaskDetail() {
                   <dd className="mt-0.5 break-words font-medium text-foreground">
                     {[jiraProjectName, jiraProjectKey].filter(Boolean).join(" · ") || "—"}
                   </dd>
-                  {canModifyTask && jiraUrl ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Перенос между проектами выполняется в Jira через меню «Действия → Переместить».
-                    </p>
-                  ) : null}
                 </div>
                 <TaskMeta label="Исполнитель Jira" value={jiraAssignee} />
                 <TaskMeta
@@ -496,9 +485,12 @@ function TaskDetail() {
           ) : null}
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
-            <h2 className="text-lg font-semibold">
-              {task.source === "jira" ? "Исполнитель" : "Исполнители"}
-            </h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">
+                {task.source === "jira" ? "Текущий исполнитель" : "Исполнители"}
+              </h2>
+              <PriorityBadge priority={task.priority} />
+            </div>
             {task.assignees?.length ? (
               <ul className="mt-3 space-y-1 text-sm">
                 {task.assignees.map((a) => (
@@ -524,6 +516,13 @@ function TaskDetail() {
                             внешний Jira
                           </span>
                         ) : null}
+                        {a.assignment_source !== "jira" &&
+                        a.assignment_source !== "jira_external" &&
+                        a.assigned_by_name ? (
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            Назначил: {a.assigned_by_name}
+                          </span>
+                        ) : null}
                       </span>
                     </span>
                     <span className="text-xs text-muted-foreground">
@@ -539,7 +538,9 @@ function TaskDetail() {
             {canModifyTask && role === "manager" ? (
               <div className="mt-4 border-t border-border pt-4 space-y-4">
                 <div>
-                  <p className="text-sm font-medium">Назначить сотрудников</p>
+                  <p className="text-sm font-medium">
+                    {isJira ? "Сменить исполнителя" : "Изменить исполнителей"}
+                  </p>
                   <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
                     {members.data?.map((m) => (
                       <label
