@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Clock3,
   ExternalLink,
-  FolderKanban,
   Loader2,
   Pencil,
   Send,
@@ -71,7 +70,6 @@ function TaskDetail() {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
-  const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
   const [editing, setEditing] = useState(false);
   const taskQuery = useQuery({
     queryKey: ["task", id, organizationId],
@@ -88,11 +86,6 @@ function TaskDetail() {
     enabled: !!organizationId && !!task,
     queryFn: () => orgApi.members(organizationId!, isJiraTask ? { forJira: true } : undefined),
   });
-  const departments = useQuery({
-    queryKey: ["org-departments", organizationId],
-    enabled: !!organizationId,
-    queryFn: () => orgApi.departments(organizationId!),
-  });
   const comments = useQuery({ queryKey: ["comments", id], queryFn: () => api.comments(id) });
   const history = useQuery({ queryKey: ["history", id], queryFn: () => api.history(id) });
 
@@ -104,10 +97,7 @@ function TaskDetail() {
           .map((assignee) => assignee.id as number),
       );
     }
-    if (task?.department_assignees) {
-      setSelectedDepartments(task.department_assignees.map((department) => department.id));
-    }
-  }, [task?.id, task?.assignees, task?.department_assignees]);
+  }, [task?.id, task?.assignees]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["task", id, organizationId] });
@@ -126,8 +116,7 @@ function TaskDetail() {
   });
 
   const assignMutation = useMutation({
-    mutationFn: (payload: { userIds: number[]; departmentIds: number[] }) =>
-      api.assign(id, organizationId ?? 0, payload.userIds, payload.departmentIds),
+    mutationFn: (userIds: number[]) => api.assign(id, organizationId ?? 0, userIds),
     onSuccess: () => {
       invalidate();
       toast.success("Исполнитель обновлён");
@@ -501,30 +490,6 @@ function TaskDetail() {
               <p className="mt-2 text-sm text-muted-foreground">Никто не назначен.</p>
             )}
 
-            <h3 className="mt-5 flex items-center gap-2 border-t border-border pt-4 text-sm font-semibold">
-              <UsersRound className="h-4 w-4 text-muted-foreground" /> Назначенные отделы
-            </h3>
-            {task.department_assignees?.length ? (
-              <ul className="mt-3 space-y-2 text-sm">
-                {task.department_assignees.map((department) => (
-                  <li
-                    key={department.id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2"
-                  >
-                    <span className="inline-flex min-w-0 items-center gap-2">
-                      <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate">{department.name}</span>
-                    </span>
-                    {department.code ? (
-                      <span className="text-xs text-muted-foreground">{department.code}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-muted-foreground">Отделы не назначены.</p>
-            )}
-
             {canModifyTask && role === "manager" ? (
               <div className="mt-4 border-t border-border pt-4 space-y-4">
                 <div>
@@ -575,45 +540,13 @@ function TaskDetail() {
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium">Назначить отделы</p>
-                  <div className="mt-2 max-h-36 space-y-1 overflow-y-auto">
-                    {departments.data?.map((d) => (
-                      <label
-                        key={d.id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
-                      >
-                        <input
-                          type="checkbox"
-                          className="accent-primary"
-                          checked={selectedDepartments.includes(d.id)}
-                          onChange={(e) =>
-                            setSelectedDepartments((prev) =>
-                              e.target.checked ? [...prev, d.id] : prev.filter((x) => x !== d.id),
-                            )
-                          }
-                        />
-                        {d.name}
-                      </label>
-                    ))}
-                    {departments.isError ? (
-                      <p className="text-xs text-destructive">
-                        {(departments.error as Error).message}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
                 <Button
                   className="mt-1 w-full"
                   disabled={assignMutation.isPending}
                   onClick={() =>
-                    assignMutation.mutate({
-                      userIds:
-                        members.data?.map((m) => m.user_id).filter((id) => selected.includes(id)) ??
-                        [],
-                      departmentIds: selectedDepartments,
-                    })
+                    assignMutation.mutate(
+                      members.data?.map((m) => m.user_id).filter((id) => selected.includes(id)) ?? [],
+                    )
                   }
                 >
                   {assignMutation.isPending ? (

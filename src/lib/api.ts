@@ -49,14 +49,6 @@ export interface Assignee {
   assigned_by?: number | null;
 }
 
-export interface DepartmentAssignee {
-  id: number;
-  name: string;
-  code: string | null;
-  assigned_at: string;
-  assigned_by: number;
-}
-
 export interface Task {
   id: number;
   organization_id?: number;
@@ -78,7 +70,6 @@ export interface Task {
   updated_at: string;
   assignees?: Assignee[];
   assignee_count?: number;
-  department_assignees?: DepartmentAssignee[];
   is_jira?: boolean;
   jira_key?: string | null;
   jira_url?: string | null;
@@ -171,6 +162,8 @@ export interface Comment {
   created_at: string;
   author_name?: string | null;
   author_username?: string | null;
+  jira_comment_id?: string | null;
+  jira_author_name?: string | null;
 }
 
 export interface HistoryEntry {
@@ -479,11 +472,11 @@ export const api = {
       method: "POST",
       body: { organizationId, aiActionId, ...options },
     }),
-  /** Назначение исполнителей и отделов. userIds — ID пользователей (user_id из members). */
-  assign: (id: number, organizationId: number, userIds: number[], departmentIds: number[]) =>
+  /** Назначение исполнителей. userIds — ID пользователей (user_id из members). */
+  assign: (id: number, organizationId: number, userIds: number[]) =>
     apiFetch<Task>(`/tasks/${id}/assign?organizationId=${organizationId}`, {
       method: "PATCH",
-      body: { userIds, departmentIds },
+      body: { userIds },
     }),
 
   setStatus: (id: number, status: TaskStatus, organizationId: number) =>
