@@ -37,9 +37,38 @@ import { orgApi } from "@/lib/org";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tasks/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    period: search.period === "today" || search.period === "week" ? search.period : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    const string = (value: unknown) => (typeof value === "string" ? value : undefined);
+    const oneOf = <T extends string>(value: unknown, allowed: readonly T[]) =>
+      typeof value === "string" && (allowed as readonly string[]).includes(value)
+        ? (value as T)
+        : undefined;
+
+    return {
+      taskStatus: oneOf(search.taskStatus, [
+        "BACKLOG",
+        "SELECTED",
+        "WAITING",
+        "IN_PROGRESS",
+        "REVIEW",
+        "DONE",
+        "CANCELLED",
+      ]),
+      assignment: oneOf(search.assignment, ["any", "yes", "no"]),
+      source: oneOf(search.source, ["all", "internal", "jira"]),
+      query: string(search.query),
+      project: string(search.project),
+      assignee: string(search.assignee),
+      dateMode: oneOf(search.dateMode, ["week", "today", "month", "all", "date", "range"]),
+      dateField: oneOf(search.dateField, ["updated_at", "created_at", "deadline", "last_synced_at"]),
+      exactDate: string(search.exactDate),
+      dateFrom: string(search.dateFrom),
+      dateTo: string(search.dateTo),
+      view: oneOf(search.view, ["table", "board"]),
+      // Поддержка старых ссылок, например /tasks?period=week.
+      period: oneOf(search.period, ["today", "week"]),
+    };
+  },
   head: () => ({
     meta: [
       { title: "Задачи — Yaya.ЦифровойБот" },
@@ -69,22 +98,42 @@ function isManagerRole(role?: string | null) {
 }
 
 function TasksPage() {
-  const { period } = Route.useSearch();
+  const routeSearch = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
   const qc = useQueryClient();
-  const [status, setStatus] = useState<TaskStatus | "">("");
-  const [assignment, setAssignment] = useState<Assignment>("any");
-  const [source, setSource] = useState<SourceFilter>("all");
-  const [search, setSearch] = useState("");
-  const [projectKey, setProjectKey] = useState("");
-  const [assigneeId, setAssigneeId] = useState("");
-  const [dateMode, setDateMode] = useState<DateMode>(period ?? "week");
-  const [dateField, setDateField] = useState<DateField>("updated_at");
-  const [exactDate, setExactDate] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [view, setView] = useState<TasksView>("board");
+  const updateSearch = (patch: Record<string, string | undefined>) => {
+    void navigate({
+      replace: true,
+      search: (previous) => ({ ...previous, ...patch }),
+    });
+  };
+  const status = (routeSearch.taskStatus ?? "") as TaskStatus | "";
+  const assignment = (routeSearch.assignment ?? "any") as Assignment;
+  const source = (routeSearch.source ?? "all") as SourceFilter;
+  const search = routeSearch.query ?? "";
+  const projectKey = routeSearch.project ?? "";
+  const assigneeId = routeSearch.assignee ?? "";
+  const dateMode = (routeSearch.dateMode ?? routeSearch.period ?? "week") as DateMode;
+  const dateField = (routeSearch.dateField ?? "updated_at") as DateField;
+  const exactDate = routeSearch.exactDate ?? "";
+  const dateFrom = routeSearch.dateFrom ?? "";
+  const dateTo = routeSearch.dateTo ?? "";
+  const view = (routeSearch.view ?? "board") as TasksView;
+  const setStatus = (value: TaskStatus | "") => updateSearch({ taskStatus: value || undefined });
+  const setAssignment = (value: Assignment) =>
+    updateSearch({ assignment: value === "any" ? undefined : value });
+  const setSource = (value: SourceFilter) => updateSearch({ source: value === "all" ? undefined : value });
+  const setSearch = (value: string) => updateSearch({ query: value || undefined });
+  const setProjectKey = (value: string) => updateSearch({ project: value || undefined });
+  const setAssigneeId = (value: string) => updateSearch({ assignee: value || undefined });
+  const setDateMode = (value: DateMode) => updateSearch({ dateMode: value, period: undefined });
+  const setDateField = (value: DateField) => updateSearch({ dateField: value });
+  const setExactDate = (value: string) => updateSearch({ exactDate: value || undefined });
+  const setDateFrom = (value: string) => updateSearch({ dateFrom: value || undefined });
+  const setDateTo = (value: string) => updateSearch({ dateTo: value || undefined });
+  const setView = (value: TasksView) => updateSearch({ view: value });
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
