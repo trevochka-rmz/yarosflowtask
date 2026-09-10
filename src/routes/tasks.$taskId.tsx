@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
@@ -9,6 +9,7 @@ import {
   Loader2,
   Pencil,
   Send,
+  Trash2,
   UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -70,6 +71,7 @@ function TaskDetail() {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
+  const syncedJiraTask = useRef<string | null>(null);
   const [editing, setEditing] = useState(false);
   const taskQuery = useQuery({
     queryKey: ["task", id, organizationId],
@@ -132,6 +134,32 @@ function TaskDetail() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: number) => api.deleteComment(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", id] });
+      toast.success("Комментарий удалён");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const jiraSyncMutation = useMutation({
+    mutationFn: () => api.syncTaskFromJira(id, organizationId ?? 0),
+    onSuccess: () => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ["comments", id] });
+      queryClient.invalidateQueries({ queryKey: ["attachments", id] });
+    },
+  });
+
+  useEffect(() => {
+    if (!isJiraTask || !organizationId) return;
+    const syncKey = `${id}:${organizationId}`;
+    if (syncedJiraTask.current === syncKey) return;
+    syncedJiraTask.current = syncKey;
+    jiraSyncMutation.mutate();
+  }, [id, isJiraTask, organizationId]);
 
   if (taskQuery.isPending) {
     return (
@@ -369,7 +397,25 @@ function TaskDetail() {
                         {c.author_name ||
                           (c.author_username ? `@${c.author_username}` : `#${c.author_id}`)}
                       </span>
-                      <span>{formatDate(c.created_at)}</span>
+                      <span className="flex items-center gap-2">
+                        {formatDate(c.created_at)}
+                        {c.author_id === currentId ? (
+                          <button
+                            type="button"
+                            className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Удалить комментарий"
+                            title="Удалить комментарий"
+                            disabled={deleteCommentMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm("Удалить комментарий?")) {
+                                deleteCommentMutation.mutate(c.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </span>
                     </div>
                     <p className="mt-2 text-sm whitespace-pre-wrap">{c.body}</p>
                   </div>

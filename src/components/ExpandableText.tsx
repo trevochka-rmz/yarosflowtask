@@ -5,18 +5,39 @@ import { cn } from "@/lib/utils";
 /** Длинный текст: на мобильных свёрнут, разворачивается по кнопке. */
 export function ExpandableText({ text, lines = 4 }: { text: string; lines?: number }) {
   const [open, setOpen] = useState(false);
-  const long = (text ?? "").length > 180;
+  const normalized = String(text ?? "")
+    .replace(/(?:^|\n)\s*Требует уточнения\s*:[^\n]*(?=\n|$)/gi, "\n")
+    .trim();
+  const long = normalized.length > 180;
+  const blocks = normalized.split(/^(h3\.\s*.+)$/gim).filter(Boolean);
 
-  if (!long) return <p className="whitespace-pre-wrap">{text}</p>;
+  const content = (
+    <>
+      {blocks.map((block, index) => {
+        const heading = block.match(/^h3\.\s*(.+)$/i);
+        return heading ? (
+          <h3 key={index} className="mt-3 text-sm font-semibold first:mt-0">
+            {heading[1]}
+          </h3>
+        ) : (
+          <div key={index} className="whitespace-pre-wrap">
+            {block.trim()}
+          </div>
+        );
+      })}
+    </>
+  );
+
+  if (!long) return <div>{content}</div>;
 
   return (
     <div>
-      <p
+      <div
         className={cn("whitespace-pre-wrap", !open && "sm:line-clamp-none")}
         style={open ? undefined : { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: lines, overflow: "hidden" }}
       >
-        {text}
-      </p>
+        {content}
+      </div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

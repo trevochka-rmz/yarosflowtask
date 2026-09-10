@@ -493,9 +493,12 @@ export const api = {
 
   deleteTask: (id: number, organizationId: number) =>
     apiFetch<unknown>(`/tasks/${id}?organizationId=${organizationId}`, { method: "DELETE" }),
+  syncTaskFromJira: (id: number, organizationId: number) =>
+    apiFetch<{ ok: boolean }>(`/tasks/${id}/sync-jira?organizationId=${organizationId}`, { method: "POST" }),
   comments: (taskId: number) => apiFetch<Comment[]>(`/comments/task/${taskId}`),
   addComment: (taskId: number, authorId: number, body: string) =>
     apiFetch<Comment>("/comments", { method: "POST", body: { taskId, authorId, body } }),
+  deleteComment: (id: number) => apiFetch<unknown>(`/comments/${id}`, { method: "DELETE" }),
   history: (taskId: number) => apiFetch<HistoryEntry[]>(`/history/task/${taskId}`),
   attachments: (taskId: number) => apiFetch<Attachment[]>(`/attachments/task/${taskId}`),
   uploadAttachments: uploadFiles,
