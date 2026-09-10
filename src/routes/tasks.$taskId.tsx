@@ -31,7 +31,7 @@ import {
   type TaskStatus,
 } from "@/lib/api";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { integrationApi, useCurrentTenant } from "@/lib/platform";
+import { useCurrentTenant } from "@/lib/platform";
 import { orgApi } from "@/lib/org";
 
 export const Route = createFileRoute("/tasks/$taskId")({
@@ -73,22 +73,6 @@ function TaskDetail() {
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
   const [editing, setEditing] = useState(false);
-  const [selectedProjectKey, setSelectedProjectKey] = useState("");
-
-  const integrations = useQuery({
-    queryKey: ["integrations", organizationId],
-    enabled: !!organizationId,
-    queryFn: () => integrationApi.list(organizationId!),
-  });
-  const activeJira = (integrations.data ?? []).find(
-    (integration) => integration.provider === "JIRA" && integration.status === "ACTIVE",
-  );
-  const jiraProjects = useQuery({
-    queryKey: ["jira-projects", organizationId, activeJira?.id],
-    enabled: !!organizationId && !!activeJira?.id,
-    queryFn: () => integrationApi.jiraProjects(organizationId!, activeJira!.id),
-  });
-
   const taskQuery = useQuery({
     queryKey: ["task", id, organizationId],
     queryFn: () => api.task(id, organizationId),
@@ -125,10 +109,6 @@ function TaskDetail() {
     }
   }, [task?.id, task?.assignees, task?.department_assignees]);
 
-  useEffect(() => {
-    setSelectedProjectKey(task?.jira_project_key || task?.external_project_key || "");
-  }, [task?.id, task?.jira_project_key, task?.external_project_key]);
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["task", id, organizationId] });
     queryClient.invalidateQueries({ queryKey: ["history", id] });
@@ -153,18 +133,6 @@ function TaskDetail() {
       toast.success("Исполнители обновлены");
     },
     onError: (e: Error) => toast.error(e.message),
-  });
-
-  const projectMutation = useMutation({
-    mutationFn: (projectKey: string) => api.updateTask(id, organizationId ?? 0, { projectKey }),
-    onSuccess: () => {
-      invalidate();
-      toast.success("Проект Jira изменён");
-    },
-    onError: (e: Error) => {
-      setSelectedProjectKey(task?.jira_project_key || task?.external_project_key || "");
-      toast.error(e.message);
-    },
   });
 
   const commentMutation = useMutation({
@@ -470,42 +438,13 @@ function TaskDetail() {
                 <TaskMeta label="Тип задачи" value={jiraIssueType} />
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">Проект</dt>
-                  {activeJira && canModifyTask && role === "manager" ? (
-                    <select
-                      value={selectedProjectKey}
-                      disabled={jiraProjects.isPending || projectMutation.isPending}
-                      onChange={(event) => {
-                        const projectKey = event.target.value;
-                        setSelectedProjectKey(projectKey);
-                        if (projectKey && projectKey !== jiraProjectKey) {
-                          projectMutation.mutate(projectKey);
-                        }
-                      }}
-                      className="mt-1 h-9 w-full rounded-md border border-input bg-card px-2 text-sm disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {jiraProjectKey &&
-                      !(jiraProjects.data?.projects ?? []).some(
-                        (project) => project.key === jiraProjectKey,
-                      ) ? (
-                        <option value={jiraProjectKey}>
-                          {jiraProjectName || jiraProjectKey} ({jiraProjectKey})
-                        </option>
-                      ) : null}
-                      {(jiraProjects.data?.projects ?? []).map((project) => (
-                        <option key={project.key} value={project.key}>
-                          {project.name} ({project.key})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <dd className="mt-0.5 break-words font-medium text-foreground">
-                      {[jiraProjectName, jiraProjectKey].filter(Boolean).join(" · ") || "—"}
-                    </dd>
-                  )}
-                  {projectMutation.isPending ? (
-                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Переносим задачу…
-                    </span>
+                  <dd className="mt-0.5 break-words font-medium text-foreground">
+                    {[jiraProjectName, jiraProjectKey].filter(Boolean).join(" · ") || "—"}
+                  </dd>
+                  {canModifyTask && jiraUrl ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Перенос между проектами выполняется в Jira через меню «Действия → Переместить».
+                    </p>
                   ) : null}
                 </div>
                 <TaskMeta label="Исполнитель Jira" value={jiraAssignee} />
