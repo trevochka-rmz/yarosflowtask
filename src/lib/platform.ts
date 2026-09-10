@@ -273,7 +273,7 @@ export interface AiTaskPreview {
   description: string;
   acceptance_criteria: string;
   priority: string;
-  category: string;
+  project_key: string | null;
   suggested_deadline: string | null;
   input_text: string;
   ai_model: string | null;

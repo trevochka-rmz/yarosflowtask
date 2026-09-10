@@ -335,6 +335,14 @@ function Index() {
   }, [jiraProjects.data]);
 
   useEffect(() => {
+    const projectKey = preview?.project_key;
+    const projects = jiraProjects.data?.projects ?? [];
+    if (projectKey && projects.some((project) => project.key === projectKey)) {
+      setSelectedProjectKey(projectKey);
+    }
+  }, [preview?.project_key, jiraProjects.data]);
+
+  useEffect(() => {
     if (!hasActiveJira || selectedJiraUserId != null || !jiraMembers.data?.length) return;
     const timur = jiraMembers.data.find((member) =>
       [member.full_name, member.username, member.jira_username].some((value) =>
