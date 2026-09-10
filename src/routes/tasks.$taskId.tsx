@@ -192,6 +192,18 @@ function TaskDetail() {
   const jiraProjectName = task.jira_project_name || task.external_project_name;
   const jiraReporter = task.jira_reporter || task.external_reporter_name;
   const jiraIssueType = task.jira_issuetype || task.external_issuetype;
+  const assignedByNames = [
+    ...new Set(
+      (task.assignees ?? [])
+        .filter(
+          (assignee) =>
+            assignee.assignment_source !== "jira" &&
+            assignee.assignment_source !== "jira_external" &&
+            assignee.assigned_by_name,
+        )
+        .map((assignee) => assignee.assigned_by_name as string),
+    ),
+  ];
 
   return (
     <AppLayout>
@@ -250,9 +262,14 @@ function TaskDetail() {
                       <td className="px-4 py-3 sm:px-6">
                         <div className="flex flex-wrap gap-2">
                           <StatusBadge status={task.status} />
-                          <PriorityBadge priority={task.priority} />
+                          {!isJira ? <PriorityBadge priority={task.priority} /> : null}
                           <AssignmentBadge count={task.assignees?.length ?? 0} />
                         </div>
+                        {!isJira && assignedByNames.length ? (
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            Назначил: <span className="font-medium">{assignedByNames.join(", ")}</span>
+                          </div>
+                        ) : null}
                         {isJira && (jiraStatus || jiraUrl) && (
                           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                             {jiraStatus && (
@@ -466,6 +483,10 @@ function TaskDetail() {
                 <TaskMeta label="Статус Jira" value={jiraStatus} />
                 <TaskMeta label="Тип задачи" value={jiraIssueType} />
                 <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Приоритет</dt>
+                  <dd className="mt-1"><PriorityBadge priority={task.priority} /></dd>
+                </div>
+                <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">Проект</dt>
                   <dd className="mt-0.5 break-words font-medium text-foreground">
                     {[jiraProjectName, jiraProjectKey].filter(Boolean).join(" · ") || "—"}
@@ -477,6 +498,9 @@ function TaskDetail() {
                   value={task.jira_assignee_key || task.external_assignee_key}
                 />
                 <TaskMeta label="Автор Jira" value={jiraReporter} />
+                {assignedByNames.length ? (
+                  <TaskMeta label="Назначил" value={assignedByNames.join(", ")} />
+                ) : null}
                 <TaskMeta label="Создана в Jira" value={formatDate(task.jira_created_at)} />
                 <TaskMeta label="Обновлена в Jira" value={formatDate(task.jira_updated_at)} />
                 <TaskMeta label="Последняя синхронизация" value={formatDate(task.last_synced_at)} />
@@ -486,10 +510,7 @@ function TaskDetail() {
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">
-                {task.source === "jira" ? "Текущий исполнитель" : "Исполнители"}
-              </h2>
-              <PriorityBadge priority={task.priority} />
+              <h2 className="text-lg font-semibold">Исполнитель</h2>
             </div>
             {task.assignees?.length ? (
               <ul className="mt-3 space-y-1 text-sm">
@@ -514,13 +535,6 @@ function TaskDetail() {
                         {a.is_external ? (
                           <span className="ml-2 rounded-full bg-[#0052CC]/10 px-2 py-0.5 text-xs text-[#0052CC]">
                             внешний Jira
-                          </span>
-                        ) : null}
-                        {a.assignment_source !== "jira" &&
-                        a.assignment_source !== "jira_external" &&
-                        a.assigned_by_name ? (
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            Назначил: {a.assigned_by_name}
                           </span>
                         ) : null}
                       </span>
