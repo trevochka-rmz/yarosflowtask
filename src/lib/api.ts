@@ -446,6 +446,7 @@ export const api = {
       pushToJira?: boolean;
       projectKey?: string;
       jiraAssignee?: string | null;
+      assigneeUserId?: number | null;
     },
   ) =>
     apiFetch<Task>("/tasks", {

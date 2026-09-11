@@ -375,7 +375,11 @@ function Index() {
         deadline: null,
         pushToJira: hasActiveJira && publishToJira,
         ...(hasActiveJira && publishToJira
-          ? { projectKey: selectedProjectKey, jiraAssignee: jiraMember?.jira_username ?? null }
+          ? {
+              projectKey: selectedProjectKey,
+              jiraAssignee: jiraMember?.jira_username ?? null,
+              assigneeUserId: selectedJiraUserId,
+            }
           : {}),
       });
       if (created.jira_push_error) {
