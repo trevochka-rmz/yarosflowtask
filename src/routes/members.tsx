@@ -181,6 +181,7 @@ function MembersPage() {
         departmentId?: number | null;
         is_active?: boolean;
         jiraUsername?: string | null;
+        gitlabUsername?: string | null;
         organizationFullName?: string | null;
       };
     }) => orgApi.updateMember(orgId!, v.member.id, v.body),
@@ -345,6 +346,7 @@ function MembersPage() {
                   <th className="px-4 py-3">Статус</th>
                   <th className="px-4 py-3">Telegram</th>
                   <th className="px-4 py-3">Jira username</th>
+                  <th className="px-4 py-3">GitLab username</th>
                   <th className="px-4 py-3">Роль</th>
                   <th className="px-4 py-3">Отдел</th>
                   <th className="px-4 py-3">Добавлен</th>
@@ -411,6 +413,23 @@ function MembersPage() {
                           />
                         ) : (
                           m.jira_username || "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {canUpdate ? (
+                          <input
+                            className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm"
+                            defaultValue={m.gitlab_username ?? ""}
+                            placeholder="Логин в GitLab"
+                            onBlur={(e) => {
+                              const raw = e.target.value.trim();
+                              const next = raw === "" ? null : raw;
+                              if (next === (m.gitlab_username ?? null)) return;
+                              patch.mutate({ member: m, body: { gitlabUsername: next } });
+                            }}
+                          />
+                        ) : (
+                          m.gitlab_username || "—"
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -503,9 +522,47 @@ function MembersPage() {
                     ) : null}
                     <RoleSelect m={m} />
                     <DeptSelect m={m} />
-                    <div className="text-xs text-muted-foreground">
-                      Jira username: {m.jira_username || "—"}
-                    </div>
+                    {canUpdate ? (
+                      <>
+                        <label className="grid gap-1 text-xs text-muted-foreground">
+                          Jira username
+                          <input
+                            className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground"
+                            defaultValue={m.jira_username ?? ""}
+                            placeholder="Логин в Jira"
+                            onBlur={(e) => {
+                              const raw = e.target.value.trim();
+                              const next = raw === "" ? null : raw;
+                              if (next === (m.jira_username ?? null)) return;
+                              patch.mutate({ member: m, body: { jiraUsername: next } });
+                            }}
+                          />
+                        </label>
+                        <label className="grid gap-1 text-xs text-muted-foreground">
+                          GitLab username
+                          <input
+                            className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground"
+                            defaultValue={m.gitlab_username ?? ""}
+                            placeholder="Логин в GitLab"
+                            onBlur={(e) => {
+                              const raw = e.target.value.trim();
+                              const next = raw === "" ? null : raw;
+                              if (next === (m.gitlab_username ?? null)) return;
+                              patch.mutate({ member: m, body: { gitlabUsername: next } });
+                            }}
+                          />
+                        </label>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-xs text-muted-foreground">
+                          Jira username: {m.jira_username || "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          GitLab username: {m.gitlab_username || "—"}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </li>
               );

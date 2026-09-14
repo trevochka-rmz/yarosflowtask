@@ -66,6 +66,8 @@ export interface OrgMember {
   username: string | null;
   /** Логин пользователя в Jira (jira_username). */
   jira_username?: string | null;
+  /** Логин пользователя в GitLab (gitlab_username). */
+  gitlab_username?: string | null;
   /** Имя сотрудника внутри организации; при отсутствии используется имя из Telegram. */
   organization_full_name?: string | null;
   first_name?: string | null;
@@ -161,6 +163,7 @@ export const orgApi = {
       departmentId?: number | null;
       is_active?: boolean;
       jiraUsername?: string | null;
+      gitlabUsername?: string | null;
       organizationFullName?: string | null;
     },
   ) => apiFetch<OrgMember>(`/organizations/${id}/members/${memberId}`, { method: "PATCH", body }),

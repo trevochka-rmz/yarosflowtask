@@ -283,6 +283,7 @@ function OrganizationProfile({
   const qc = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [jiraDraft, setJiraDraft] = useState<string | null>(null);
+  const [gitlabDraft, setGitlabDraft] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const profile = useQuery({
@@ -305,11 +306,13 @@ function OrganizationProfile({
       qc.invalidateQueries({ queryKey: ["users-me"] }),
     ]);
   };
-  const jira = useMutation({
-    mutationFn: (value: string) => api.updateMyProfile(org.id, value.trim() || null),
+  const identities = useMutation({
+    mutationFn: (body: { jira_username?: string | null; gitlab_username?: string | null }) =>
+      api.updateMyProfile(org.id, body),
     onSuccess: async () => {
       await refreshProfile();
       setJiraDraft(null);
+      setGitlabDraft(null);
     },
   });
   const avatar = useMutation({
@@ -350,7 +353,9 @@ function OrganizationProfile({
       </div>
     );
   const currentJira = profile.data.jira_username ?? "";
-  const dirty = (jiraDraft ?? currentJira).trim() !== currentJira;
+  const currentGitlab = profile.data.gitlab_username ?? "";
+  const jiraDirty = (jiraDraft ?? currentJira).trim() !== currentJira;
+  const gitlabDirty = (gitlabDraft ?? currentGitlab).trim() !== currentGitlab;
   const fullName =
     user.full_name || [user.first_name, user.last_name].filter(Boolean).join(" ") || "Пользователь";
   const departmentName = org.department_id
@@ -370,7 +375,7 @@ function OrganizationProfile({
                   type="button"
                   className="rounded-full ring-4 ring-card transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   onClick={() => setAvatarOpen(true)}
-                  aria-label="Открыть фото на весь экран"
+                  aria-label="Открыть фото"
                 >
                   <UserAvatar
                     avatarUrl={profile.data.avatar_url}
@@ -450,7 +455,9 @@ function OrganizationProfile({
                 className="border-t border-border pt-5"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (dirty) jira.mutate(jiraDraft ?? currentJira);
+                  if (jiraDirty) {
+                    identities.mutate({ jira_username: (jiraDraft ?? currentJira).trim() || null });
+                  }
                 }}
               >
                 <Label htmlFor="profile-jira">Jira username</Label>
@@ -461,20 +468,54 @@ function OrganizationProfile({
                     placeholder="Например, ivan.petrov"
                     maxLength={255}
                     value={jiraDraft ?? currentJira}
-                    disabled={jira.isPending}
+                    disabled={identities.isPending}
                     onChange={(event) => {
                       setJiraDraft(event.target.value);
-                      jira.reset();
+                      identities.reset();
                     }}
                   />
-                  <Button type="submit" disabled={!dirty || jira.isPending}>
-                    {jira.isPending ? "…" : "Сохранить"}
+                  <Button type="submit" disabled={!jiraDirty || identities.isPending}>
+                    {identities.isPending ? "…" : "Сохранить"}
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Логин нужен для точного назначения задач из Jira.
                 </p>
-                <Feedback error={jira.error} success={jira.isSuccess} />
+                <Feedback error={identities.error} success={identities.isSuccess} />
+              </form>
+              <form
+                className="border-t border-border pt-5"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (gitlabDirty) {
+                    identities.mutate({
+                      gitlab_username: (gitlabDraft ?? currentGitlab).trim() || null,
+                    });
+                  }
+                }}
+              >
+                <Label htmlFor="profile-gitlab">GitLab username</Label>
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    id="profile-gitlab"
+                    autoComplete="off"
+                    placeholder="Например, ivan.petrov"
+                    maxLength={255}
+                    value={gitlabDraft ?? currentGitlab}
+                    disabled={identities.isPending}
+                    onChange={(event) => {
+                      setGitlabDraft(event.target.value);
+                      identities.reset();
+                    }}
+                  />
+                  <Button type="submit" disabled={!gitlabDirty || identities.isPending}>
+                    {identities.isPending ? "…" : "Сохранить"}
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Логин используется для связи аккаунта сотрудника с GitLab.
+                </p>
+                <Feedback error={identities.error} success={identities.isSuccess} />
               </form>
             </div>
 
@@ -565,12 +606,12 @@ function OrganizationProfile({
       />
       {profile.data.avatar_url ? (
         <Dialog open={avatarOpen} onOpenChange={setAvatarOpen}>
-          <DialogContent className="h-dvh max-w-none border-0 bg-black p-5 sm:rounded-none">
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl border border-border bg-card p-3 sm:w-full">
             <DialogTitle className="sr-only">Фото сотрудника</DialogTitle>
             <img
               src={profile.data.avatar_url}
               alt={`Фото: ${fullName}`}
-              className="h-full w-full object-contain"
+              className="max-h-[70vh] w-full rounded-md object-contain"
             />
           </DialogContent>
         </Dialog>
@@ -724,7 +765,9 @@ function OrganizationProfile({
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (dirty) jira.mutate(jiraDraft ?? currentJira);
+                  if (jiraDirty) {
+                    identities.mutate({ jira_username: (jiraDraft ?? currentJira).trim() || null });
+                  }
                 }}
               >
                 <Label htmlFor="page-jira">Jira username</Label>
@@ -735,10 +778,10 @@ function OrganizationProfile({
                   placeholder="Например, ivan.petrov"
                   maxLength={255}
                   value={jiraDraft ?? currentJira}
-                  disabled={jira.isPending}
+                  disabled={identities.isPending}
                   onChange={(event) => {
                     setJiraDraft(event.target.value);
-                    jira.reset();
+                    identities.reset();
                   }}
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -747,24 +790,24 @@ function OrganizationProfile({
                     : "Jira-логин пока не добавлен."}
                 </p>
                 <div className="mt-4 flex gap-2">
-                  <Button type="submit" disabled={!dirty || jira.isPending}>
-                    {jira.isPending ? "Сохраняем…" : "Сохранить"}
+                  <Button type="submit" disabled={!jiraDirty || identities.isPending}>
+                    {identities.isPending ? "Сохраняем…" : "Сохранить"}
                   </Button>
-                  {dirty && (
+                  {jiraDirty && (
                     <Button
                       type="button"
                       variant="ghost"
-                      disabled={jira.isPending}
+                      disabled={identities.isPending}
                       onClick={() => {
                         setJiraDraft(null);
-                        jira.reset();
+                        identities.reset();
                       }}
                     >
                       Отменить
                     </Button>
                   )}
                 </div>
-                <Feedback error={jira.error} success={jira.isSuccess} />
+                <Feedback error={identities.error} success={identities.isSuccess} />
               </form>
             </Card>
             <Card

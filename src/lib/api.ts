@@ -30,6 +30,7 @@ export type MyProfile = Pick<User,
 > & {
   organization_id?: number;
   jira_username?: string | null;
+  gitlab_username?: string | null;
   avatar_storage_path?: string | null;
   is_platform_admin: boolean;
 };
@@ -370,9 +371,12 @@ export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
   myProfile: (organizationId: number) =>
     apiFetch<MyProfile>(`/users/me?organizationId=${organizationId}`),
-  updateMyProfile: (organizationId: number, jira_username: string | null) =>
+  updateMyProfile: (
+    organizationId: number,
+    body: { jira_username?: string | null; gitlab_username?: string | null },
+  ) =>
     apiFetch<MyProfile>(`/users/me?organizationId=${organizationId}`, {
-      method: "PATCH", body: { jira_username },
+      method: "PATCH", body,
     }),
   uploadMyAvatar,
   removeMyAvatar: (organizationId: number) =>

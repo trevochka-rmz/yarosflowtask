@@ -232,7 +232,7 @@ function UserProfileSheet({
   React.useEffect(() => { setJiraDraft(null); }, [org?.id, open]);
   const jira = useMutation({
     mutationFn: ({ organizationId, value }: { organizationId: number; value: string }) =>
-      api.updateMyProfile(organizationId, value.trim() || null),
+      api.updateMyProfile(organizationId, { jira_username: value.trim() || null }),
     onSuccess: async (_, variables) => {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["my-profile", variables.organizationId] }),
