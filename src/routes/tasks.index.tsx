@@ -828,6 +828,7 @@ function TasksPage() {
                       <Link
                         to="/tasks/$taskId"
                         params={{ taskId: String(task.id) }}
+                        search={true}
                         className="block min-w-0 font-medium text-foreground"
                       >
                         {task.title}
@@ -844,7 +845,12 @@ function TasksPage() {
                       ) : null}
                     </div>
                   </div>
-                  <Link to="/tasks/$taskId" params={{ taskId: String(task.id) }} className="block">
+                  <Link
+                    to="/tasks/$taskId"
+                    params={{ taskId: String(task.id) }}
+                    search={true}
+                    className="block"
+                  >
                     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       {task.source === "jira" && task.external_status ? (
                         <span className="font-medium">
@@ -925,6 +931,7 @@ function TasksPage() {
                           <Link
                             to="/tasks/$taskId"
                             params={{ taskId: String(task.id) }}
+                            search={true}
                             className="font-medium text-primary hover:underline"
                           >
                             {task.title}
@@ -1183,6 +1190,7 @@ function KanbanTaskCard({
       <Link
         to="/tasks/$taskId"
         params={{ taskId: String(task.id) }}
+        search={true}
         className="mt-2 block font-medium leading-snug text-foreground hover:text-primary"
       >
         {task.title}
