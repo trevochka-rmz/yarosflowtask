@@ -111,6 +111,22 @@ export interface Department {
   created_at: string;
 }
 
+export interface EmployeeDailyReport {
+  id: number;
+  report_date: string;
+  generated_at: string;
+  member_id: number;
+  user_id: number;
+  full_name: string | null;
+  avatar_url?: string | null;
+  department_name?: string | null;
+  gitlab_username?: string | null;
+  task_items: Array<{ id: number; title: string; status: string; updated_at?: string }> | string;
+  commit_report: unknown | null;
+  commit_lookup: "username" | "fio" | null;
+  video_report: unknown | null;
+}
+
 export interface DepartmentTemplate {
   id: number;
   code: string;
@@ -152,6 +168,14 @@ export const orgApi = {
     if (opts?.hasJiraUsername) params.set("hasJiraUsername", "true");
     const qs = params.toString();
     return apiFetch<OrgMember[]>(`/organizations/${id}/members${qs ? `?${qs}` : ""}`);
+  },
+  employeeReports: (id: number, filters?: { date?: string; from?: string; to?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.date) params.set("date", filters.date);
+    if (filters?.from) params.set("from", filters.from);
+    if (filters?.to) params.set("to", filters.to);
+    const query = params.toString();
+    return apiFetch<EmployeeDailyReport[]>(`/organizations/${id}/employee-reports${query ? `?${query}` : ""}`);
   },
   addMember: (id: number, body: { userId: number; roleId: number; departmentId?: number }) =>
     apiFetch<OrgMember>(`/organizations/${id}/members`, { method: "POST", body }),

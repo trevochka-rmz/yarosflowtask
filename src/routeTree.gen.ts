@@ -19,6 +19,7 @@ import { Route as DirectorRouteImport } from './routes/director'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as OrgRouteImport } from './routes/org'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as TaskflowRouteImport } from './routes/taskflow'
 import { Route as TeamRouteImport } from './routes/team'
@@ -82,6 +83,11 @@ const OrgRoute = OrgRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RolesRoute = RolesRouteImport.update({
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
+  '/reports': typeof ReportsRoute
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
+  '/reports': typeof ReportsRoute
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
+  '/reports': typeof ReportsRoute
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/org'
     | '/profile'
+    | '/reports'
     | '/roles'
     | '/taskflow'
     | '/team'
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/org'
     | '/profile'
+    | '/reports'
     | '/roles'
     | '/taskflow'
     | '/team'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/members'
     | '/org'
     | '/profile'
+    | '/reports'
     | '/roles'
     | '/taskflow'
     | '/team'
@@ -327,6 +339,7 @@ export interface RootRouteChildren {
   MembersRoute: typeof MembersRoute
   OrgRoute: typeof OrgRoute
   ProfileRoute: typeof ProfileRoute
+  ReportsRoute: typeof ReportsRoute
   RolesRoute: typeof RolesRoute
   TaskflowRoute: typeof TaskflowRoute
   TeamRoute: typeof TeamRoute
@@ -411,6 +424,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roles': {
@@ -549,6 +569,7 @@ const rootRouteChildren: RootRouteChildren = {
   MembersRoute: MembersRoute,
   OrgRoute: OrgRoute,
   ProfileRoute: ProfileRoute,
+  ReportsRoute: ReportsRoute,
   RolesRoute: RolesRoute,
   TaskflowRoute: TaskflowRoute,
   TeamRoute: TeamRoute,

@@ -20,6 +20,7 @@ import {
   ChevronDown,
   LayoutGrid,
   MessageSquare,
+  ChartNoAxesColumnIncreasing,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -476,6 +477,7 @@ const GROUPS: NavGroup[] = [
       },
       { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList, perm: "task.create" },
       { title: "Задачи", url: "/tasks", icon: ListChecks, perm: "task.read" },
+      { title: "Отчёты", url: "/reports", icon: ChartNoAxesColumnIncreasing },
     ],
   },
   {
