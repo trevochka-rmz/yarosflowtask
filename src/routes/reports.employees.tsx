@@ -2,10 +2,11 @@ import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router"
 import { AppLayout } from "@/components/AppLayout";
 import { EmployeeReportsDashboard } from "@/components/reports/EmployeeReportsDashboard";
 
-export const Route = createFileRoute("/reports")({ component: ReportsPage });
-function ReportsPage() {
+/** Kept as a direct URL for links; /reports remains the same all-employees overview. */
+export const Route = createFileRoute("/reports/employees")({ component: EmployeesReportsRoute });
+function EmployeesReportsRoute() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  if (pathname !== "/reports") return <Outlet />;
+  if (pathname !== "/reports/employees") return <Outlet />;
   return (
     <AppLayout wide>
       <EmployeeReportsDashboard />

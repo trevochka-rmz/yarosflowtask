@@ -31,9 +31,11 @@ import { Route as BotsNewRouteImport } from './routes/bots.new'
 import { Route as ChangeRequestsIndexRouteImport } from './routes/change-requests.index'
 import { Route as ChangeRequestsNewRouteImport } from './routes/change-requests.new'
 import { Route as IntegrationsProviderRouteImport } from './routes/integrations.$provider'
+import { Route as ReportsEmployeesRouteImport } from './routes/reports.employees'
 import { Route as TasksIndexRouteImport } from './routes/tasks.index'
 import { Route as TasksTaskIdRouteImport } from './routes/tasks.$taskId'
 import { Route as IntegrationsProviderIntegrationIdRouteImport } from './routes/integrations.$provider.$integrationId'
+import { Route as ReportsEmployeesEmployeeIdRouteImport } from './routes/reports.employees.$employeeId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -145,6 +147,11 @@ const IntegrationsProviderRoute = IntegrationsProviderRouteImport.update({
   path: '/integrations/$provider',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsEmployeesRoute = ReportsEmployeesRouteImport.update({
+  id: '/employees',
+  path: '/employees',
+  getParentRoute: () => ReportsRoute,
+} as any)
 const TasksIndexRoute = TasksIndexRouteImport.update({
   id: '/tasks/',
   path: '/tasks/',
@@ -161,6 +168,12 @@ const IntegrationsProviderIntegrationIdRoute =
     path: '/$integrationId',
     getParentRoute: () => IntegrationsProviderRoute,
   } as any)
+const ReportsEmployeesEmployeeIdRoute =
+  ReportsEmployeesEmployeeIdRouteImport.update({
+    id: '/$employeeId',
+    path: '/$employeeId',
+    getParentRoute: () => ReportsEmployeesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -173,7 +186,7 @@ export interface FileRoutesByFullPath {
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
-  '/reports': typeof ReportsRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
@@ -183,11 +196,13 @@ export interface FileRoutesByFullPath {
   '/bots/new': typeof BotsNewRoute
   '/change-requests/new': typeof ChangeRequestsNewRoute
   '/integrations/$provider': typeof IntegrationsProviderRouteWithChildren
+  '/reports/employees': typeof ReportsEmployeesRouteWithChildren
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
   '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/integrations/$provider/$integrationId': typeof IntegrationsProviderIntegrationIdRoute
+  '/reports/employees/$employeeId': typeof ReportsEmployeesEmployeeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -200,7 +215,7 @@ export interface FileRoutesByTo {
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
-  '/reports': typeof ReportsRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
@@ -210,11 +225,13 @@ export interface FileRoutesByTo {
   '/bots/new': typeof BotsNewRoute
   '/change-requests/new': typeof ChangeRequestsNewRoute
   '/integrations/$provider': typeof IntegrationsProviderRouteWithChildren
+  '/reports/employees': typeof ReportsEmployeesRouteWithChildren
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots': typeof BotsIndexRoute
   '/change-requests': typeof ChangeRequestsIndexRoute
   '/tasks': typeof TasksIndexRoute
   '/integrations/$provider/$integrationId': typeof IntegrationsProviderIntegrationIdRoute
+  '/reports/employees/$employeeId': typeof ReportsEmployeesEmployeeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -228,7 +245,7 @@ export interface FileRoutesById {
   '/members': typeof MembersRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
-  '/reports': typeof ReportsRoute
+  '/reports': typeof ReportsRouteWithChildren
   '/roles': typeof RolesRoute
   '/taskflow': typeof TaskflowRoute
   '/team': typeof TeamRoute
@@ -238,11 +255,13 @@ export interface FileRoutesById {
   '/bots/new': typeof BotsNewRoute
   '/change-requests/new': typeof ChangeRequestsNewRoute
   '/integrations/$provider': typeof IntegrationsProviderRouteWithChildren
+  '/reports/employees': typeof ReportsEmployeesRouteWithChildren
   '/tasks/$taskId': typeof TasksTaskIdRoute
   '/bots/': typeof BotsIndexRoute
   '/change-requests/': typeof ChangeRequestsIndexRoute
   '/tasks/': typeof TasksIndexRoute
   '/integrations/$provider/$integrationId': typeof IntegrationsProviderIntegrationIdRoute
+  '/reports/employees/$employeeId': typeof ReportsEmployeesEmployeeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -267,11 +286,13 @@ export interface FileRouteTypes {
     | '/bots/new'
     | '/change-requests/new'
     | '/integrations/$provider'
+    | '/reports/employees'
     | '/tasks/$taskId'
     | '/bots/'
     | '/change-requests/'
     | '/tasks/'
     | '/integrations/$provider/$integrationId'
+    | '/reports/employees/$employeeId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -294,11 +315,13 @@ export interface FileRouteTypes {
     | '/bots/new'
     | '/change-requests/new'
     | '/integrations/$provider'
+    | '/reports/employees'
     | '/tasks/$taskId'
     | '/bots'
     | '/change-requests'
     | '/tasks'
     | '/integrations/$provider/$integrationId'
+    | '/reports/employees/$employeeId'
   id:
     | '__root__'
     | '/'
@@ -321,11 +344,13 @@ export interface FileRouteTypes {
     | '/bots/new'
     | '/change-requests/new'
     | '/integrations/$provider'
+    | '/reports/employees'
     | '/tasks/$taskId'
     | '/bots/'
     | '/change-requests/'
     | '/tasks/'
     | '/integrations/$provider/$integrationId'
+    | '/reports/employees/$employeeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -339,7 +364,7 @@ export interface RootRouteChildren {
   MembersRoute: typeof MembersRoute
   OrgRoute: typeof OrgRoute
   ProfileRoute: typeof ProfileRoute
-  ReportsRoute: typeof ReportsRoute
+  ReportsRoute: typeof ReportsRouteWithChildren
   RolesRoute: typeof RolesRoute
   TaskflowRoute: typeof TaskflowRoute
   TeamRoute: typeof TeamRoute
@@ -510,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsProviderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/employees': {
+      id: '/reports/employees'
+      path: '/employees'
+      fullPath: '/reports/employees'
+      preLoaderRoute: typeof ReportsEmployeesRouteImport
+      parentRoute: typeof ReportsRoute
+    }
     '/tasks/': {
       id: '/tasks/'
       path: '/tasks'
@@ -531,6 +563,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IntegrationsProviderIntegrationIdRouteImport
       parentRoute: typeof IntegrationsProviderRoute
     }
+    '/reports/employees/$employeeId': {
+      id: '/reports/employees/$employeeId'
+      path: '/$employeeId'
+      fullPath: '/reports/employees/$employeeId'
+      preLoaderRoute: typeof ReportsEmployeesEmployeeIdRouteImport
+      parentRoute: typeof ReportsEmployeesRoute
+    }
   }
 }
 
@@ -545,6 +584,28 @@ const AcquiringRouteChildren: AcquiringRouteChildren = {
 const AcquiringRouteWithChildren = AcquiringRoute._addFileChildren(
   AcquiringRouteChildren,
 )
+
+interface ReportsEmployeesRouteChildren {
+  ReportsEmployeesEmployeeIdRoute: typeof ReportsEmployeesEmployeeIdRoute
+}
+
+const ReportsEmployeesRouteChildren: ReportsEmployeesRouteChildren = {
+  ReportsEmployeesEmployeeIdRoute: ReportsEmployeesEmployeeIdRoute,
+}
+
+const ReportsEmployeesRouteWithChildren =
+  ReportsEmployeesRoute._addFileChildren(ReportsEmployeesRouteChildren)
+
+interface ReportsRouteChildren {
+  ReportsEmployeesRoute: typeof ReportsEmployeesRouteWithChildren
+}
+
+const ReportsRouteChildren: ReportsRouteChildren = {
+  ReportsEmployeesRoute: ReportsEmployeesRouteWithChildren,
+}
+
+const ReportsRouteWithChildren =
+  ReportsRoute._addFileChildren(ReportsRouteChildren)
 
 interface IntegrationsProviderRouteChildren {
   IntegrationsProviderIntegrationIdRoute: typeof IntegrationsProviderIntegrationIdRoute
@@ -569,7 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   MembersRoute: MembersRoute,
   OrgRoute: OrgRoute,
   ProfileRoute: ProfileRoute,
-  ReportsRoute: ReportsRoute,
+  ReportsRoute: ReportsRouteWithChildren,
   RolesRoute: RolesRoute,
   TaskflowRoute: TaskflowRoute,
   TeamRoute: TeamRoute,

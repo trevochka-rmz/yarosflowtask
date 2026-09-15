@@ -124,6 +124,7 @@ export interface EmployeeDailyReport {
   task_items: Array<{ id: number; title: string; status: string; source?: "internal" | "jira" | null; created_in_taskflow?: boolean; updated_at?: string }> | string;
   commit_report: unknown | null;
   commit_lookup: "username" | "fio" | null;
+  commit_error?: string | null;
   video_report: unknown | null;
   live?: boolean;
 }
