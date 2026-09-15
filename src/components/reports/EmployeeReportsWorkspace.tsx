@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -36,12 +36,25 @@ export function EmployeeReportsWorkspace() {
     queryFn: () => orgApi.departments(org!.id),
     enabled: !!org,
   });
+  useEffect(() => {
+    const it = departments.data?.find((department) =>
+      ["it", "ит"].includes(department.name.trim().toLowerCase()),
+    );
+    if (it && filters.departmentId !== it.id)
+      setFilters((current) => ({ ...current, departmentId: it.id }));
+  }, [departments.data, filters.departmentId]);
   const reports = useQuery({
     queryKey: ["employee-reports", org?.id, filters],
     queryFn: () => reportsService.getOverview(org!.id, filters),
     enabled: !!org,
   });
-  const list = (reports.data ?? []).filter((report) => source === "all" || source === "commits" && report.commits.length > 0 || source === "tasks" && report.tasks.length > 0 || source === "video" && report.videos.length > 0);
+  const list = (reports.data ?? []).filter(
+    (report) =>
+      source === "all" ||
+      (source === "commits" && report.commits.length > 0) ||
+      (source === "tasks" && report.tasks.length > 0) ||
+      (source === "video" && report.videos.length > 0),
+  );
   const active = list.find((x) => x.member.id === selected) ?? list[0];
   if (!org) return <p className="text-sm text-muted-foreground">Выберите организацию.</p>;
   return (
@@ -53,7 +66,21 @@ export function EmployeeReportsWorkspace() {
         onChange={setFilters}
         onDownload={() => {}}
       />
-      <ReportTypeTabs type={source} onChange={(value) => { setSource(value); setTab(value === "commits" ? "git" : value === "tasks" ? "tasks" : value === "video" ? "video" : "overview"); }} />
+      <ReportTypeTabs
+        type={source}
+        onChange={(value) => {
+          setSource(value);
+          setTab(
+            value === "commits"
+              ? "git"
+              : value === "tasks"
+                ? "tasks"
+                : value === "video"
+                  ? "video"
+                  : "overview",
+          );
+        }}
+      />
       {reports.isPending ? (
         <p className="p-8 text-sm text-muted-foreground">Загружаем отчеты…</p>
       ) : reports.isError ? (
@@ -191,7 +218,9 @@ function ReportPanel({
                   )}{" "}
                   · {t.title}
                 </span>
-                <span className="text-muted-foreground">{STATUS_LABELS[t.status as keyof typeof STATUS_LABELS] || t.status}</span>
+                <span className="text-muted-foreground">
+                  {STATUS_LABELS[t.status as keyof typeof STATUS_LABELS] || t.status}
+                </span>
               </div>
             ))
           ) : (

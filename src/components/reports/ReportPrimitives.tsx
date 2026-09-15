@@ -8,7 +8,6 @@ import {
   GitCommitHorizontal,
   ListChecks,
   Search,
-  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +47,7 @@ export function ReportsHeader({
   onDownload: () => void;
 }) {
   const [customOpen, setCustomOpen] = React.useState(false);
+  const [preset, setPreset] = React.useState("today");
   const setRange = (value: string) => {
     if (value === "custom") {
       setCustomOpen(true);
@@ -59,9 +59,10 @@ export function ReportsHeader({
           return { from, to };
         })()
       : rangeFor(value);
+    setPreset(value);
     onChange({ ...filters, ...range });
   };
-  const periodValue = `${filters.from}|${filters.to}`;
+  const periodValue = preset;
   return (
     <>
       <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
@@ -84,14 +85,11 @@ export function ReportsHeader({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={periodValue}>Выбранный период</SelectItem>
               <SelectItem value="today">Сегодня</SelectItem>
               <SelectItem value="yesterday">Вчера</SelectItem>
-              <SelectItem value="7">7 дней</SelectItem>
-              <SelectItem value="14">14 дней</SelectItem>
-              <SelectItem value="30">30 дней</SelectItem>
-              <SelectItem value="this-month">Этот месяц</SelectItem>
-              <SelectItem value="last-month">Прошлый месяц</SelectItem>
+              <SelectItem value="7">За неделю</SelectItem>
+              <SelectItem value="30">За месяц</SelectItem>
+              <SelectItem value="custom">Выбрать день или период</SelectItem>
               <SelectItem value="custom">Произвольный период</SelectItem>
             </SelectContent>
           </Select>
@@ -153,8 +151,14 @@ function ReportsFilters({
   members: OrgMember[];
   onChange: (filters: ReportFilters) => void;
 }) {
+  const itDepartment = departments.find((department) =>
+    ["it", "ит"].includes(department.name.trim().toLowerCase()),
+  );
+  const itMembers = members.filter(
+    (member) => !itDepartment || member.department_id === itDepartment.id,
+  );
   return (
-    <div className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft md:grid-cols-[minmax(180px,1fr)_180px_220px_auto]">
+    <div className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft md:grid-cols-[minmax(180px,1fr)_220px]">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -164,24 +168,6 @@ function ReportsFilters({
           placeholder="Поиск сотрудника"
         />
       </div>
-      <Select
-        value={String(filters.departmentId ?? "all")}
-        onValueChange={(value) =>
-          onChange({ ...filters, departmentId: value === "all" ? undefined : Number(value) })
-        }
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Отдел" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Все отделы</SelectItem>
-          {departments.map((department) => (
-            <SelectItem key={department.id} value={String(department.id)}>
-              {department.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
       <Select
         value={String(filters.memberId ?? "all")}
         onValueChange={(value) =>
@@ -193,17 +179,13 @@ function ReportsFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Все сотрудники</SelectItem>
-          {members.map((member) => (
+          {itMembers.map((member) => (
             <SelectItem key={member.id} value={String(member.id)}>
               {member.full_name || member.username || `#${member.user_id}`}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
-      <Button variant="ghost" className="justify-start text-muted-foreground">
-        <SlidersHorizontal className="mr-2 h-4 w-4" />
-        Еще фильтры
-      </Button>
     </div>
   );
 }
