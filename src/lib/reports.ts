@@ -1,5 +1,5 @@
-import { orgApi, type EmployeeDailyReport, type OrgMember } from "./org";
-import type { TaskStatus } from "./api";
+import { apiFetch, type TaskStatus } from "./api";
+import type { EmployeeDailyReport, OrgMember } from "./org";
 
 export type ReportType = "all" | "commits" | "tasks" | "video";
 export type ReportFilters = {
@@ -52,6 +52,45 @@ export type EmployeeReport = {
   activities: EmployeeActivity[];
   activeDays: number;
   lastActivity?: string;
+};
+
+type ApiEmployee = Pick<
+  OrgMember,
+  | "id"
+  | "user_id"
+  | "department_id"
+  | "full_name"
+  | "avatar_url"
+  | "department_name"
+  | "role_name"
+  | "gitlab_username"
+  | "jira_username"
+> & {
+  commits: number;
+  tasks: number;
+  completed_tasks: number;
+  video_reports: number;
+  active_days: number;
+  last_activity?: string | null;
+};
+type ApiEmployeeDetail = {
+  employee: ApiEmployee;
+  tasks: ReportTask[];
+  commits: ReportCommit[];
+  video_reports: Array<{
+    report_date: string;
+    created_at?: string;
+    video_url?: string | null;
+    analysis?: unknown;
+  }>;
+  activities: Array<{
+    type: "task" | "commit" | "video";
+    date: string;
+    title: string;
+    task?: ReportTask;
+    commit?: ReportCommit;
+    video?: { video_url?: string | null };
+  }>;
 };
 
 function list(value: unknown): unknown[] {
@@ -139,86 +178,80 @@ function textCommitActivity(value: unknown) {
 
 export const reportsService = {
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {
-    const [members, dailyReports] = await Promise.all([
-      orgApi.members(orgId),
-      orgApi.employeeReports(orgId, { from: filters.from, to: filters.to }),
-    ]);
-    const active = members
-      .filter((member) => member.is_active)
-      .filter((member) => !filters.departmentId || member.department_id === filters.departmentId)
-      .filter((member) => !filters.memberId || member.id === filters.memberId)
-      .filter(
-        (member) =>
-          !filters.search ||
-          `${member.full_name ?? ""} ${member.username ?? ""}`
-            .toLowerCase()
-            .includes(filters.search!.toLowerCase()),
-      );
-    return active.map((member) => {
-      const rows = dailyReports.filter((row) => row.member_id === member.id);
-      const taskMap = new Map<number, ReportTask>();
-      const commitMap = new Map<string, ReportCommit>();
-      const videos: ReportVideo[] = [];
-      const activities: EmployeeActivity[] = [];
-      rows.forEach((row) => {
-        readTasks(row.task_items).forEach((task) => {
-          taskMap.set(task.id, task);
-          activities.push({
-            id: `task-${row.report_date}-${task.id}`,
-            kind: "tasks",
-            date: task.updated_at ?? row.report_date,
-            title: task.title,
-            detail: String(task.status),
-          });
-        });
-        readCommits(row.commit_report, row.report_date).forEach((commit, index) => {
-          const key = commit.hash ?? `${row.report_date}-${index}-${commit.message}`;
-          commitMap.set(key, commit);
-          activities.push({
-            id: `commit-${key}`,
-            kind: "commits",
-            date: commit.date ?? row.report_date,
-            title: commit.message,
-            detail: commit.hash,
-            url: commit.url,
-          });
-        });
-        if (!readCommits(row.commit_report, row.report_date).length && row.commit_report)
-          activities.push({
-            id: `commit-report-${row.report_date}`,
-            kind: "commits",
-            date: row.report_date,
-            title: "Получен отчет по коммитам",
-            detail: textCommitActivity(row.commit_report),
-          });
-        readVideos(row.video_report, row.report_date).forEach((video, index) => {
-          videos.push(video);
-          activities.push({
-            id: `video-${row.report_date}-${index}`,
-            kind: "video",
-            date: video.createdAt ?? row.report_date,
-            title: "Видеоотчет",
-            url: video.url,
-          });
-        });
-      });
-      const activitiesSorted = activities.sort((a, b) => b.date.localeCompare(a.date));
-      return {
-        member,
-        tasks: [...taskMap.values()],
-        commits: [...commitMap.values()],
-        videos,
-        activities: activitiesSorted,
-        activeDays: new Set(rows.map((row) => row.report_date)).size,
-        lastActivity: activitiesSorted[0]?.date,
-      };
-    });
+    const params = new URLSearchParams({ from: filters.from, to: filters.to });
+    if (filters.departmentId) params.set("departmentId", String(filters.departmentId));
+    if (filters.memberId) params.set("memberId", String(filters.memberId));
+    const employees = await apiFetch<ApiEmployee[]>(
+      `/organizations/${orgId}/reports/employees?${params}`,
+    );
+    const selected = employees.filter(
+      (employee) =>
+        !filters.search ||
+        `${employee.full_name ?? ""}`.toLowerCase().includes(filters.search.toLowerCase()),
+    );
+    return Promise.all(selected.map((employee) => this.getEmployee(orgId, employee.id, filters)));
   },
   async getEmployee(orgId: number, employeeId: number, filters: ReportFilters) {
-    const all = await this.getOverview(orgId, { ...filters, memberId: employeeId });
-    return all[0] ?? null;
+    const params = new URLSearchParams({ from: filters.from, to: filters.to });
+    const data = await apiFetch<ApiEmployeeDetail>(
+      `/organizations/${orgId}/reports/employees/${employeeId}?${params}`,
+    );
+    return normalizeEmployeeReport(data);
   },
 };
+
+function memberFromApi(employee: ApiEmployee): OrgMember {
+  return {
+    ...employee,
+    organization_id: 0,
+    role_id: 0,
+    is_active: true,
+    created_at: "",
+    updated_at: "",
+    username: null,
+    first_name: null,
+    last_name: null,
+    tg_id: null,
+  };
+}
+function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
+  const videos = data.video_reports.map((video) => {
+    const analysis = object(video.analysis);
+    return {
+      date: video.report_date,
+      createdAt: video.created_at,
+      url: video.video_url ?? undefined,
+      summary: analysis
+        ? {
+            completed: typeof analysis.summary === "string" ? analysis.summary : undefined,
+            problems: Array.isArray(analysis.blockers) ? analysis.blockers.join("; ") : undefined,
+            plans: Array.isArray(analysis.follow_up_questions)
+              ? analysis.follow_up_questions.join("; ")
+              : undefined,
+          }
+        : undefined,
+    };
+  });
+  const activities = data.activities
+    .map((activity, index): EmployeeActivity => ({
+      id: `${activity.type}-${index}-${activity.date}`,
+      kind: activity.type === "task" ? "tasks" : activity.type === "commit" ? "commits" : "video",
+      date: activity.date,
+      title: activity.title,
+      detail: activity.commit?.hash ?? activity.task?.status,
+      url: activity.commit?.url ?? activity.video?.video_url ?? undefined,
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return {
+    member: memberFromApi(data.employee),
+    tasks: data.tasks,
+    commits: data.commits,
+    videos,
+    activities,
+    activeDays: data.employee.active_days,
+    lastActivity: data.employee.last_activity ?? activities[0]?.date,
+  };
+}
 
 export function hasCompletedTask(task: ReportTask) {
   return task.status === "DONE";
