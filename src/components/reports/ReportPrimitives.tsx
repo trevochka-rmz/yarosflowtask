@@ -50,6 +50,7 @@ export function ReportsHeader({
   const [preset, setPreset] = React.useState("today");
   const setRange = (value: string) => {
     if (value === "custom") {
+      setPreset("custom");
       setCustomOpen(true);
       return;
     }
@@ -89,7 +90,11 @@ export function ReportsHeader({
               <SelectItem value="yesterday">Вчера</SelectItem>
               <SelectItem value="7">За неделю</SelectItem>
               <SelectItem value="30">За месяц</SelectItem>
-              <SelectItem value="custom">Выбрать день или период</SelectItem>
+              <SelectItem value="custom">
+                {filters.from === filters.to
+                  ? `Выбран день: ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${filters.from}T12:00:00`))}`
+                  : `Период: ${filters.from} — ${filters.to}`}
+              </SelectItem>
               <SelectItem value="custom">Произвольный период</SelectItem>
             </SelectContent>
           </Select>
