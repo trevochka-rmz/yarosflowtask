@@ -16,6 +16,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { orgApi, useCurrentOrg } from "@/lib/org";
 import { isoDate, reportsService, type ReportFilters, type ReportType } from "@/lib/reports";
 import { parseGitReport } from "@/lib/git-report-parser";
+import { STATUS_LABELS } from "@/lib/api";
 import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./ReportPrimitives";
 
 export function EmployeeReportsWorkspace() {
@@ -190,7 +191,7 @@ function ReportPanel({
                   )}{" "}
                   · {t.title}
                 </span>
-                <span className="text-muted-foreground">{t.status}</span>
+                <span className="text-muted-foreground">{STATUS_LABELS[t.status as keyof typeof STATUS_LABELS] || t.status}</span>
               </div>
             ))
           ) : (
