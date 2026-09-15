@@ -121,9 +121,13 @@ function ReportsFilters({
   const itDepartment = departments.find((department) =>
     ["it", "ит"].includes(department.name.trim().toLowerCase()),
   );
-  const itMembers = members.filter(
-    (member) => !itDepartment || member.department_id === itDepartment.id,
-  );
+  const itMembers = members.filter((member) => {
+    const role = (member.role_name || "").trim().toLowerCase();
+    return (
+      (!itDepartment || member.department_id === itDepartment.id) &&
+      !["manager", "менеджер", "administrator", "администратор"].includes(role)
+    );
+  });
   return (
     <div className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft md:grid-cols-[minmax(180px,1fr)_220px]">
       <div className="relative">
