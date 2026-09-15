@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
-import { EmployeeReportsDashboard } from "@/components/reports/EmployeeReportsDashboard";
+import { EmployeeReportsWorkspace } from "@/components/reports/EmployeeReportsWorkspace";
 
 export const Route = createFileRoute("/reports")({ component: ReportsPage });
 function ReportsPage() {
@@ -8,7 +8,7 @@ function ReportsPage() {
   if (pathname !== "/reports") return <Outlet />;
   return (
     <AppLayout wide>
-      <EmployeeReportsDashboard />
+      <EmployeeReportsWorkspace />
     </AppLayout>
   );
 }

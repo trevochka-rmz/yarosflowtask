@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
-import { EmployeeReportsDashboard } from "@/components/reports/EmployeeReportsDashboard";
+import { EmployeeReportsWorkspace } from "@/components/reports/EmployeeReportsWorkspace";
 
 /** Kept as a direct URL for links; /reports remains the same all-employees overview. */
 export const Route = createFileRoute("/reports/employees")({ component: EmployeesReportsRoute });
@@ -9,7 +9,7 @@ function EmployeesReportsRoute() {
   if (pathname !== "/reports/employees") return <Outlet />;
   return (
     <AppLayout wide>
-      <EmployeeReportsDashboard />
+      <EmployeeReportsWorkspace />
     </AppLayout>
   );
 }
