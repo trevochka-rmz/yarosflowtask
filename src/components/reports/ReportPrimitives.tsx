@@ -43,18 +43,35 @@ export function ReportsHeader({
   onChange: (filters: ReportFilters) => void;
 }) {
   const [dayOpen, setDayOpen] = React.useState(false);
-  const [preset, setPreset] = React.useState("today");
+  const preset = React.useMemo(() => {
+    const isRange = (range: { from: string; to: string }) =>
+      filters.from === range.from && filters.to === range.to;
+    if (isRange(rangeFor("today"))) return "today";
+    if (isRange(rangeFor("yesterday"))) return "yesterday";
+    if (isRange(rangeFor("7"))) return "7";
+    if (isRange(rangeFor("30"))) return "30";
+    return "custom";
+  }, [filters.from, filters.to]);
+  const selectedPeriodLabel = React.useMemo(() => {
+    const format = (date: string) =>
+      new Intl.DateTimeFormat("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(`${date}T00:00:00`));
+    if (filters.from === filters.to) return format(filters.from);
+    return `${format(filters.from)} — ${format(filters.to)}`;
+  }, [filters.from, filters.to]);
   const setRange = (value: string) => {
+    if (value === "custom") return;
     const range = value.includes("|")
       ? (() => {
           const [from, to] = value.split("|");
           return { from, to };
         })()
       : rangeFor(value);
-    setPreset(value);
     onChange({ ...filters, ...range });
   };
-  const periodValue = preset;
   return (
     <>
       <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
@@ -71,7 +88,7 @@ export function ReportsHeader({
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Select value={periodValue} onValueChange={setRange}>
+          <Select value={preset} onValueChange={setRange}>
             <SelectTrigger className="min-w-[190px] bg-card">
               <CalendarDays className="mr-2 h-4 w-4 text-muted-foreground" />
               <SelectValue />
@@ -81,6 +98,9 @@ export function ReportsHeader({
               <SelectItem value="yesterday">Вчера</SelectItem>
               <SelectItem value="7">За неделю</SelectItem>
               <SelectItem value="30">За месяц</SelectItem>
+              <SelectItem value="custom" disabled>
+                Выбранный период: {selectedPeriodLabel}
+              </SelectItem>
             </SelectContent>
           </Select>
           <Popover open={dayOpen} onOpenChange={setDayOpen}>
@@ -90,11 +110,17 @@ export function ReportsHeader({
                 className="flex h-10 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60"
               >
                 <CalendarDays className="h-4 w-4" />
-                Выбрать день
+                {preset === "custom" && filters.from === filters.to
+                  ? selectedPeriodLabel
+                  : "Выбрать день"}
               </button>
             </PopoverTrigger>
             <PopoverContent side="bottom" align="end" className="w-64 space-y-3">
-              <p className="text-sm font-medium">Выберите день</p>
+              <p className="text-sm font-medium">
+                {preset === "custom" && filters.from === filters.to
+                  ? "Изменить выбранный день"
+                  : "Выберите день"}
+              </p>
               <input
                 type="date"
                 value={filters.from === filters.to ? filters.from : ""}

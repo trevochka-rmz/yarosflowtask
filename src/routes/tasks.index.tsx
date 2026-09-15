@@ -138,9 +138,8 @@ function TasksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newPriority, setNewPriority] = useState<Task["priority"]>("medium");
-  const [newDeadline, setNewDeadline] = useState("");
-  const [newAssignees, setNewAssignees] = useState<number[]>([]);
-  const [publishToJira, setPublishToJira] = useState(false);
+  const [newAssigneeId, setNewAssigneeId] = useState<string>("");
+  const [newProjectKey, setNewProjectKey] = useState("");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
   const canModifyTasks = !isManagerRole(tenant?.role_name ?? user?.role);
@@ -162,38 +161,56 @@ function TasksPage() {
   const hasActiveJira = (integrations.data ?? []).some(
     (i) => i.provider === "JIRA" && i.status === "ACTIVE",
   );
+  const activeJira = (integrations.data ?? []).find(
+    (i) => i.provider === "JIRA" && i.status === "ACTIVE",
+  );
 
   const createMembers = useQuery({
-    queryKey: ["org-members", organizationId, publishToJira ? "forJira" : "all"],
+    queryKey: ["org-members", organizationId, hasActiveJira ? "forJira" : "all"],
     enabled: !!organizationId && createOpen && !integrations.isPending,
-    queryFn: () => orgApi.members(organizationId!, publishToJira ? { forJira: true } : undefined),
+    queryFn: () => orgApi.members(organizationId!, hasActiveJira ? { forJira: true } : undefined),
   });
 
   useEffect(() => {
-    if (!createOpen || !publishToJira || !createMembers.data?.length || newAssignees.length) return;
-    const timur = createMembers.data.find((member) =>
-      [member.full_name, member.username, member.jira_username].some((value) =>
-        /(^|\s)(timur|тимур)(\s|$)/i.test(value ?? ""),
-      ),
+    if (!createOpen || !hasActiveJira || !activeJira?.id) return;
+    setNewAssigneeId("");
+  }, [createOpen, hasActiveJira, activeJira?.id]);
+
+  const jiraProjects = useQuery({
+    queryKey: ["jira-projects", organizationId, activeJira?.id],
+    enabled: !!organizationId && createOpen && !!activeJira?.id,
+    queryFn: () => integrationApi.jiraProjects(organizationId!, activeJira!.id),
+  });
+
+  useEffect(() => {
+    const projects = jiraProjects.data?.projects ?? [];
+    if (!projects.length) return;
+    setNewProjectKey((current) =>
+      projects.some((project) => project.key === current)
+        ? current
+        : (projects.find((project) => project.key === "PREDEV")?.key ?? projects[0].key),
     );
-    if (timur) setNewAssignees([timur.user_id]);
-  }, [createOpen, createMembers.data, publishToJira, newAssignees.length]);
+  }, [jiraProjects.data]);
 
   const createTask = useMutation({
     mutationFn: async () => {
       if (!organizationId) throw new Error("Организация не выбрана");
-      const selectedMember = createMembers.data?.find((member) =>
-        newAssignees.includes(member.user_id),
+      const selectedMember = createMembers.data?.find(
+        (member) => String(member.user_id) === newAssigneeId,
+      );
+      const selectedProject = jiraProjects.data?.projects.find(
+        (project) => project.key === newProjectKey,
       );
       const created = await api.createManualTask(organizationId, {
         title: newTitle.trim(),
         description: newDescription.trim() || undefined,
         priority: newPriority,
-        deadline: newDeadline || null,
-        ...(hasActiveJira && publishToJira
+        assigneeUserId: selectedMember?.user_id ?? null,
+        ...(hasActiveJira
           ? {
               pushToJira: true,
-              projectKey: "PREDEV",
+              projectKey: newProjectKey,
+              projectName: selectedProject?.name,
               jiraAssignee: selectedMember?.jira_username ?? null,
             }
           : {}),
@@ -203,9 +220,6 @@ function TasksPage() {
           `Локальная задача создана, но Jira вернула ошибку: ${(created as Task & { jira_push_error?: string }).jira_push_error}`,
         );
       }
-      if (!publishToJira && newAssignees.length) {
-        return api.assign(created.id, organizationId, newAssignees, []);
-      }
       return created;
     },
     onSuccess: () => {
@@ -213,12 +227,11 @@ function TasksPage() {
       setNewTitle("");
       setNewDescription("");
       setNewPriority("medium");
-      setNewDeadline("");
-      setNewAssignees([]);
-      setPublishToJira(false);
+      setNewAssigneeId("");
+      setNewProjectKey("");
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: ["tasks-board"] });
-      toast.success(publishToJira ? "Задача создана и добавлена в Jira" : "Задача создана");
+      toast.success(hasActiveJira ? "Задача создана и добавлена в Jira" : "Задача создана");
     },
     onError: (error: Error) => {
       void qc.invalidateQueries({ queryKey: ["tasks"] });
@@ -455,8 +468,8 @@ function TasksPage() {
         onOpenChange={(open) => {
           setCreateOpen(open);
           if (!open) {
-            setNewAssignees([]);
-            setPublishToJira(false);
+            setNewAssigneeId("");
+            setNewProjectKey("");
           }
         }}
       >
@@ -468,21 +481,10 @@ function TasksPage() {
             {integrations.isPending ? (
               <p className="text-sm text-muted-foreground">Проверяем интеграции…</p>
             ) : hasActiveJira ? (
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-[#0052CC]/10 px-3 py-2 text-[#0052CC]">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 accent-primary"
-                  checked={publishToJira}
-                  onChange={(event) => {
-                    setPublishToJira(event.target.checked);
-                    setNewAssignees([]);
-                  }}
-                />
-                <span>
-                  <span className="block text-sm font-medium">Создать задачу в Jira</span>
-                  <span className="block text-xs">Проект PREDEV.</span>
-                </span>
-              </label>
+              <div className="rounded-lg bg-[#0052CC]/10 px-3 py-2 text-[#0052CC]">
+                <p className="text-sm font-medium">Задача будет создана в Jira и TaskFlow</p>
+                <p className="mt-0.5 text-xs">Выберите проект и исполнителя ниже.</p>
+              </div>
             ) : (
               <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
                 Jira не подключена — задача будет создана только в TaskFlow.
@@ -521,69 +523,59 @@ function TasksPage() {
                   <option value="critical">Критичный</option>
                 </select>
               </label>
-              <label className="block space-y-1.5 text-sm font-medium">
-                Срок
-                <Input
-                  type="datetime-local"
-                  value={newDeadline}
-                  onChange={(event) => setNewDeadline(event.target.value)}
-                />
-              </label>
+              {hasActiveJira ? (
+                <label className="block space-y-1.5 text-sm font-medium">
+                  Проект Jira
+                  <select
+                    value={newProjectKey}
+                    disabled={jiraProjects.isPending || !jiraProjects.data?.projects.length}
+                    onChange={(event) => setNewProjectKey(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  >
+                    <option value="">
+                      {jiraProjects.isPending ? "Загрузка проектов…" : "Выберите проект"}
+                    </option>
+                    {(jiraProjects.data?.projects ?? []).map((project) => (
+                      <option key={project.key} value={project.key}>
+                        {project.name} ({project.key})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
 
             <div>
-              <p className="text-sm font-medium">
-                {publishToJira ? "Исполнитель Jira" : "Исполнители"}
-              </p>
-              {publishToJira ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  По умолчанию выбирается Timur. Для Jira разрешён один исполнитель.
-                </p>
-              ) : null}
-              <div className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
-                {createMembers.isPending ? (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">Загрузка участников…</p>
-                ) : null}
-                {(createMembers.data ?? []).map((member) => (
-                  <label
-                    key={member.id}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
-                  >
-                    <input
-                      type={publishToJira ? "radio" : "checkbox"}
-                      name={publishToJira ? "create-jira-assignee" : undefined}
-                      checked={newAssignees.includes(member.user_id)}
-                      onChange={(event) =>
-                        setNewAssignees((previous) => {
-                          if (publishToJira) return event.target.checked ? [member.user_id] : [];
-                          return event.target.checked
-                            ? [...previous, member.user_id]
-                            : previous.filter((id) => id !== member.user_id);
-                        })
-                      }
-                    />
-                    <span className="min-w-0">
+              <label className="block space-y-1.5 text-sm font-medium">
+                Исполнитель
+                <select
+                  value={newAssigneeId}
+                  disabled={createMembers.isPending}
+                  onChange={(event) => setNewAssigneeId(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                >
+                  <option value="">Без исполнителя</option>
+                  {(createMembers.data ?? []).map((member) => (
+                    <option key={member.id} value={member.user_id}>
                       {userLabel({
                         id: member.user_id,
                         full_name: member.full_name,
                         username: member.username,
                       })}
-                      {publishToJira && member.jira_username ? (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          Jira: {member.jira_username}
-                        </span>
-                      ) : null}
-                    </span>
-                  </label>
-                ))}
-                {!createMembers.isPending && !createMembers.data?.length ? (
-                  <p className="px-2 py-1 text-xs text-muted-foreground">
-                    {publishToJira
-                      ? "Нет участников с заполненным Jira username."
-                      : "В организации нет доступных участников."}
-                  </p>
-                ) : null}
-              </div>
+                      {hasActiveJira && member.jira_username
+                        ? ` · Jira: ${member.jira_username}`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {!createMembers.isPending && !createMembers.data?.length ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {hasActiveJira
+                    ? "Нет участников с заполненным Jira username."
+                    : "В организации нет доступных участников."}
+                </p>
+              ) : null}
             </div>
           </div>
           <DialogFooter>
@@ -591,7 +583,12 @@ function TasksPage() {
               Отмена
             </Button>
             <Button
-              disabled={!newTitle.trim() || integrations.isPending || createTask.isPending}
+              disabled={
+                !newTitle.trim() ||
+                integrations.isPending ||
+                createTask.isPending ||
+                (hasActiveJira && (!newProjectKey || jiraProjects.isPending))
+              }
               onClick={() => createTask.mutate()}
             >
               {createTask.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

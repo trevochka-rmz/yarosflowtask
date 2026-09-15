@@ -449,6 +449,7 @@ export const api = {
       deadline?: string | null;
       pushToJira?: boolean;
       projectKey?: string;
+      projectName?: string;
       jiraAssignee?: string | null;
       assigneeUserId?: number | null;
     },
