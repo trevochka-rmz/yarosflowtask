@@ -28,6 +28,9 @@ export type ReportCommit = {
   branch?: string;
   date?: string;
   url?: string;
+  /** Полный текст дневного отчета 1С, когда сервис не отдает отдельные commit objects. */
+  report_text?: string;
+  employee_name?: string;
 };
 export type ReportVideo = {
   date: string;

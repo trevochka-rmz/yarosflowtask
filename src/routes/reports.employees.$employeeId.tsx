@@ -316,7 +316,14 @@ function CommitsTable({ report }: { report: EmployeeReport }) {
                     commit.hash || "—"
                   )}
                 </td>
-                <td className="px-4 py-3 font-medium">{commit.message}</td>
+              <td className="max-w-xl px-4 py-3 font-medium">
+                <p>{commit.message}</p>
+                {commit.report_text ? (
+                  <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/60 p-3 font-sans text-xs font-normal leading-relaxed text-muted-foreground">
+                    {commit.report_text}
+                  </pre>
+                ) : null}
+              </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {commit.date ? formatDate(commit.date) : "—"}
                 </td>
