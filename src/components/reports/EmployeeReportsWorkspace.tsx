@@ -64,7 +64,6 @@ export function EmployeeReportsWorkspace() {
         departments={departments.data ?? []}
         members={members.data ?? []}
         onChange={setFilters}
-        onDownload={() => {}}
       />
       <ReportTypeTabs
         type={source}

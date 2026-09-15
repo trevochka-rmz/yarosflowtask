@@ -3,14 +3,12 @@ import * as React from "react";
 import {
   CalendarDays,
   CheckCircle2,
-  Download,
   FileVideo,
   GitCommitHorizontal,
   ListChecks,
   Search,
   Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -37,13 +35,11 @@ export function ReportsHeader({
   departments,
   members,
   onChange,
-  onDownload,
 }: {
   filters: ReportFilters;
   departments: Department[];
   members: OrgMember[];
   onChange: (filters: ReportFilters) => void;
-  onDownload: () => void;
 }) {
   const [preset, setPreset] = React.useState("today");
   const setRange = (value: string) => {
@@ -83,20 +79,22 @@ export function ReportsHeader({
               <SelectItem value="yesterday">Вчера</SelectItem>
               <SelectItem value="7">За неделю</SelectItem>
               <SelectItem value="30">За месяц</SelectItem>
-              <SelectItem value="day">
-                {`Выбран день: ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${filters.from}T12:00:00`))}`}
-              </SelectItem>
             </SelectContent>
           </Select>
           <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm text-muted-foreground">
             <CalendarDays className="h-4 w-4" />
             <span>Выбрать день</span>
-            <input aria-label="Выбрать конкретный день" type="date" value={filters.from === filters.to ? filters.from : ""} onChange={(event) => { const date = event.target.value; if (date) { setPreset("day"); onChange({ ...filters, from: date, to: date }); } }} className="w-0 min-w-0 flex-1 opacity-0" />
+            <input
+              aria-label="Выбрать конкретный день"
+              type="date"
+              value={filters.from === filters.to ? filters.from : ""}
+              onChange={(event) => {
+                const date = event.target.value;
+                if (date) onChange({ ...filters, from: date, to: date });
+              }}
+              className="w-0 min-w-0 flex-1 opacity-0"
+            />
           </label>
-          <Button onClick={onDownload} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Скачать CSV
-          </Button>
         </div>
       </div>
       <ReportsFilters
