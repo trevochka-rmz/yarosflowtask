@@ -291,7 +291,7 @@ export const orgApi = {
    * Запустить синхронизацию задач с Jira для организации.
    * maxResults и jql опциональны; если не заданы, backend использует значения по умолчанию.
    */
-  tasksSyncJira: (orgId: number, body: { maxResults?: number; jql?: string }) =>
+  tasksSyncJira: (orgId: number, body: { maxResults?: number; jql?: string; hardCap?: number }) =>
     apiFetch<{ success?: boolean; synced?: number }>(`/organizations/${orgId}/tasks/sync-jira`, {
       method: "POST",
       body,

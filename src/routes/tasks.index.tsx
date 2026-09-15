@@ -55,7 +55,6 @@ export const Route = createFileRoute("/tasks/")({
         "CANCELLED",
       ]),
       assignment: oneOf(search.assignment, ["any", "yes", "no"]),
-      source: oneOf(search.source, ["all", "internal", "jira"]),
       query: string(search.query),
       project: string(search.project),
       assignee: string(search.assignee),
@@ -84,7 +83,6 @@ export const Route = createFileRoute("/tasks/")({
 });
 
 type Assignment = "any" | "yes" | "no";
-type SourceFilter = "all" | "internal" | "jira";
 type TasksView = "table" | "board";
 type DateMode = "week" | "today" | "month" | "all" | "date" | "range";
 type DateField = "updated_at" | "created_at" | "deadline" | "last_synced_at";
@@ -111,7 +109,6 @@ function TasksPage() {
   };
   const status = (routeSearch.taskStatus ?? "") as TaskStatus | "";
   const assignment = (routeSearch.assignment ?? "any") as Assignment;
-  const source = (routeSearch.source ?? "all") as SourceFilter;
   const search = routeSearch.query ?? "";
   const projectKey = routeSearch.project ?? "";
   const assigneeId = routeSearch.assignee ?? "";
@@ -124,7 +121,6 @@ function TasksPage() {
   const setStatus = (value: TaskStatus | "") => updateSearch({ taskStatus: value || undefined });
   const setAssignment = (value: Assignment) =>
     updateSearch({ assignment: value === "any" ? undefined : value });
-  const setSource = (value: SourceFilter) => updateSearch({ source: value === "all" ? undefined : value });
   const setSearch = (value: string) => updateSearch({ query: value || undefined });
   const setProjectKey = (value: string) => updateSearch({ project: value || undefined });
   const setAssigneeId = (value: string) => updateSearch({ assignee: value || undefined });
@@ -265,7 +261,6 @@ function TasksPage() {
       "tasks",
       status,
       assignment,
-      source,
       search,
       projectKey,
       assigneeId,
@@ -283,7 +278,6 @@ function TasksPage() {
       const params = new URLSearchParams();
       if (status) params.set("status", status);
       if (assignment !== "any") params.set("assigned", assignment);
-      if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
       if (selectedAssigneeId) params.set("assigneeId", selectedAssigneeId);
@@ -296,7 +290,6 @@ function TasksPage() {
   const boardQueryKey = [
     "tasks-board",
     assignment,
-    source,
     search,
     projectKey,
     assigneeId,
@@ -315,7 +308,6 @@ function TasksPage() {
       if (!organizationId) throw new Error("Организация не выбрана");
       const params = new URLSearchParams();
       if (assignment !== "any") params.set("assigned", assignment);
-      if (source !== "all") params.set("source", source);
       if (search.trim()) params.set("search", search.trim());
       if (hasActiveJira && projectKey) params.set("projectKey", projectKey);
       if (selectedAssigneeId) params.set("assigneeId", selectedAssigneeId);
@@ -398,12 +390,6 @@ function TasksPage() {
     { key: "no", label: "Без исполнителя" },
   ];
 
-  const sources: { key: SourceFilter; label: string }[] = [
-    { key: "all", label: "Все" },
-    { key: "internal", label: "Только наши" },
-    ...(hasActiveJira ? [{ key: "jira", label: "Только Jira" as const }] : []),
-  ];
-
   return (
     <AppLayout wide>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -454,10 +440,7 @@ function TasksPage() {
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground sm:w-auto"
               disabled={syncJira.isPending}
               onClick={() =>
-                syncJira.mutate({
-                  maxResults: 50,
-                  jql: "statusCategory != Done ORDER BY updated DESC",
-                })
+                syncJira.mutate({ maxResults: 100, hardCap: 0 })
               }
             >
               {syncJira.isPending ? (
@@ -465,7 +448,7 @@ function TasksPage() {
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-              Синхронизировать Jira
+              Полная синхронизация Jira
             </button>
           )}
         </div>
@@ -685,23 +668,6 @@ function TasksPage() {
         </select>
 
         <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap">
-          <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
-            {sources.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => setSource(s.key)}
-                className={cn(
-                  "flex-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm md:flex-none",
-                  source === s.key
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
           <div className="flex w-full rounded-lg border border-border bg-card p-1 md:w-auto">
             {assignments.map((a) => (
               <button
