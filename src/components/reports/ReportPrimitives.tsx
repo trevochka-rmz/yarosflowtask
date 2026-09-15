@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 import type { Department, OrgMember } from "@/lib/org";
@@ -46,14 +45,8 @@ export function ReportsHeader({
   onChange: (filters: ReportFilters) => void;
   onDownload: () => void;
 }) {
-  const [customOpen, setCustomOpen] = React.useState(false);
   const [preset, setPreset] = React.useState("today");
   const setRange = (value: string) => {
-    if (value === "custom") {
-      setPreset("custom");
-      setCustomOpen(true);
-      return;
-    }
     const range = value.includes("|")
       ? (() => {
           const [from, to] = value.split("|");
@@ -90,45 +83,16 @@ export function ReportsHeader({
               <SelectItem value="yesterday">Вчера</SelectItem>
               <SelectItem value="7">За неделю</SelectItem>
               <SelectItem value="30">За месяц</SelectItem>
-              <SelectItem value="custom">
-                {filters.from === filters.to
-                  ? `Выбран день: ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${filters.from}T12:00:00`))}`
-                  : `Период: ${filters.from} — ${filters.to}`}
+              <SelectItem value="day">
+                {`Выбран день: ${new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${filters.from}T12:00:00`))}`}
               </SelectItem>
-              <SelectItem value="custom">Произвольный период</SelectItem>
             </SelectContent>
           </Select>
-          <Popover open={customOpen} onOpenChange={setCustomOpen}>
-            <PopoverTrigger asChild>
-              <span className="sr-only">Выбрать произвольный период</span>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-72 space-y-3">
-              <p className="text-sm font-medium">Произвольный период</p>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-xs text-muted-foreground">
-                  С
-                  <input
-                    type="date"
-                    value={filters.from}
-                    onChange={(event) => onChange({ ...filters, from: event.target.value })}
-                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                  />
-                </label>
-                <label className="text-xs text-muted-foreground">
-                  По
-                  <input
-                    type="date"
-                    value={filters.to}
-                    onChange={(event) => onChange({ ...filters, to: event.target.value })}
-                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                  />
-                </label>
-              </div>
-              <Button size="sm" className="w-full" onClick={() => setCustomOpen(false)}>
-                Применить
-              </Button>
-            </PopoverContent>
-          </Popover>
+          <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm text-muted-foreground">
+            <CalendarDays className="h-4 w-4" />
+            <span>Выбрать день</span>
+            <input aria-label="Выбрать конкретный день" type="date" value={filters.from === filters.to ? filters.from : ""} onChange={(event) => { const date = event.target.value; if (date) { setPreset("day"); onChange({ ...filters, from: date, to: date }); } }} className="w-0 min-w-0 flex-1 opacity-0" />
+          </label>
           <Button onClick={onDownload} variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Скачать CSV
