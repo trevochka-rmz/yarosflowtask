@@ -262,6 +262,21 @@ export const integrationApi = {
     apiFetch<{ ok: boolean; error?: string; projects: JiraProject[] }>(
       `/organizations/${orgId}/integrations/${integrationId}/jira/projects`,
     ),
+  jiraUsers: (orgId: number, integrationId: number, projectKey?: string) =>
+    apiFetch<{
+      ok: boolean;
+      error?: string;
+      users: Array<{
+        username: string;
+        key?: string | null;
+        displayName: string;
+        active?: boolean;
+      }>;
+    }>(
+      `/organizations/${orgId}/integrations/${integrationId}/jira/users?scope=software${
+        projectKey ? `&projectKey=${encodeURIComponent(projectKey)}` : ""
+      }`,
+    ),
 };
 
 /* ======================================================================== */

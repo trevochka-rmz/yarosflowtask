@@ -451,6 +451,7 @@ export const api = {
       projectKey?: string;
       projectName?: string;
       jiraAssignee?: string | null;
+      jiraAssigneeDisplayName?: string | null;
       assigneeUserId?: number | null;
     },
   ) =>
