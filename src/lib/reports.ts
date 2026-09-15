@@ -192,7 +192,21 @@ export const reportsService = {
         !filters.search ||
         `${employee.full_name ?? ""}`.toLowerCase().includes(filters.search.toLowerCase()),
     );
-    return Promise.all(selected.map((employee) => this.getEmployee(orgId, employee.id, filters)));
+    // Список должен открываться без десятков запросов к внешнему 1С-сервису.
+    // Полный текст 1С загружается только для открытой карточки сотрудника.
+    return selected.map((employee) => ({
+      member: memberFromApi(employee),
+      tasks: Array.from({ length: employee.tasks }, (_, index) => ({
+        id: -index - 1,
+        title: "",
+        status: "BACKLOG",
+      })),
+      commits: Array.from({ length: employee.commits }, () => ({ message: "" })),
+      videos: Array.from({ length: employee.video_reports }, () => ({ date: filters.to })),
+      activities: [],
+      activeDays: employee.active_days,
+      lastActivity: employee.last_activity ?? undefined,
+    }));
   },
   async getEmployee(orgId: number, employeeId: number, filters: ReportFilters) {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });

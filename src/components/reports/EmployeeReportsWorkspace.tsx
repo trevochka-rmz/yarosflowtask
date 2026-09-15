@@ -56,6 +56,11 @@ export function EmployeeReportsWorkspace() {
       (source === "video" && report.videos.length > 0),
   );
   const active = list.find((x) => x.member.id === selected) ?? list[0];
+  const activeReport = useQuery({
+    queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
+    queryFn: () => reportsService.getEmployee(org!.id, active!.member.id, filters),
+    enabled: !!org && !!active,
+  });
   if (!org) return <p className="text-sm text-muted-foreground">Выберите организацию.</p>;
   return (
     <div className="space-y-3">
@@ -123,7 +128,17 @@ export function EmployeeReportsWorkspace() {
               );
             })}
           </aside>
-          <ReportPanel report={active} tab={tab} setTab={setTab} />
+          {activeReport.isPending ? (
+            <section className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
+              Загружаем отчет сотрудника…
+            </section>
+          ) : activeReport.isError ? (
+            <section className="rounded-2xl border bg-card p-8 text-sm text-destructive">
+              Не удалось загрузить отчет сотрудника.
+            </section>
+          ) : (
+            <ReportPanel report={activeReport.data ?? active} tab={tab} setTab={setTab} />
+          )}
         </div>
       )}
     </div>
