@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserAvatar } from "@/components/UserAvatar";
 import { cn } from "@/lib/utils";
 import type { Department, OrgMember } from "@/lib/org";
@@ -41,6 +42,7 @@ export function ReportsHeader({
   members: OrgMember[];
   onChange: (filters: ReportFilters) => void;
 }) {
+  const [dayOpen, setDayOpen] = React.useState(false);
   const [preset, setPreset] = React.useState("today");
   const setRange = (value: string) => {
     const range = value.includes("|")
@@ -81,20 +83,32 @@ export function ReportsHeader({
               <SelectItem value="30">За месяц</SelectItem>
             </SelectContent>
           </Select>
-          <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm text-muted-foreground">
-            <CalendarDays className="h-4 w-4" />
-            <span>Выбрать день</span>
-            <input
-              aria-label="Выбрать конкретный день"
-              type="date"
-              value={filters.from === filters.to ? filters.from : ""}
-              onChange={(event) => {
-                const date = event.target.value;
-                if (date) onChange({ ...filters, from: date, to: date });
-              }}
-              className="w-0 min-w-0 flex-1 opacity-0"
-            />
-          </label>
+          <Popover open={dayOpen} onOpenChange={setDayOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex h-10 items-center gap-2 rounded-md border border-input bg-card px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Выбрать день
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="end" className="w-64 space-y-3">
+              <p className="text-sm font-medium">Выберите день</p>
+              <input
+                type="date"
+                value={filters.from === filters.to ? filters.from : ""}
+                onChange={(event) => {
+                  const date = event.target.value;
+                  if (date) {
+                    onChange({ ...filters, from: date, to: date });
+                    setDayOpen(false);
+                  }
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       <ReportsFilters
