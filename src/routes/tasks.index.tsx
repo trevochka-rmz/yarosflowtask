@@ -561,13 +561,9 @@ function TasksPage() {
                   <option value="">Без исполнителя</option>
                   {hasActiveJira
                     ? (jiraUsers.data?.users ?? []).map((jiraUser) => {
-                        const member = createMembers.data?.find(
-                          (item) => item.jira_username === jiraUser.username,
-                        );
                         return (
                           <option key={jiraUser.username} value={jiraUser.username}>
                             {jiraUser.displayName} ({jiraUser.username})
-                            {member ? " · участник TaskFlow" : ""}
                           </option>
                         );
                       })
