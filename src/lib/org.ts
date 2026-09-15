@@ -112,7 +112,7 @@ export interface Department {
 }
 
 export interface EmployeeDailyReport {
-  id: number;
+  id?: number;
   report_date: string;
   generated_at: string;
   member_id: number;
@@ -121,10 +121,11 @@ export interface EmployeeDailyReport {
   avatar_url?: string | null;
   department_name?: string | null;
   gitlab_username?: string | null;
-  task_items: Array<{ id: number; title: string; status: string; updated_at?: string }> | string;
+  task_items: Array<{ id: number; title: string; status: string; source?: "internal" | "jira" | null; created_in_taskflow?: boolean; updated_at?: string }> | string;
   commit_report: unknown | null;
   commit_lookup: "username" | "fio" | null;
   video_report: unknown | null;
+  live?: boolean;
 }
 
 export interface DepartmentTemplate {
@@ -177,6 +178,8 @@ export const orgApi = {
     const query = params.toString();
     return apiFetch<EmployeeDailyReport[]>(`/organizations/${id}/employee-reports${query ? `?${query}` : ""}`);
   },
+  employeeReportPreview: (id: number, memberId: number, date: string) =>
+    apiFetch<EmployeeDailyReport>(`/organizations/${id}/employee-reports/live?memberId=${memberId}&date=${date}`),
   addMember: (id: number, body: { userId: number; roleId: number; departmentId?: number }) =>
     apiFetch<OrgMember>(`/organizations/${id}/members`, { method: "POST", body }),
   updateMember: (
