@@ -203,6 +203,7 @@ function ReportPanel({
   tab,
   setTab,
   canUpload,
+  selectedReportDate,
   onUploaded,
 }: {
   report: Awaited<ReturnType<typeof reportsService.getEmployee>> extends infer T
