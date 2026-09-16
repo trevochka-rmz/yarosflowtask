@@ -292,26 +292,42 @@ export function activityLabel(type: ReportType) {
         : "событий";
 }
 export function isoDate(value: Date) {
-  return value.toLocaleDateString("en-CA", { timeZone: "Asia/Bishkek" });
+  // `toLocaleDateString('en-CA')` в Safari может вернуть M/D/YYYY, тогда
+  // быстрые фильтры отправляют backend невалидную дату. Собираем ISO сами.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bishkek",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
+
+function shiftIsoDate(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day));
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return [
+    shifted.getUTCFullYear(),
+    String(shifted.getUTCMonth() + 1).padStart(2, "0"),
+    String(shifted.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 export function rangeFor(kind: string) {
-  const now = new Date();
-  const end = isoDate(now);
-  const start = new Date(now);
+  const end = isoDate(new Date());
   if (kind === "this-month") return { from: `${end.slice(0, 7)}-01`, to: end };
   if (kind === "last-month") {
-    const firstThisMonth = new Date(`${end.slice(0, 7)}-01T12:00:00`);
-    firstThisMonth.setDate(0);
-    const previousEnd = isoDate(firstThisMonth);
+    const previousEnd = shiftIsoDate(`${end.slice(0, 7)}-01`, -1);
     return { from: `${previousEnd.slice(0, 7)}-01`, to: previousEnd };
   }
   if (kind === "today") return { from: end, to: end };
   if (kind === "yesterday") {
-    start.setDate(start.getDate() - 1);
-    const date = isoDate(start);
+    const date = shiftIsoDate(end, -1);
     return { from: date, to: date };
   }
   const days = Number(kind);
-  start.setDate(start.getDate() - Math.max(0, days - 1));
-  return { from: isoDate(start), to: end };
+  return { from: shiftIsoDate(end, -Math.max(0, days - 1)), to: end };
 }
