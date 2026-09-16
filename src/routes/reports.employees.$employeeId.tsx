@@ -115,6 +115,8 @@ function EmployeeReportContent({
   range,
   tab,
   setTab,
+  canUpload,
+  onUploaded,
 }: {
   report: EmployeeReport;
   range: { from: string; to: string };

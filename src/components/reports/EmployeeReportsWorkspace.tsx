@@ -173,6 +173,8 @@ function ReportPanel({
   report,
   tab,
   setTab,
+  canUpload,
+  onUploaded,
 }: {
   report: Awaited<ReturnType<typeof reportsService.getEmployee>> extends infer T
     ? NonNullable<T>
