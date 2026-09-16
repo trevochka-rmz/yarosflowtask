@@ -52,13 +52,19 @@ export function EmployeeReportsWorkspace() {
     queryFn: () => reportsService.getOverview(org!.id, filters),
     enabled: !!org,
   });
-  const list = (reports.data ?? []).filter(
-    (report) =>
-      source === "all" ||
-      (source === "commits" && report.commits.length > 0) ||
-      (source === "tasks" && report.tasks.length > 0) ||
-      (source === "video" && report.videos.length > 0),
-  );
+  const list = (reports.data ?? [])
+    .filter(
+      (report) =>
+        source === "all" ||
+        (source === "commits" && report.commits.length > 0) ||
+        (source === "tasks" && report.tasks.length > 0) ||
+        (source === "video" && report.videos.length > 0),
+    )
+    .sort((left, right) => {
+      const leftIsCurrent = Number(left.member.user_id) === Number(currentUser?.id);
+      const rightIsCurrent = Number(right.member.user_id) === Number(currentUser?.id);
+      return Number(rightIsCurrent) - Number(leftIsCurrent);
+    });
   const active = list.find((x) => x.member.id === selected) ?? list[0];
   const activeReport = useQuery({
     queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
@@ -115,13 +121,19 @@ export function EmployeeReportsWorkspace() {
               const git = report.commits.length > 0,
                 jira = report.tasks.length > 0,
                 video = report.videos.length > 0;
+              const isCurrentUser = Number(report.member.user_id) === Number(currentUser?.id);
               return (
                 <button
                   key={report.member.id}
                   onClick={() => setSelected(report.member.id)}
-                  className={`flex w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active.member.id === report.member.id ? "bg-primary/8 border-l-2 border-l-primary" : ""}`}
+                  className={`flex w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
                 >
                   <EmployeeName member={report.member} compact />
+                  {isCurrentUser ? (
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      Вы
+                    </span>
+                  ) : null}
                   <span className="ml-auto flex gap-1">
                     <i
                       title="Git-отчет"
