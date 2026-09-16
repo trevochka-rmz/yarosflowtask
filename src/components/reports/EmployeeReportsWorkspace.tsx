@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
 import {
   CalendarDays,
   CheckCircle2,
@@ -25,6 +26,10 @@ export function EmployeeReportsWorkspace() {
   const { org } = useCurrentOrg();
   const { data: currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
+  const linkedMemberId = useRouterState({
+    select: (state) => Number(state.location.search.memberId) || undefined,
+  });
+  const appliedLinkedMemberId = useRef<number>();
   const today = isoDate(new Date());
   const [filters, setFilters] = useState<ReportFilters>({ from: today, to: today });
   const [source, setSource] = useState<ReportType>("all");
@@ -65,6 +70,17 @@ export function EmployeeReportsWorkspace() {
       const rightIsCurrent = Number(right.member.user_id) === Number(currentUser?.id);
       return Number(rightIsCurrent) - Number(leftIsCurrent);
     });
+  useEffect(() => {
+    if (
+      !linkedMemberId ||
+      appliedLinkedMemberId.current === linkedMemberId ||
+      !list.some((report) => report.member.id === linkedMemberId)
+    ) {
+      return;
+    }
+    appliedLinkedMemberId.current = linkedMemberId;
+    setSelected(linkedMemberId);
+  }, [linkedMemberId, list]);
   const active = list.find((x) => x.member.id === selected) ?? list[0];
   const activeReport = useQuery({
     queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
