@@ -49,6 +49,8 @@ export type UploadedVideoReport = {
   file_size: number | null;
   created_at: string;
 };
+
+export const MAX_VIDEO_REPORT_SIZE = 200 * 1024 * 1024;
 export type EmployeeActivity = {
   id: string;
   kind: Exclude<ReportType, "all">;
@@ -227,6 +229,9 @@ export const reportsService = {
     return normalizeEmployeeReport(data);
   },
   async uploadVideo(orgId: number, employeeId: number, reportDate: string, video: File) {
+    if (video.size > MAX_VIDEO_REPORT_SIZE) {
+      throw new Error("Размер видеоотчёта не должен превышать 200 МБ");
+    }
     const body = new FormData();
     body.set("reportDate", reportDate);
     body.set("video", video);
@@ -239,12 +244,24 @@ export const reportsService = {
     } catch {
       throw new Error("Не удалось загрузить видео. Проверьте соединение с сервером.");
     }
-    const payload = (await response.json().catch(() => null)) as {
-      success?: boolean;
-      message?: string;
-      data?: UploadedVideoReport;
-    } | null;
+    const rawBody = await response.text();
+    const payload = (() => {
+      try {
+        return JSON.parse(rawBody) as {
+          success?: boolean;
+          message?: string;
+          data?: UploadedVideoReport;
+        };
+      } catch {
+        return null;
+      }
+    })();
     if (!response.ok || payload?.success === false || !payload?.data) {
+      if (response.status === 413) {
+        throw new Error(
+          "Сервер временно не принимает видео такого размера. Попробуйте позже или обратитесь к администратору.",
+        );
+      }
       throw new Error(payload?.message || "Не удалось загрузить видеоотчёт");
     }
     return payload.data;

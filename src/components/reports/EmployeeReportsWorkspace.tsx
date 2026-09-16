@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -217,6 +218,11 @@ function ReportPanel({
 }) {
   const git = parseGitReport(report.commits.find((x) => x.report_text)?.report_text);
   const video = report.videos[0];
+  const reportDateLabel = new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${selectedReportDate}T12:00:00`));
   const hasVideoForSelectedDate = report.videos.some(
     (item) => isoDate(new Date(item.date)) === selectedReportDate,
   );
@@ -234,14 +240,20 @@ function ReportPanel({
             {report.member.department_name || report.member.role_name || "Сотрудник"}
           </p>
         </div>
-        {canUpload && report.member.video_report_eligible ? (
-          <VideoReportUpload
-            employee={report.member}
-            defaultReportDate={selectedReportDate}
-            alreadyUploaded={hasVideoForSelectedDate}
-            onUploaded={onUploaded}
-          />
-        ) : null}
+        <div className="ml-auto flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-2 text-xs text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5" />
+            Отчет за {reportDateLabel}
+          </span>
+          {canUpload && report.member.video_report_eligible ? (
+            <VideoReportUpload
+              employee={report.member}
+              defaultReportDate={selectedReportDate}
+              alreadyUploaded={hasVideoForSelectedDate}
+              onUploaded={onUploaded}
+            />
+          ) : null}
+        </div>
       </header>
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
         <TabsList className="w-full justify-start">

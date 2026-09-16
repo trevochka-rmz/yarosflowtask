@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useCurrentOrg } from "@/lib/org";
-import { isoDate, reportsService } from "@/lib/reports";
+import { isoDate, MAX_VIDEO_REPORT_SIZE, reportsService } from "@/lib/reports";
 
 export function VideoReportUpload({
   employee,
@@ -30,11 +30,13 @@ export function VideoReportUpload({
   const today = isoDate(new Date());
   const [reportDate, setReportDate] = useState(defaultReportDate ?? today);
   const [file, setFile] = useState<File>();
+  const [fileError, setFileError] = useState<string>();
   const upload = useMutation({
     mutationFn: () => reportsService.uploadVideo(org!.id, employee.id, reportDate, file!),
     onSuccess: () => {
       setOpen(false);
       setFile(undefined);
+      setFileError(undefined);
       onUploaded();
     },
   });
@@ -48,6 +50,8 @@ export function VideoReportUpload({
         disabled={alreadyUploaded}
         onClick={() => {
           setReportDate(defaultReportDate ?? today);
+          setFileError(undefined);
+          upload.reset();
           setOpen(true);
         }}
       >
@@ -83,11 +87,23 @@ export function VideoReportUpload({
             <Input
               type="file"
               accept="video/*"
-              onChange={(event) => setFile(event.target.files?.[0])}
+              onChange={(event) => {
+                const selectedFile = event.target.files?.[0];
+                upload.reset();
+                if (selectedFile && selectedFile.size > MAX_VIDEO_REPORT_SIZE) {
+                  setFile(undefined);
+                  setFileError("Размер видеоотчёта не должен превышать 200 МБ");
+                  event.target.value = "";
+                  return;
+                }
+                setFile(selectedFile);
+                setFileError(undefined);
+              }}
               required
             />
           </label>
           {file ? <p className="text-xs text-muted-foreground">{file.name}</p> : null}
+          {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
           {upload.isError ? (
             <p className="text-sm text-destructive">{upload.error.message}</p>
           ) : null}

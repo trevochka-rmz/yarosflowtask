@@ -76,10 +76,6 @@ export function ReportsHeader({
     <>
       <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
         <div>
-          <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            <CalendarDays className="h-3.5 w-3.5" />
-            Командная аналитика
-          </p>
           <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
             Отчеты по сотрудникам
           </h1>
