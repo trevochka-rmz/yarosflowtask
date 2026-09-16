@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, type TaskStatus } from "./api";
-import { authHeaders } from "./auth";
+import { authHeaders, clearToken } from "./auth";
 import type { EmployeeDailyReport, OrgMember } from "./org";
 
 export type ReportType = "all" | "commits" | "tasks" | "video";
@@ -230,43 +230,68 @@ export const reportsService = {
     );
     return normalizeEmployeeReport(data);
   },
-  async uploadVideo(orgId: number, employeeId: number, reportDate: string, video: File) {
+  async uploadVideo(
+    orgId: number,
+    employeeId: number,
+    reportDate: string,
+    video: File,
+    onProgress?: (percent: number) => void,
+  ) {
     if (video.size > MAX_VIDEO_REPORT_SIZE) {
       throw new Error("Размер видеоотчёта не должен превышать 200 МБ");
     }
     const body = new FormData();
     body.set("reportDate", reportDate);
     body.set("video", video);
-    let response: Response;
-    try {
-      response = await fetch(
+    return new Promise<UploadedVideoReport>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open(
+        "POST",
         `${API_BASE_URL}/organizations/${orgId}/reports/employees/${employeeId}/video-reports`,
-        { method: "POST", headers: authHeaders(), body },
       );
-    } catch {
-      throw new Error("Не удалось загрузить видео. Проверьте соединение с сервером.");
-    }
-    const rawBody = await response.text();
-    const payload = (() => {
-      try {
-        return JSON.parse(rawBody) as {
-          success?: boolean;
-          message?: string;
-          data?: UploadedVideoReport;
-        };
-      } catch {
-        return null;
-      }
-    })();
-    if (!response.ok || payload?.success === false || !payload?.data) {
-      if (response.status === 413) {
-        throw new Error(
-          "Сервер временно не принимает видео такого размера. Попробуйте позже или обратитесь к администратору.",
-        );
-      }
-      throw new Error(payload?.message || "Не удалось загрузить видеоотчёт");
-    }
-    return payload.data;
+      Object.entries(authHeaders()).forEach(([name, value]) =>
+        request.setRequestHeader(name, value),
+      );
+      request.upload.onprogress = (event) => {
+        if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+      };
+      request.onerror = () =>
+        reject(new Error("Не удалось загрузить видео. Проверьте соединение с сервером."));
+      request.onabort = () => reject(new Error("Загрузка видео была отменена."));
+      request.onload = () => {
+        const payload = (() => {
+          try {
+            return JSON.parse(request.responseText) as {
+              success?: boolean;
+              message?: string;
+              data?: UploadedVideoReport;
+            };
+          } catch {
+            return null;
+          }
+        })();
+        if (
+          !request.status ||
+          request.status >= 400 ||
+          payload?.success === false ||
+          !payload?.data
+        ) {
+          if (request.status === 401) clearToken();
+          if (request.status === 413) {
+            reject(
+              new Error(
+                "Сервер временно не принимает видео такого размера. Попробуйте позже или обратитесь к администратору.",
+              ),
+            );
+            return;
+          }
+          reject(new Error(payload?.message || "Не удалось загрузить видеоотчёт"));
+          return;
+        }
+        resolve(payload.data);
+      };
+      request.send(body);
+    });
   },
   async deleteVideo(orgId: number, employeeId: number, videoReportId: number) {
     return apiFetch<UploadedVideoReport>(

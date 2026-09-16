@@ -4,6 +4,19 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
 import type { ReportVideo } from "@/lib/reports";
 
+function formatDuration(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return undefined;
+  const totalSeconds = Math.round(seconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
 export function VideoReportCard({
   video,
   canDelete = false,
@@ -16,8 +29,10 @@ export function VideoReportCard({
   const hasSummary = Boolean(
     video.summary?.completed || video.summary?.problems || video.summary?.plans,
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const [hasStartedPlayback, setHasStartedPlayback] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
+  const [detectedDuration, setDetectedDuration] = useState<string>();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
 
@@ -82,13 +97,20 @@ export function VideoReportCard({
                 // report until an entire video has been downloaded.
                 preload="none"
                 src={video.url}
-                onLoadStart={() => {
-                  setIsLoading(true);
+                onLoadedMetadata={(event) => {
+                  setDetectedDuration(formatDuration(event.currentTarget.duration));
+                }}
+                onPlay={() => {
+                  setHasStartedPlayback(true);
                   setPlaybackError(false);
                 }}
-                onCanPlay={() => setIsLoading(false)}
+                onWaiting={() => {
+                  if (hasStartedPlayback) setIsBuffering(true);
+                }}
+                onPlaying={() => setIsBuffering(false)}
+                onCanPlay={() => setIsBuffering(false)}
                 onError={() => {
-                  setIsLoading(false);
+                  setIsBuffering(false);
                   setPlaybackError(true);
                 }}
               >
@@ -100,10 +122,10 @@ export function VideoReportCard({
               </div>
             )}
           </div>
-          {isLoading ? (
+          {hasStartedPlayback && isBuffering ? (
             <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              Загружаем видео…
+              Подгружаем видео…
             </p>
           ) : null}
           {playbackError ? (
@@ -137,7 +159,7 @@ export function VideoReportCard({
             </div>
             <div className="flex justify-between gap-3">
               <dt>Длительность</dt>
-              <dd>{video.duration || "не указана"}</dd>
+              <dd>{detectedDuration || video.duration || "определяется после запуска"}</dd>
             </div>
           </dl>
         </section>

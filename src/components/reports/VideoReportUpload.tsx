@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { useCurrentOrg } from "@/lib/org";
 import { isoDate, MAX_VIDEO_REPORT_SIZE, reportsService } from "@/lib/reports";
 
@@ -31,18 +32,27 @@ export function VideoReportUpload({
   const [reportDate, setReportDate] = useState(defaultReportDate ?? today);
   const [file, setFile] = useState<File>();
   const [fileError, setFileError] = useState<string>();
+  const [uploadProgress, setUploadProgress] = useState<number>();
   const upload = useMutation({
-    mutationFn: () => reportsService.uploadVideo(org!.id, employee.id, reportDate, file!),
+    mutationFn: () =>
+      reportsService.uploadVideo(org!.id, employee.id, reportDate, file!, setUploadProgress),
     onSuccess: () => {
       setOpen(false);
       setFile(undefined);
       setFileError(undefined);
+      setUploadProgress(undefined);
       onUploaded();
     },
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && upload.isPending) return;
+        setOpen(nextOpen);
+      }}
+    >
       <Button
         type="button"
         className="ml-auto"
@@ -51,6 +61,7 @@ export function VideoReportUpload({
         onClick={() => {
           setReportDate(defaultReportDate ?? today);
           setFileError(undefined);
+          setUploadProgress(undefined);
           upload.reset();
           setOpen(true);
         }}
@@ -69,7 +80,10 @@ export function VideoReportUpload({
           className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (file && !upload.isPending) upload.mutate();
+            if (file && !upload.isPending) {
+              setUploadProgress(0);
+              upload.mutate();
+            }
           }}
         >
           <label className="block space-y-1.5 text-sm font-medium">
@@ -79,6 +93,7 @@ export function VideoReportUpload({
               value={reportDate}
               max={today}
               onChange={(event) => setReportDate(event.target.value)}
+              disabled={upload.isPending}
               required
             />
           </label>
@@ -87,6 +102,7 @@ export function VideoReportUpload({
             <Input
               type="file"
               accept="video/*"
+              disabled={upload.isPending}
               onChange={(event) => {
                 const selectedFile = event.target.files?.[0];
                 upload.reset();
@@ -104,6 +120,22 @@ export function VideoReportUpload({
           </label>
           {file ? <p className="text-xs text-muted-foreground">{file.name}</p> : null}
           {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
+          {upload.isPending ? (
+            <div
+              className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3"
+              aria-live="polite"
+            >
+              <Progress value={uploadProgress ?? 0} />
+              <p className="text-sm font-medium">
+                {uploadProgress === undefined || uploadProgress < 100
+                  ? `Загружаем видео: ${uploadProgress ?? 0}%`
+                  : "Видео отправлено. Сохраняем файл…"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Не закрывайте и не обновляйте страницу до завершения загрузки.
+              </p>
+            </div>
+          ) : null}
           {upload.isError ? (
             <p className="text-sm text-destructive">{upload.error.message}</p>
           ) : null}
