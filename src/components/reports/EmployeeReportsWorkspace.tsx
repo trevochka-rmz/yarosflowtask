@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   ChevronLeft,
@@ -21,6 +21,7 @@ import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./Repo
 
 export function EmployeeReportsWorkspace() {
   const { org } = useCurrentOrg();
+  const queryClient = useQueryClient();
   const today = isoDate(new Date());
   const [filters, setFilters] = useState<ReportFilters>({ from: today, to: today });
   const [source, setSource] = useState<ReportType>("all");
@@ -61,6 +62,14 @@ export function EmployeeReportsWorkspace() {
     queryFn: () => reportsService.getEmployee(org!.id, active!.member.id, filters),
     enabled: !!org && !!active,
   });
+  // После успешной загрузки 1С-снимок сохранён на backend. Обновляем только
+  // сводный список, чтобы красный Git-индикатор сразу стал зелёным.
+  useEffect(() => {
+    if (!activeReport.data?.commits.length) return;
+    void queryClient.invalidateQueries({
+      queryKey: ["employee-reports", org?.id],
+    });
+  }, [activeReport.dataUpdatedAt, activeReport.data?.commits.length, org?.id, queryClient]);
   if (!org) return <p className="text-sm text-muted-foreground">Выберите организацию.</p>;
   return (
     <div className="space-y-3">
