@@ -7,10 +7,8 @@ import {
   FileVideo,
   GitBranch,
   ListChecks,
-  Play,
   Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
 import { orgApi, useCurrentOrg } from "@/lib/org";
@@ -19,6 +17,7 @@ import { isoDate, reportsService, type ReportFilters, type ReportType } from "@/
 import { parseGitReport } from "@/lib/git-report-parser";
 import { STATUS_LABELS } from "@/lib/api";
 import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./ReportPrimitives";
+import { VideoReportCard } from "./VideoReportCard";
 import { VideoReportUpload } from "./VideoReportUpload";
 
 export function EmployeeReportsWorkspace() {
@@ -293,19 +292,8 @@ function ReportPanel({
             Видеоотчет
           </h2>
           {video ? (
-            <div className="mt-3 text-sm">
-              <p className="text-emerald-600">✓ Есть видеоотчет</p>
-              <p className="mt-2 whitespace-pre-line text-muted-foreground">
-                {video.summary?.completed || "Текст видеоотчета пока не получен."}
-              </p>
-              {video.url && (
-                <Button asChild className="mt-3">
-                  <a href={video.url}>
-                    <Play className="mr-2 h-4 w-4" />
-                    Открыть видео
-                  </a>
-                </Button>
-              )}
+            <div className="mt-3">
+              <VideoReportCard video={video} />
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">Видеоотчета нет.</p>

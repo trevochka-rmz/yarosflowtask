@@ -8,12 +8,10 @@ import {
   FileVideo,
   GitCommitHorizontal,
   ListChecks,
-  Play,
   UserRound,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -30,6 +28,7 @@ import {
 } from "@/lib/reports";
 import { EmptyReport, MetricCard } from "@/components/reports/ReportPrimitives";
 import { VideoReportUpload } from "@/components/reports/VideoReportUpload";
+import { VideoReportCard } from "@/components/reports/VideoReportCard";
 
 export const Route = createFileRoute("/reports/employees/$employeeId")({
   component: EmployeeReportPage,
@@ -361,48 +360,9 @@ function CommitsTable({ report }: { report: EmployeeReport }) {
 function Videos({ report }: { report: EmployeeReport }) {
   if (!report.videos.length) return <EmptyReport type="video" />;
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="space-y-4">
       {report.videos.map((video, index) => (
-        <article
-          key={`${video.date}-${index}`}
-          className="rounded-2xl border border-border bg-card p-5 shadow-soft"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="font-semibold">{formatDate(video.date).slice(0, 10)}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Видеоотчет</p>
-            </div>
-            <span className="rounded-xl bg-amber-500/10 p-2 text-amber-600">
-              <FileVideo className="h-4 w-4" />
-            </span>
-          </div>
-          <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-            <p>Длительность: {video.duration || "не указана"}</p>
-            <p>Создан: {video.createdAt ? formatDate(video.createdAt) : "не указано"}</p>
-          </div>
-          {video.url ? (
-            <Button asChild className="mt-5 w-full">
-              <a href={video.url} target="_blank" rel="noreferrer">
-                <Play className="mr-2 h-4 w-4" />
-                Смотреть
-              </a>
-            </Button>
-          ) : null}
-          {video.summary && (
-            <div className="mt-5 border-t border-border pt-4 text-sm">
-              <h3 className="font-medium">Краткое содержание</h3>
-              {video.summary.completed && (
-                <p className="mt-2 text-muted-foreground">Выполнено: {video.summary.completed}</p>
-              )}
-              {video.summary.problems && (
-                <p className="mt-2 text-muted-foreground">Проблемы: {video.summary.problems}</p>
-              )}
-              {video.summary.plans && (
-                <p className="mt-2 text-muted-foreground">Планы: {video.summary.plans}</p>
-              )}
-            </div>
-          )}
-        </article>
+        <VideoReportCard key={`${video.date}-${index}`} video={video} />
       ))}
     </div>
   );
