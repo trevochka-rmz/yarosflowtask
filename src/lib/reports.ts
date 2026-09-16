@@ -236,6 +236,7 @@ export const reportsService = {
     reportDate: string,
     video: File,
     onProgress?: (percent: number) => void,
+    signal?: AbortSignal,
   ) {
     if (video.size > MAX_VIDEO_REPORT_SIZE) {
       throw new Error("Размер видеоотчёта не должен превышать 200 МБ");
@@ -244,7 +245,13 @@ export const reportsService = {
     body.set("reportDate", reportDate);
     body.set("video", video);
     return new Promise<UploadedVideoReport>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error("Загрузка видео была отменена."));
+        return;
+      }
       const request = new XMLHttpRequest();
+      const abortUpload = () => request.abort();
+      const removeAbortListener = () => signal?.removeEventListener("abort", abortUpload);
       request.open(
         "POST",
         `${API_BASE_URL}/organizations/${orgId}/reports/employees/${employeeId}/video-reports`,
@@ -255,10 +262,16 @@ export const reportsService = {
       request.upload.onprogress = (event) => {
         if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
       };
-      request.onerror = () =>
+      request.onerror = () => {
+        removeAbortListener();
         reject(new Error("Не удалось загрузить видео. Проверьте соединение с сервером."));
-      request.onabort = () => reject(new Error("Загрузка видео была отменена."));
+      };
+      request.onabort = () => {
+        removeAbortListener();
+        reject(new Error("Загрузка видео была отменена."));
+      };
       request.onload = () => {
+        removeAbortListener();
         const payload = (() => {
           try {
             return JSON.parse(request.responseText) as {
@@ -290,6 +303,7 @@ export const reportsService = {
         }
         resolve(payload.data);
       };
+      signal?.addEventListener("abort", abortUpload, { once: true });
       request.send(body);
     });
   },
@@ -316,23 +330,34 @@ function memberFromApi(employee: ApiEmployee): OrgMember {
   };
 }
 function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
-  const videos = data.video_reports.map((video) => {
+  // Запрос после отмены не добавляет ролик локально. Эта защита нужна на случай
+  // старых дублей в БД или сетевой гонки: на один отчётный день показываем только
+  // первую (API уже сортирует их от новых к старым) активную запись.
+  const videoIds = new Set<number>();
+  const videoDates = new Set<string>();
+  const videos = data.video_reports.flatMap((video) => {
+    const date = String(video.report_date).slice(0, 10);
+    if (videoIds.has(video.id) || videoDates.has(date)) return [];
+    videoIds.add(video.id);
+    videoDates.add(date);
     const analysis = object(video.analysis);
-    return {
-      id: video.id,
-      date: video.report_date,
-      createdAt: video.created_at,
-      url: video.video_url ?? undefined,
-      summary: analysis
-        ? {
-            completed: typeof analysis.summary === "string" ? analysis.summary : undefined,
-            problems: Array.isArray(analysis.blockers) ? analysis.blockers.join("; ") : undefined,
-            plans: Array.isArray(analysis.follow_up_questions)
-              ? analysis.follow_up_questions.join("; ")
-              : undefined,
-          }
-        : undefined,
-    };
+    return [
+      {
+        id: video.id,
+        date,
+        createdAt: video.created_at,
+        url: video.video_url ?? undefined,
+        summary: analysis
+          ? {
+              completed: typeof analysis.summary === "string" ? analysis.summary : undefined,
+              problems: Array.isArray(analysis.blockers) ? analysis.blockers.join("; ") : undefined,
+              plans: Array.isArray(analysis.follow_up_questions)
+                ? analysis.follow_up_questions.join("; ")
+                : undefined,
+            }
+          : undefined,
+      },
+    ];
   });
   const activities = data.activities
     .map((activity, index): EmployeeActivity => ({

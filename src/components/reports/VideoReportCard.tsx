@@ -1,5 +1,13 @@
-import { useState } from "react";
-import { ExternalLink, FileVideo, LoaderCircle, Sparkles, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  ExternalLink,
+  FileVideo,
+  LoaderCircle,
+  Maximize2,
+  Play,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
 import type { ReportVideo } from "@/lib/reports";
@@ -35,6 +43,36 @@ export function VideoReportCard({
   const [detectedDuration, setDetectedDuration] = useState<string>();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
+  const [isStartingPlayback, setIsStartingPlayback] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const startPlayback = async () => {
+    if (!videoRef.current || isStartingPlayback) return;
+    setIsStartingPlayback(true);
+    setPlaybackError(false);
+    try {
+      await videoRef.current.play();
+    } catch {
+      setPlaybackError(true);
+    } finally {
+      setIsStartingPlayback(false);
+    }
+  };
+
+  const openFullscreen = async () => {
+    const player = videoRef.current as
+      (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (!player) return;
+    try {
+      if (player.requestFullscreen) {
+        await player.requestFullscreen();
+        return;
+      }
+      player.webkitEnterFullscreen?.();
+    } catch {
+      // On browsers that deny fullscreen the regular player controls remain available.
+    }
+  };
 
   const deleteVideo = async () => {
     if (!video.id || !onDelete || isDeleting) return;
@@ -87,35 +125,68 @@ export function VideoReportCard({
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(16rem,1fr)] lg:items-center">
         <div>
-          <div className="overflow-hidden rounded-xl bg-black">
+          <div className="relative overflow-hidden rounded-xl bg-black">
             {video.url ? (
-              <video
-                className="aspect-video w-full object-contain"
-                controls
-                playsInline
-                // MinIO currently ignores HTTP Range. Do not delay opening a
-                // report until an entire video has been downloaded.
-                preload="none"
-                src={video.url}
-                onLoadedMetadata={(event) => {
-                  setDetectedDuration(formatDuration(event.currentTarget.duration));
-                }}
-                onPlay={() => {
-                  setHasStartedPlayback(true);
-                  setPlaybackError(false);
-                }}
-                onWaiting={() => {
-                  if (hasStartedPlayback) setIsBuffering(true);
-                }}
-                onPlaying={() => setIsBuffering(false)}
-                onCanPlay={() => setIsBuffering(false)}
-                onError={() => {
-                  setIsBuffering(false);
-                  setPlaybackError(true);
-                }}
-              >
-                Ваш браузер не поддерживает воспроизведение видео.
-              </video>
+              <>
+                <video
+                  ref={videoRef}
+                  className="aspect-video w-full object-contain"
+                  controls
+                  controlsList="nodownload noremoteplayback noplaybackrate"
+                  disablePictureInPicture
+                  playsInline
+                  // MinIO currently ignores HTTP Range. Do not automatically
+                  // download a potentially 200 MB report on page open.
+                  preload="none"
+                  src={video.url}
+                  onLoadedMetadata={(event) => {
+                    setDetectedDuration(formatDuration(event.currentTarget.duration));
+                  }}
+                  onPlay={() => {
+                    setHasStartedPlayback(true);
+                    setPlaybackError(false);
+                  }}
+                  onWaiting={() => {
+                    if (hasStartedPlayback) setIsBuffering(true);
+                  }}
+                  onPlaying={() => setIsBuffering(false)}
+                  onCanPlay={() => setIsBuffering(false)}
+                  onError={() => {
+                    setIsBuffering(false);
+                    setPlaybackError(true);
+                  }}
+                >
+                  Ваш браузер не поддерживает воспроизведение видео.
+                </video>
+                {!hasStartedPlayback ? (
+                  <button
+                    type="button"
+                    className="absolute inset-0 flex items-center justify-center bg-black/20 text-white transition hover:bg-black/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    onClick={startPlayback}
+                    aria-label="Запустить видео"
+                  >
+                    <span className="flex items-center gap-2 rounded-full bg-black/70 px-5 py-3 text-sm font-medium shadow-lg">
+                      {isStartingPlayback ? (
+                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Play className="h-5 w-5 fill-current" />
+                      )}
+                      {isStartingPlayback ? "Запускаем…" : "Запустить видео"}
+                    </span>
+                  </button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="absolute right-3 top-3 h-8 w-8 bg-black/60 text-white hover:bg-black/80"
+                  onClick={() => void openFullscreen()}
+                  aria-label="Открыть видео на весь экран"
+                  title="На весь экран"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </>
             ) : (
               <div className="flex aspect-video items-center justify-center text-sm text-muted-foreground">
                 Видеофайл недоступен

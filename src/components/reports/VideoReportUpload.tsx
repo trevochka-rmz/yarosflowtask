@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,20 @@ export function VideoReportUpload({
   const [file, setFile] = useState<File>();
   const [fileError, setFileError] = useState<string>();
   const [uploadProgress, setUploadProgress] = useState<number>();
+  const uploadAbortRef = useRef<AbortController>();
   const upload = useMutation({
-    mutationFn: () =>
-      reportsService.uploadVideo(org!.id, employee.id, reportDate, file!, setUploadProgress),
+    mutationFn: async () => {
+      const abortController = new AbortController();
+      uploadAbortRef.current = abortController;
+      return reportsService.uploadVideo(
+        org!.id,
+        employee.id,
+        reportDate,
+        file!,
+        setUploadProgress,
+        abortController.signal,
+      );
+    },
     onSuccess: () => {
       setOpen(false);
       setFile(undefined);
@@ -43,13 +54,27 @@ export function VideoReportUpload({
       setUploadProgress(undefined);
       onUploaded();
     },
+    onSettled: () => {
+      uploadAbortRef.current = undefined;
+    },
   });
+
+  const cancelUploadAndClose = () => {
+    uploadAbortRef.current?.abort();
+    setOpen(false);
+    setFile(undefined);
+    setFileError(undefined);
+    setUploadProgress(undefined);
+  };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen && upload.isPending) return;
+        if (!nextOpen && upload.isPending) {
+          cancelUploadAndClose();
+          return;
+        }
         setOpen(nextOpen);
       }}
     >
@@ -132,7 +157,8 @@ export function VideoReportUpload({
                   : "Видео отправлено. Сохраняем файл…"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Не закрывайте и не обновляйте страницу до завершения загрузки.
+                Можно закрыть окно, если передумали — загрузка и уведомление в Telegram будут
+                отменены.
               </p>
             </div>
           ) : null}
