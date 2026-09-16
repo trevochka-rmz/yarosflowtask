@@ -14,13 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
 import { orgApi, useCurrentOrg } from "@/lib/org";
+import { useCurrentUser } from "@/lib/use-current-user";
 import { isoDate, reportsService, type ReportFilters, type ReportType } from "@/lib/reports";
 import { parseGitReport } from "@/lib/git-report-parser";
 import { STATUS_LABELS } from "@/lib/api";
 import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./ReportPrimitives";
+import { VideoReportUpload } from "./VideoReportUpload";
 
 export function EmployeeReportsWorkspace() {
   const { org } = useCurrentOrg();
+  const { data: currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const today = isoDate(new Date());
   const [filters, setFilters] = useState<ReportFilters>({ from: today, to: today });
@@ -146,7 +149,20 @@ export function EmployeeReportsWorkspace() {
               Не удалось загрузить отчет сотрудника.
             </section>
           ) : (
-            <ReportPanel report={activeReport.data ?? active} tab={tab} setTab={setTab} />
+            <ReportPanel
+              report={activeReport.data ?? active}
+              tab={tab}
+              setTab={setTab}
+              canUpload={
+                Number(currentUser?.id) === Number((activeReport.data ?? active).member.user_id)
+              }
+              onUploaded={() => {
+                void queryClient.invalidateQueries({
+                  queryKey: ["employee-report-detail", org.id, active.member.id],
+                });
+                void queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] });
+              }}
+            />
           )}
         </div>
       )}
@@ -162,13 +178,15 @@ function ReportPanel({
     ? NonNullable<T>
     : never;
   tab: string;
-  setTab: (tab: any) => void;
+  setTab: (tab: "overview" | "git" | "tasks" | "video") => void;
+  canUpload: boolean;
+  onUploaded: () => void;
 }) {
   const git = parseGitReport(report.commits.find((x) => x.report_text)?.report_text);
   const video = report.videos[0];
   return (
     <section className="rounded-2xl border bg-card p-5">
-      <header className="flex items-center gap-3">
+      <header className="flex flex-wrap items-center gap-3">
         <UserAvatar
           avatarUrl={report.member.avatar_url}
           name={report.member.full_name}
@@ -180,6 +198,9 @@ function ReportPanel({
             {report.member.department_name || report.member.role_name || "Сотрудник"}
           </p>
         </div>
+        {canUpload && report.member.video_report_eligible ? (
+          <VideoReportUpload employee={report.member} onUploaded={onUploaded} />
+        ) : null}
       </header>
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
         <TabsList className="w-full justify-start">

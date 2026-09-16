@@ -1,4 +1,5 @@
-import { apiFetch, type TaskStatus } from "./api";
+import { API_BASE_URL, apiFetch, type TaskStatus } from "./api";
+import { authHeaders } from "./auth";
 import type { EmployeeDailyReport, OrgMember } from "./org";
 
 export type ReportType = "all" | "commits" | "tasks" | "video";
@@ -39,6 +40,15 @@ export type ReportVideo = {
   url?: string;
   summary?: { completed?: string; problems?: string; plans?: string };
 };
+export type UploadedVideoReport = {
+  id: number;
+  report_date: string;
+  video_url: string | null;
+  file_name: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+};
 export type EmployeeActivity = {
   id: string;
   kind: Exclude<ReportType, "all">;
@@ -73,6 +83,7 @@ type ApiEmployee = Pick<
   tasks: number;
   completed_tasks: number;
   video_reports: number;
+  video_report_eligible?: boolean;
   active_days: number;
   last_activity?: string | null;
 };
@@ -214,6 +225,29 @@ export const reportsService = {
       `/organizations/${orgId}/reports/employees/${employeeId}?${params}`,
     );
     return normalizeEmployeeReport(data);
+  },
+  async uploadVideo(orgId: number, employeeId: number, reportDate: string, video: File) {
+    const body = new FormData();
+    body.set("reportDate", reportDate);
+    body.set("video", video);
+    let response: Response;
+    try {
+      response = await fetch(
+        `${API_BASE_URL}/organizations/${orgId}/reports/employees/${employeeId}/video-reports`,
+        { method: "POST", headers: authHeaders(), body },
+      );
+    } catch {
+      throw new Error("Не удалось загрузить видео. Проверьте соединение с сервером.");
+    }
+    const payload = (await response.json().catch(() => null)) as {
+      success?: boolean;
+      message?: string;
+      data?: UploadedVideoReport;
+    } | null;
+    if (!response.ok || payload?.success === false || !payload?.data) {
+      throw new Error(payload?.message || "Не удалось загрузить видеоотчёт");
+    }
+    return payload.data;
   },
 };
 

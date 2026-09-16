@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
 import { useCurrentOrg } from "@/lib/org";
+import { useCurrentUser } from "@/lib/use-current-user";
 import { formatDate, PRIORITY_LABELS, STATUS_LABELS } from "@/lib/api";
 import {
   hasCompletedTask,
@@ -28,6 +29,7 @@ import {
   type ReportType,
 } from "@/lib/reports";
 import { EmptyReport, MetricCard } from "@/components/reports/ReportPrimitives";
+import { VideoReportUpload } from "@/components/reports/VideoReportUpload";
 
 export const Route = createFileRoute("/reports/employees/$employeeId")({
   component: EmployeeReportPage,
@@ -37,6 +39,8 @@ type DetailTab = "overview" | Exclude<ReportType, "all">;
 function EmployeeReportPage() {
   const { employeeId } = Route.useParams();
   const { org } = useCurrentOrg();
+  const { data: currentUser } = useCurrentUser();
+  const queryClient = useQueryClient();
   const today = isoDate(new Date());
   const from = new Date();
   from.setDate(from.getDate() - 13);
@@ -74,7 +78,19 @@ function EmployeeReportPage() {
         ) : !report.data ? (
           <EmptyReport />
         ) : (
-          <EmployeeReportContent report={report.data} range={range} tab={tab} setTab={setTab} />
+          <EmployeeReportContent
+            report={report.data}
+            range={range}
+            tab={tab}
+            setTab={setTab}
+            canUpload={Number(currentUser?.id) === Number(report.data.member.user_id)}
+            onUploaded={() => {
+              void queryClient.invalidateQueries({
+                queryKey: ["employee-report", org.id, employeeId],
+              });
+              void queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] });
+            }}
+          />
         )}
       </div>
     </AppLayout>
@@ -104,11 +120,13 @@ function EmployeeReportContent({
   range: { from: string; to: string };
   tab: DetailTab;
   setTab: (tab: DetailTab) => void;
+  canUpload: boolean;
+  onUploaded: () => void;
 }) {
   const completed = report.tasks.filter(hasCompletedTask).length;
   return (
     <>
-      <header className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <UserAvatar
             avatarUrl={report.member.avatar_url}
@@ -128,6 +146,9 @@ function EmployeeReportContent({
           <CalendarDays className="h-4 w-4" />
           {formatShortRange(range)}
         </p>
+        {canUpload && report.member.video_report_eligible ? (
+          <VideoReportUpload employee={report.member} onUploaded={onUploaded} />
+        ) : null}
       </header>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
@@ -316,14 +337,14 @@ function CommitsTable({ report }: { report: EmployeeReport }) {
                     commit.hash || "—"
                   )}
                 </td>
-              <td className="max-w-xl px-4 py-3 font-medium">
-                <p>{commit.message}</p>
-                {commit.report_text ? (
-                  <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/60 p-3 font-sans text-xs font-normal leading-relaxed text-muted-foreground">
-                    {commit.report_text}
-                  </pre>
-                ) : null}
-              </td>
+                <td className="max-w-xl px-4 py-3 font-medium">
+                  <p>{commit.message}</p>
+                  {commit.report_text ? (
+                    <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/60 p-3 font-sans text-xs font-normal leading-relaxed text-muted-foreground">
+                      {commit.report_text}
+                    </pre>
+                  ) : null}
+                </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {commit.date ? formatDate(commit.date) : "—"}
                 </td>

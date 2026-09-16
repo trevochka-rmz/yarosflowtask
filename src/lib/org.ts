@@ -76,6 +76,8 @@ export interface OrgMember {
   role_name: string | null;
   role_is_system?: boolean;
   department_name: string | null;
+  /** Действующий сотрудник IT, которому разрешено прикреплять видеоотчёты. */
+  video_report_eligible?: boolean;
 }
 
 export interface PermissionInfo {
