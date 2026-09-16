@@ -150,6 +150,23 @@ export function EmployeeReportsWorkspace() {
                 </button>
               );
             })}
+            <div className="border-t bg-muted/30 p-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">Индикаторы активности</p>
+              <div className="mt-2 space-y-1.5">
+                <p className="flex items-center gap-2">
+                  <i className="h-2 w-2 rounded-full bg-emerald-500" /> Git-отчет: есть
+                </p>
+                <p className="flex items-center gap-2">
+                  <i className="h-2 w-2 rounded-full bg-rose-400" /> Git-отчет: нет
+                </p>
+                <p className="flex items-center gap-2">
+                  <i className="h-2 w-2 rounded-full bg-blue-500" /> Jira: есть активность
+                </p>
+                <p className="flex items-center gap-2">
+                  <i className="h-2 w-2 rounded-full bg-emerald-500" /> Видео: загружено
+                </p>
+              </div>
+            </div>
           </aside>
           {activeReport.isPending ? (
             <section className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
@@ -167,6 +184,7 @@ export function EmployeeReportsWorkspace() {
               canUpload={
                 Number(currentUser?.id) === Number((activeReport.data ?? active).member.user_id)
               }
+              selectedReportDate={filters.to}
               onUploaded={() => {
                 void queryClient.invalidateQueries({
                   queryKey: ["employee-report-detail", org.id, active.member.id],
@@ -193,10 +211,14 @@ function ReportPanel({
   tab: string;
   setTab: (tab: "overview" | "git" | "tasks" | "video") => void;
   canUpload: boolean;
+  selectedReportDate: string;
   onUploaded: () => void;
 }) {
   const git = parseGitReport(report.commits.find((x) => x.report_text)?.report_text);
   const video = report.videos[0];
+  const hasVideoForSelectedDate = report.videos.some(
+    (item) => isoDate(new Date(item.date)) === selectedReportDate,
+  );
   return (
     <section className="rounded-2xl border bg-card p-5">
       <header className="flex flex-wrap items-center gap-3">
@@ -212,7 +234,12 @@ function ReportPanel({
           </p>
         </div>
         {canUpload && report.member.video_report_eligible ? (
-          <VideoReportUpload employee={report.member} onUploaded={onUploaded} />
+          <VideoReportUpload
+            employee={report.member}
+            defaultReportDate={selectedReportDate}
+            alreadyUploaded={hasVideoForSelectedDate}
+            onUploaded={onUploaded}
+          />
         ) : null}
       </header>
       <Tabs value={tab} onValueChange={setTab} className="mt-5">

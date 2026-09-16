@@ -17,13 +17,18 @@ import { isoDate, reportsService } from "@/lib/reports";
 export function VideoReportUpload({
   employee,
   onUploaded,
+  defaultReportDate,
+  alreadyUploaded = false,
 }: {
   employee: { id: number; full_name: string | null };
   onUploaded: () => void;
+  defaultReportDate?: string;
+  alreadyUploaded?: boolean;
 }) {
   const { org } = useCurrentOrg();
   const [open, setOpen] = useState(false);
-  const [reportDate, setReportDate] = useState(isoDate(new Date()));
+  const today = isoDate(new Date());
+  const [reportDate, setReportDate] = useState(defaultReportDate ?? today);
   const [file, setFile] = useState<File>();
   const upload = useMutation({
     mutationFn: () => reportsService.uploadVideo(org!.id, employee.id, reportDate, file!),
@@ -36,9 +41,18 @@ export function VideoReportUpload({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button type="button" className="ml-auto" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        className="ml-auto"
+        variant={alreadyUploaded ? "secondary" : "default"}
+        disabled={alreadyUploaded}
+        onClick={() => {
+          setReportDate(defaultReportDate ?? today);
+          setOpen(true);
+        }}
+      >
         <Upload className="mr-2 h-4 w-4" />
-        Добавить видеоотчет
+        {alreadyUploaded ? "Видеоотчет добавлен" : "Добавить видеоотчет"}
       </Button>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -59,7 +73,7 @@ export function VideoReportUpload({
             <Input
               type="date"
               value={reportDate}
-              max={isoDate(new Date())}
+              max={today}
               onChange={(event) => setReportDate(event.target.value)}
               required
             />
