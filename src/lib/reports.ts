@@ -34,6 +34,7 @@ export type ReportCommit = {
   employee_name?: string;
 };
 export type ReportVideo = {
+  id?: number;
   date: string;
   duration?: string;
   createdAt?: string;
@@ -94,6 +95,7 @@ type ApiEmployeeDetail = {
   tasks: ReportTask[];
   commits: ReportCommit[];
   video_reports: Array<{
+    id: number;
     report_date: string;
     created_at?: string;
     video_url?: string | null;
@@ -266,6 +268,12 @@ export const reportsService = {
     }
     return payload.data;
   },
+  async deleteVideo(orgId: number, employeeId: number, videoReportId: number) {
+    return apiFetch<UploadedVideoReport>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}`,
+      { method: "DELETE" },
+    );
+  },
 };
 
 function memberFromApi(employee: ApiEmployee): OrgMember {
@@ -286,6 +294,7 @@ function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
   const videos = data.video_reports.map((video) => {
     const analysis = object(video.analysis);
     return {
+      id: video.id,
       date: video.report_date,
       createdAt: video.created_at,
       url: video.video_url ?? undefined,

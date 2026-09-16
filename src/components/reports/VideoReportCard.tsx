@@ -1,15 +1,44 @@
 import { useState } from "react";
-import { ExternalLink, FileVideo, LoaderCircle, Sparkles } from "lucide-react";
+import { ExternalLink, FileVideo, LoaderCircle, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/api";
 import type { ReportVideo } from "@/lib/reports";
 
-export function VideoReportCard({ video }: { video: ReportVideo }) {
+export function VideoReportCard({
+  video,
+  canDelete = false,
+  onDelete,
+}: {
+  video: ReportVideo;
+  canDelete?: boolean;
+  onDelete?: (videoReportId: number) => Promise<void>;
+}) {
   const hasSummary = Boolean(
     video.summary?.completed || video.summary?.problems || video.summary?.plans,
   );
   const [isLoading, setIsLoading] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
+
+  const deleteVideo = async () => {
+    if (!video.id || !onDelete || isDeleting) return;
+    if (
+      !window.confirm(
+        "Удалить видеоотчет? Старый ролик будет перенесён в архив, после этого можно загрузить новый.",
+      )
+    ) {
+      return;
+    }
+    setIsDeleting(true);
+    setDeleteError(undefined);
+    try {
+      await onDelete(video.id);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Не удалось удалить видеоотчет");
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
@@ -23,14 +52,22 @@ export function VideoReportCard({ video }: { video: ReportVideo }) {
             <p className="text-sm text-muted-foreground">{formatDate(video.date).slice(0, 10)}</p>
           </div>
         </div>
-        {video.url ? (
-          <Button asChild variant="outline" size="sm">
-            <a href={video.url} target="_blank" rel="noreferrer">
-              Открыть видео
-              <ExternalLink className="ml-2 h-3.5 w-3.5" />
-            </a>
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {canDelete && video.id && onDelete ? (
+            <Button variant="outline" size="sm" disabled={isDeleting} onClick={deleteVideo}>
+              <Trash2 className="mr-2 h-3.5 w-3.5" />
+              {isDeleting ? "Удаляем…" : "Удалить"}
+            </Button>
+          ) : null}
+          {video.url ? (
+            <Button asChild variant="outline" size="sm">
+              <a href={video.url} target="_blank" rel="noreferrer">
+                Открыть видео
+                <ExternalLink className="ml-2 h-3.5 w-3.5" />
+              </a>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(16rem,1fr)] lg:items-center">
@@ -105,6 +142,7 @@ export function VideoReportCard({ video }: { video: ReportVideo }) {
           </dl>
         </section>
       </div>
+      {deleteError ? <p className="mt-3 text-sm text-destructive">{deleteError}</p> : null}
     </article>
   );
 }

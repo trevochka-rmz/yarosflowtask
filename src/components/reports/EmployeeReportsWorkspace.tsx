@@ -192,6 +192,15 @@ export function EmployeeReportsWorkspace() {
                 });
                 void queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] });
               }}
+              onDeleted={async (videoReportId) => {
+                await reportsService.deleteVideo(org.id, active.member.id, videoReportId);
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: ["employee-report-detail", org.id, active.member.id],
+                  }),
+                  queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
+                ]);
+              }}
             />
           )}
         </div>
@@ -206,6 +215,7 @@ function ReportPanel({
   canUpload,
   selectedReportDate,
   onUploaded,
+  onDeleted,
 }: {
   report: Awaited<ReturnType<typeof reportsService.getEmployee>> extends infer T
     ? NonNullable<T>
@@ -215,6 +225,7 @@ function ReportPanel({
   canUpload: boolean;
   selectedReportDate: string;
   onUploaded: () => void;
+  onDeleted: (videoReportId: number) => Promise<void>;
 }) {
   const git = parseGitReport(report.commits.find((x) => x.report_text)?.report_text);
   const video = report.videos[0];
@@ -333,7 +344,7 @@ function ReportPanel({
           </h2>
           {video ? (
             <div className="mt-3">
-              <VideoReportCard video={video} />
+              <VideoReportCard video={video} canDelete={canUpload} onDelete={onDeleted} />
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">Видеоотчета нет.</p>

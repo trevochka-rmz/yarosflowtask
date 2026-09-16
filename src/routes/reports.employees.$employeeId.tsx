@@ -89,6 +89,15 @@ function EmployeeReportPage() {
               });
               void queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] });
             }}
+            onDeleted={async (videoReportId) => {
+              await reportsService.deleteVideo(org.id, Number(employeeId), videoReportId);
+              await Promise.all([
+                queryClient.invalidateQueries({
+                  queryKey: ["employee-report", org.id, employeeId],
+                }),
+                queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
+              ]);
+            }}
           />
         )}
       </div>
@@ -116,6 +125,7 @@ function EmployeeReportContent({
   setTab,
   canUpload,
   onUploaded,
+  onDeleted,
 }: {
   report: EmployeeReport;
   range: { from: string; to: string };
@@ -123,6 +133,7 @@ function EmployeeReportContent({
   setTab: (tab: DetailTab) => void;
   canUpload: boolean;
   onUploaded: () => void;
+  onDeleted: (videoReportId: number) => Promise<void>;
 }) {
   const completed = report.tasks.filter(hasCompletedTask).length;
   return (
@@ -190,7 +201,7 @@ function EmployeeReportContent({
       ) : tab === "commits" ? (
         <CommitsTable report={report} />
       ) : (
-        <Videos report={report} />
+        <Videos report={report} canDelete={canUpload} onDelete={onDeleted} />
       )}
     </>
   );
@@ -357,12 +368,25 @@ function CommitsTable({ report }: { report: EmployeeReport }) {
     </section>
   );
 }
-function Videos({ report }: { report: EmployeeReport }) {
+function Videos({
+  report,
+  canDelete,
+  onDelete,
+}: {
+  report: EmployeeReport;
+  canDelete: boolean;
+  onDelete: (videoReportId: number) => Promise<void>;
+}) {
   if (!report.videos.length) return <EmptyReport type="video" />;
   return (
     <div className="space-y-4">
       {report.videos.map((video, index) => (
-        <VideoReportCard key={`${video.date}-${index}`} video={video} />
+        <VideoReportCard
+          key={video.id ?? `${video.date}-${index}`}
+          video={video}
+          canDelete={canDelete}
+          onDelete={onDelete}
+        />
       ))}
     </div>
   );
