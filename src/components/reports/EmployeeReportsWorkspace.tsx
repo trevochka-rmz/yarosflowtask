@@ -117,6 +117,21 @@ export function EmployeeReportsWorkspace() {
     mutationFn: ({ memberId, reportDate }: { memberId: number; reportDate: string }) =>
       reportsService.sendEmployeeReport(org!.id, memberId, reportDate),
     onSuccess: (data) => {
+      if (data.notification?.pending) {
+        toast.success("Отправка начата. Ролик появится в Telegram после обработки.");
+        setPreviewTarget(undefined);
+        // В фоне Telegram может принимать большой файл дольше обычного.
+        // Обновляем карточку несколько раз, чтобы кнопка стала
+        // «Переотправить» сразу после сохранения доставки на backend.
+        [5_000, 15_000, 35_000].forEach((delay) => {
+          window.setTimeout(() => {
+            void queryClient.invalidateQueries({
+              queryKey: ["employee-report-detail", org?.id],
+            });
+          }, delay);
+        });
+        return;
+      }
       const sent = Number(data.notification?.sent ?? 0);
       toast.success(
         sent > 0

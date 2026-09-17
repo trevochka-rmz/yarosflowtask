@@ -140,7 +140,7 @@ export function VideoReportCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(16rem,1fr)] lg:items-center">
+      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.55fr)] lg:items-center">
         <div>
           <div ref={playerContainerRef} className="relative overflow-hidden rounded-xl bg-black">
             {video.url ? (

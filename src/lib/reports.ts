@@ -324,7 +324,7 @@ export const reportsService = {
     );
   },
   async sendVideo(orgId: number, employeeId: number, videoReportId: number) {
-    return apiFetch<{ notification: { sent?: number; skipped?: string } }>(
+    return apiFetch<{ notification: { sent?: number; skipped?: string; pending?: boolean } }>(
       `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}/send`,
       { method: "POST" },
     );
@@ -342,7 +342,7 @@ export const reportsService = {
     );
   },
   async sendEmployeeReport(orgId: number, employeeId: number, reportDate: string) {
-    return apiFetch<{ notification: { sent?: number; skipped?: string } }>(
+    return apiFetch<{ notification: { sent?: number; skipped?: string; pending?: boolean } }>(
       `/organizations/${orgId}/reports/employees/${employeeId}/report-notification/send`,
       { method: "POST", body: { reportDate } },
     );
