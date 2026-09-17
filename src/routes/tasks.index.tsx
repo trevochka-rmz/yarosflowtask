@@ -194,10 +194,18 @@ function TasksPage() {
   // затем остальных пользователей Jira.
   const jiraAssigneeGroups = useMemo(() => {
     const users = jiraUsers.data?.users ?? [];
+    const taskFlowMembers = (createMembers.data ?? []).filter((member) =>
+      Boolean(member.jira_username?.trim()),
+    );
     const taskFlowUsernames = new Set(
-      (createMembers.data ?? [])
-        .map((member) => member.jira_username?.trim().toLowerCase())
-        .filter((username): username is string => Boolean(username)),
+      taskFlowMembers.map((member) => member.jira_username!.trim().toLowerCase()),
+    );
+    const itTaskFlowUsernames = new Set(
+      taskFlowMembers
+        .filter((member) =>
+          ["it", "ит"].includes(member.department_name?.trim().toLowerCase() ?? ""),
+        )
+        .map((member) => member.jira_username!.trim().toLowerCase()),
     );
     const taskFlowUsers = users.filter((jiraUser) =>
       taskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
@@ -205,7 +213,10 @@ function TasksPage() {
     const externalJiraUsers = users.filter(
       (jiraUser) => !taskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
     );
-    return { taskFlowUsers, externalJiraUsers };
+    const defaultTaskFlowUser = taskFlowUsers.find((jiraUser) =>
+      itTaskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
+    );
+    return { taskFlowUsers, externalJiraUsers, defaultTaskFlowUser };
   }, [createMembers.data, jiraUsers.data]);
 
   useEffect(() => {
@@ -219,11 +230,11 @@ function TasksPage() {
   }, [jiraProjects.data]);
 
   useEffect(() => {
-    if (!createOpen || !hasActiveJira || newAssignee || !jiraAssigneeGroups.taskFlowUsers.length) {
+    if (!createOpen || !hasActiveJira || newAssignee || !jiraAssigneeGroups.defaultTaskFlowUser) {
       return;
     }
-    setNewAssignee(jiraAssigneeGroups.taskFlowUsers[0].username);
-  }, [createOpen, hasActiveJira, jiraAssigneeGroups.taskFlowUsers, newAssignee]);
+    setNewAssignee(jiraAssigneeGroups.defaultTaskFlowUser.username);
+  }, [createOpen, hasActiveJira, jiraAssigneeGroups.defaultTaskFlowUser, newAssignee]);
 
   const createTask = useMutation({
     mutationFn: async () => {
