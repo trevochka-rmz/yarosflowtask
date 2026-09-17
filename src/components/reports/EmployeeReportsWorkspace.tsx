@@ -25,6 +25,17 @@ import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./Repo
 import { VideoReportCard } from "./VideoReportCard";
 import { VideoReportUpload } from "./VideoReportUpload";
 
+function formatReportDay(value: unknown) {
+  const raw = String(value ?? "").slice(0, 10);
+  const date = new Date(`${raw}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "Дата отчёта не указана";
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 export function EmployeeReportsWorkspace() {
   const { org } = useCurrentOrg();
   const { data: currentUser } = useCurrentUser();
@@ -278,11 +289,7 @@ function ReportPanel({
   const videosForPeriod = [...report.videos].sort((left, right) =>
     right.date.localeCompare(left.date),
   );
-  const reportDateLabel = new Intl.DateTimeFormat("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(`${selectedReportDate}T12:00:00`));
+  const reportDateLabel = formatReportDay(selectedReportDate);
   const hasVideoForSelectedDate = report.videos.some(
     (item) => isoDate(new Date(item.date)) === selectedReportDate,
   );
@@ -343,13 +350,7 @@ function ReportPanel({
             <div className="mt-3 space-y-3">
               {gitReports.map(({ commit, parsed }) => (
                 <div key={commit.date} className="rounded-lg border bg-muted/20 p-3">
-                  <h3 className="text-sm font-medium">
-                    {new Intl.DateTimeFormat("ru-RU", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    }).format(new Date(`${commit.date}T12:00:00`))}
-                  </h3>
+                  <h3 className="text-sm font-medium">{formatReportDay(commit.date)}</h3>
                   {parsed ? (
                     <>
                       <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
