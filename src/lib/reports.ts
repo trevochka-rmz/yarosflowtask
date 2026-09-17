@@ -313,6 +313,12 @@ export const reportsService = {
       { method: "DELETE" },
     );
   },
+  async sendVideo(orgId: number, employeeId: number, videoReportId: number) {
+    return apiFetch<{ notification: { sent?: number; skipped?: string } }>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}/send`,
+      { method: "POST" },
+    );
+  },
 };
 
 function memberFromApi(employee: ApiEmployee): OrgMember {

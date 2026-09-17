@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -9,8 +9,11 @@ import {
   FileVideo,
   GitBranch,
   ListChecks,
+  Send,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
 import { orgApi, useCurrentOrg } from "@/lib/org";
@@ -86,6 +89,19 @@ export function EmployeeReportsWorkspace() {
     queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
     queryFn: () => reportsService.getEmployee(org!.id, active!.member.id, filters),
     enabled: !!org && !!active,
+  });
+  const sendVideo = useMutation({
+    mutationFn: ({ memberId, videoReportId }: { memberId: number; videoReportId: number }) =>
+      reportsService.sendVideo(org!.id, memberId, videoReportId),
+    onSuccess: (data) => {
+      const sent = Number(data.notification?.sent ?? 0);
+      toast.success(
+        sent > 0
+          ? "Полный видеоотчёт отправлен Owner"
+          : "Отчёт подготовлен, но Owner с подключённым Telegram не найден",
+      );
+    },
+    onError: (error: Error) => toast.error(error.message),
   });
   // После успешной загрузки 1С-снимок сохранён на backend. Обновляем только
   // сводный список, чтобы красный Git-индикатор сразу стал зелёным.
@@ -217,6 +233,10 @@ export function EmployeeReportsWorkspace() {
                   queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
                 ]);
               }}
+              onSend={(videoReportId) =>
+                sendVideo.mutateAsync({ memberId: active.member.id, videoReportId })
+              }
+              isSending={sendVideo.isPending}
             />
           )}
         </div>
@@ -232,6 +252,8 @@ function ReportPanel({
   selectedReportDate,
   onUploaded,
   onDeleted,
+  onSend,
+  isSending,
 }: {
   report: Awaited<ReturnType<typeof reportsService.getEmployee>> extends infer T
     ? NonNullable<T>
@@ -242,6 +264,8 @@ function ReportPanel({
   selectedReportDate: string;
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
+  onSend: (videoReportId: number) => Promise<unknown>;
+  isSending: boolean;
 }) {
   const git = parseGitReport(report.commits.find((x) => x.report_text)?.report_text);
   const video = report.videos[0];
@@ -273,12 +297,25 @@ function ReportPanel({
             Отчет за {reportDateLabel}
           </span>
           {canUpload && report.member.video_report_eligible ? (
-            <VideoReportUpload
-              employee={report.member}
-              defaultReportDate={selectedReportDate}
-              alreadyUploaded={hasVideoForSelectedDate}
-              onUploaded={onUploaded}
-            />
+            <div className="flex flex-col gap-2">
+              <VideoReportUpload
+                employee={report.member}
+                defaultReportDate={selectedReportDate}
+                alreadyUploaded={hasVideoForSelectedDate}
+                onUploaded={onUploaded}
+              />
+              {video?.id ? (
+                <Button
+                  type="button"
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  disabled={isSending}
+                  onClick={() => void onSend(video.id)}
+                >
+                  <Send className="h-4 w-4" />
+                  {isSending ? "Отправляем…" : "Отправить отчёт"}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </header>
