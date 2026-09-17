@@ -45,6 +45,7 @@ export function VideoReportCard({
   const [deleteError, setDeleteError] = useState<string>();
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
 
   const startPlayback = async () => {
     if (!videoRef.current || isStartingPlayback) return;
@@ -64,10 +65,17 @@ export function VideoReportCard({
       (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
     if (!player) return;
     try {
+      // В desktop-браузерах разворачиваем весь контейнер плеера. Это не
+      // конфликтует с нативной fullscreen-кнопкой внутри video controls.
+      if (playerContainerRef.current?.requestFullscreen) {
+        await playerContainerRef.current.requestFullscreen();
+        return;
+      }
       if (player.requestFullscreen) {
         await player.requestFullscreen();
         return;
       }
+      // Safari iOS поддерживает fullscreen только у самого video-элемента.
       player.webkitEnterFullscreen?.();
     } catch {
       // On browsers that deny fullscreen the regular player controls remain available.
@@ -120,18 +128,24 @@ export function VideoReportCard({
               </a>
             </Button>
           ) : null}
+          {video.url ? (
+            <Button variant="outline" size="sm" onClick={() => void openFullscreen()}>
+              <Maximize2 className="mr-2 h-3.5 w-3.5" />
+              На весь экран
+            </Button>
+          ) : null}
         </div>
       </div>
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(16rem,1fr)] lg:items-center">
         <div>
-          <div className="relative overflow-hidden rounded-xl bg-black">
+          <div ref={playerContainerRef} className="relative overflow-hidden rounded-xl bg-black">
             {video.url ? (
               <>
                 <video
                   ref={videoRef}
                   className="aspect-video w-full object-contain"
-                  controls
+                  controls={hasStartedPlayback}
                   controlsList="nodownload noremoteplayback noplaybackrate"
                   disablePictureInPicture
                   playsInline
@@ -161,7 +175,7 @@ export function VideoReportCard({
                 {!hasStartedPlayback ? (
                   <button
                     type="button"
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 text-white transition hover:bg-black/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                    className="absolute inset-0 z-10 flex items-center justify-center bg-black/20 text-white transition hover:bg-black/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                     onClick={startPlayback}
                     aria-label="Запустить видео"
                   >
@@ -175,17 +189,6 @@ export function VideoReportCard({
                     </span>
                   </button>
                 ) : null}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  className="absolute right-3 top-3 h-8 w-8 bg-black/60 text-white hover:bg-black/80"
-                  onClick={() => void openFullscreen()}
-                  aria-label="Открыть видео на весь экран"
-                  title="На весь экран"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
               </>
             ) : (
               <div className="flex aspect-video items-center justify-center text-sm text-muted-foreground">
