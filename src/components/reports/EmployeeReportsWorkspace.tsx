@@ -59,7 +59,7 @@ export function EmployeeReportsWorkspace() {
   const [tab, setTab] = useState<"overview" | "git" | "tasks" | "video">("overview");
   const [previewTarget, setPreviewTarget] = useState<{
     memberId: number;
-    videoReportId: number;
+    reportDate: string;
   }>();
   const members = useQuery({
     queryKey: ["org-members", org?.id],
@@ -114,8 +114,8 @@ export function EmployeeReportsWorkspace() {
     enabled: !!org && !!active,
   });
   const sendVideo = useMutation({
-    mutationFn: ({ memberId, videoReportId }: { memberId: number; videoReportId: number }) =>
-      reportsService.sendVideo(org!.id, memberId, videoReportId),
+    mutationFn: ({ memberId, reportDate }: { memberId: number; reportDate: string }) =>
+      reportsService.sendEmployeeReport(org!.id, memberId, reportDate),
     onSuccess: (data) => {
       const sent = Number(data.notification?.sent ?? 0);
       toast.success(
@@ -124,12 +124,13 @@ export function EmployeeReportsWorkspace() {
           : "Отчёт подготовлен, но Owner с подключённым Telegram не найден",
       );
       setPreviewTarget(undefined);
+      void queryClient.invalidateQueries({ queryKey: ["employee-report-detail", org?.id] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
   const previewVideo = useMutation({
-    mutationFn: ({ memberId, videoReportId }: { memberId: number; videoReportId: number }) =>
-      reportsService.previewVideo(org!.id, memberId, videoReportId),
+    mutationFn: ({ memberId, reportDate }: { memberId: number; reportDate: string }) =>
+      reportsService.previewEmployeeReport(org!.id, memberId, reportDate),
     onError: (error: Error) => toast.error(error.message),
   });
   // После успешной загрузки 1С-снимок сохранён на backend. Обновляем только
@@ -263,8 +264,8 @@ export function EmployeeReportsWorkspace() {
                   queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
                 ]);
               }}
-              onPreview={(videoReportId) => {
-                const target = { memberId: active.member.id, videoReportId };
+              onPreview={() => {
+                const target = { memberId: active.member.id, reportDate: filters.to };
                 setPreviewTarget(target);
                 previewVideo.mutate(target);
               }}
@@ -292,7 +293,9 @@ export function EmployeeReportsWorkspace() {
           ) : previewVideo.data ? (
             <div className="rounded-xl border bg-muted/30 p-4">
               <p className="mb-3 text-xs font-medium text-muted-foreground">
-                🎥 Видеоролик будет прикреплён
+                {previewVideo.data.has_video
+                  ? "🎥 Видеоролик будет прикреплён"
+                  : "📝 Отчёт будет отправлен без видеоролика"}
               </p>
               <div
                 className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
@@ -355,7 +358,7 @@ function ReportPanel({
   selectedReportDate: string;
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
-  onPreview: (videoReportId: number) => void;
+  onPreview: () => void;
   isSending: boolean;
 }) {
   const gitReports = report.commits
@@ -363,6 +366,7 @@ function ReportPanel({
     .map((commit) => ({ commit, parsed: parseGitReport(commit.report_text) }));
   const git = gitReports[0]?.parsed;
   const video = report.videos[0];
+  const reportWasSent = Boolean(report.reportDelivery?.sent_at);
   const videosForPeriod = [...report.videos].sort((left, right) =>
     right.date.localeCompare(left.date),
   );
@@ -397,17 +401,19 @@ function ReportPanel({
                 alreadyUploaded={hasVideoForSelectedDate}
                 onUploaded={onUploaded}
               />
-              {video?.id ? (
-                <Button
-                  type="button"
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                  disabled={isSending}
-                  onClick={() => onPreview(video.id)}
-                >
-                  <Send className="h-4 w-4" />
-                  {isSending ? "Отправляем…" : "Отправить отчёт"}
-                </Button>
-              ) : null}
+              <Button
+                type="button"
+                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={isSending}
+                onClick={onPreview}
+              >
+                <Send className="h-4 w-4" />
+                {isSending
+                  ? "Отправляем…"
+                  : reportWasSent
+                    ? "Переотправить отчёт"
+                    : "Отправить отчёт"}
+              </Button>
             </div>
           ) : null}
         </div>

@@ -68,6 +68,11 @@ export type EmployeeReport = {
   activities: EmployeeActivity[];
   activeDays: number;
   lastActivity?: string;
+  reportDelivery?: {
+    sent_at: string;
+    sent_by_user_id: number;
+    video_report_id?: number | null;
+  } | null;
 };
 
 type ApiEmployee = Pick<
@@ -109,6 +114,11 @@ type ApiEmployeeDetail = {
     commit?: ReportCommit;
     video?: { video_url?: string | null };
   }>;
+  report_delivery?: {
+    sent_at: string;
+    sent_by_user_id: number;
+    video_report_id?: number | null;
+  } | null;
 };
 
 function list(value: unknown): unknown[] {
@@ -325,6 +335,18 @@ export const reportsService = {
       { method: "POST" },
     );
   },
+  async previewEmployeeReport(orgId: number, employeeId: number, reportDate: string) {
+    return apiFetch<{ caption: string; has_video: boolean }>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/report-notification/preview`,
+      { method: "POST", body: { reportDate } },
+    );
+  },
+  async sendEmployeeReport(orgId: number, employeeId: number, reportDate: string) {
+    return apiFetch<{ notification: { sent?: number; skipped?: string } }>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/report-notification/send`,
+      { method: "POST", body: { reportDate } },
+    );
+  },
 };
 
 function memberFromApi(employee: ApiEmployee): OrgMember {
@@ -389,6 +411,7 @@ function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
     activities,
     activeDays: data.employee.active_days,
     lastActivity: data.employee.last_activity ?? activities[0]?.date,
+    reportDelivery: data.report_delivery ?? null,
   };
 }
 
