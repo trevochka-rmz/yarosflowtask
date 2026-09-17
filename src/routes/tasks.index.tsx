@@ -207,17 +207,32 @@ function TasksPage() {
         )
         .map((member) => member.jira_username!.trim().toLowerCase()),
     );
-    const taskFlowUsers = users.filter((jiraUser) =>
+    const matchedTaskFlowUsers = users.filter((jiraUser) =>
       taskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
     );
     const externalJiraUsers = users.filter(
       (jiraUser) => !taskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
     );
-    const defaultTaskFlowUser = taskFlowUsers.find((jiraUser) =>
-      itTaskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
+    const currentItMember = taskFlowMembers.find(
+      (member) =>
+        member.user_id === userId &&
+        ["it", "ит"].includes(member.department_name?.trim().toLowerCase() ?? ""),
     );
+    const currentItUser = matchedTaskFlowUsers.find(
+      (jiraUser) =>
+        jiraUser.username.trim().toLowerCase() ===
+        currentItMember?.jira_username?.trim().toLowerCase(),
+    );
+    const taskFlowUsers = currentItUser
+      ? [currentItUser, ...matchedTaskFlowUsers.filter((jiraUser) => jiraUser !== currentItUser)]
+      : matchedTaskFlowUsers;
+    const defaultTaskFlowUser =
+      currentItUser ??
+      taskFlowUsers.find((jiraUser) =>
+        itTaskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
+      );
     return { taskFlowUsers, externalJiraUsers, defaultTaskFlowUser };
-  }, [createMembers.data, jiraUsers.data]);
+  }, [createMembers.data, jiraUsers.data, userId]);
 
   useEffect(() => {
     const projects = jiraProjects.data?.projects ?? [];

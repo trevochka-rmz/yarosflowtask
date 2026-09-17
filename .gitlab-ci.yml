@@ -23,5 +23,5 @@ deploy:
     - cat "$ENV_FILE" > .env
     - echo "Останавливаем старый контейнер (если есть)..."
     - docker rm -f $CI_PROJECT_NAME || true
-    - docker run -d --name $CI_PROJECT_NAME --env-file .env -p 3003:3003 $IMAGE_TAG
+    - docker run -d --name $CI_PROJECT_NAME --restart unless-stopped --env-file .env -p 3003:3003 $IMAGE_TAG
     - rm -f .env
