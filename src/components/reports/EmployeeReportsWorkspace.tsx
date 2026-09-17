@@ -310,8 +310,7 @@ export function EmployeeReportsWorkspace() {
           <DialogHeader>
             <DialogTitle>Предпросмотр уведомления</DialogTitle>
             <DialogDescription>
-              Так сообщение с прикреплённым видео будет выглядеть у Owner и автора. Оно не
-              отправлено.
+              Так сообщение будет выглядеть у руководства и у вас. Оно ещё не отправлено.
             </DialogDescription>
           </DialogHeader>
           {previewVideo.isPending ? (
@@ -323,6 +322,17 @@ export function EmployeeReportsWorkspace() {
                   ? "🎥 Видеоролик будет прикреплён"
                   : "📝 Отчёт будет отправлен без видеоролика"}
               </p>
+              {!previewVideo.data.has_video ? (
+                <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+                  Запишите и загрузите видеоотчёт — после этого ролик появится в уведомлении.
+                </p>
+              ) : null}
+              {!previewVideo.data.caption.includes("Краткая сводка из 1С") ? (
+                <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+                  Отчёт из 1С пока не найден. Сначала заполните отчёт в 1С — после обновления он
+                  появится здесь.
+                </p>
+              ) : null}
               <div
                 className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
                 dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
