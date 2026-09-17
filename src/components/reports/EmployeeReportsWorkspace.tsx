@@ -306,17 +306,18 @@ export function EmployeeReportsWorkspace() {
           if (!open && !sendVideo.isPending) setPreviewTarget(undefined);
         }}
       >
-        <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+        <DialogContent className="flex h-[85dvh] max-h-[85dvh] max-w-xl flex-col">
           <DialogHeader>
             <DialogTitle>Предпросмотр уведомления</DialogTitle>
             <DialogDescription>
               Так сообщение будет выглядеть у руководства и у вас. Оно ещё не отправлено.
             </DialogDescription>
           </DialogHeader>
-          {previewVideo.isPending ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Готовим предпросмотр…</p>
-          ) : previewVideo.data ? (
-            <div className="rounded-xl border bg-muted/30 p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            {previewVideo.isPending ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Готовим предпросмотр…</p>
+            ) : previewVideo.data ? (
+              <div className="rounded-xl border bg-muted/30 p-4">
               <p className="mb-3 text-xs font-medium text-muted-foreground">
                 {previewVideo.data.has_video
                   ? "🎥 Видеоролик будет прикреплён"
@@ -341,12 +342,13 @@ export function EmployeeReportsWorkspace() {
               <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
                 📋 Открыть отчёты сотрудника
               </p>
-            </div>
-          ) : (
-            <p className="py-8 text-center text-sm text-destructive">
-              Не удалось подготовить предпросмотр.
-            </p>
-          )}
+              </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-destructive">
+                Не удалось подготовить предпросмотр.
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button
               type="button"
