@@ -135,8 +135,8 @@ export function EmployeeReportsWorkspace() {
       const sent = Number(data.notification?.sent ?? 0);
       toast.success(
         sent > 0
-          ? "Полный видеоотчёт отправлен Owner и автору"
-          : "Отчёт подготовлен, но Owner с подключённым Telegram не найден",
+          ? "Полный отчёт отправлен руководству и вам"
+          : "Отчёт подготовлен, но руководитель с подключённым Telegram не найден",
       );
       setPreviewTarget(undefined);
       void queryClient.invalidateQueries({ queryKey: ["employee-report-detail", org?.id] });
@@ -448,8 +448,8 @@ function ReportPanel({
                 {isSending
                   ? "Отправляем…"
                   : reportWasSent
-                    ? "Переотправить отчёт"
-                    : "Отправить отчёт"}
+                    ? "Переотправить руководству и себе"
+                    : "Отправить руководству и себе"}
               </Button>
             </div>
           ) : null}
