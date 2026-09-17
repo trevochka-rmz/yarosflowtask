@@ -324,7 +324,8 @@ export function EmployeeReportsWorkspace() {
               </p>
               {!previewVideo.data.has_video ? (
                 <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  Запишите и загрузите видеоотчёт — после этого ролик появится в уведомлении.
+                  Чтобы добавить ролик, отмените этот предпросмотр, загрузите видеоотчёт и затем
+                  снова откройте отправку отчёта. Ролик не прикрепляется автоматически.
                 </p>
               ) : null}
               {!previewVideo.data.caption.includes("Краткая сводка из 1С") ? (
@@ -364,7 +365,7 @@ export function EmployeeReportsWorkspace() {
               }}
             >
               <Send className="h-4 w-4" />
-              {sendVideo.isPending ? "Отправляем…" : "Отправить Owner и себе"}
+              {sendVideo.isPending ? "Отправляем…" : "Отправить руководству и себе"}
             </Button>
           </DialogFooter>
         </DialogContent>
