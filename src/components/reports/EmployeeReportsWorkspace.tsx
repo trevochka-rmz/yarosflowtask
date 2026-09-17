@@ -14,6 +14,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
 import { orgApi, useCurrentOrg } from "@/lib/org";
@@ -49,6 +57,10 @@ export function EmployeeReportsWorkspace() {
   const [source, setSource] = useState<ReportType>("all");
   const [selected, setSelected] = useState<number>();
   const [tab, setTab] = useState<"overview" | "git" | "tasks" | "video">("overview");
+  const [previewTarget, setPreviewTarget] = useState<{
+    memberId: number;
+    videoReportId: number;
+  }>();
   const members = useQuery({
     queryKey: ["org-members", org?.id],
     queryFn: () => orgApi.members(org!.id),
@@ -108,10 +120,16 @@ export function EmployeeReportsWorkspace() {
       const sent = Number(data.notification?.sent ?? 0);
       toast.success(
         sent > 0
-          ? "Полный видеоотчёт отправлен Owner"
+          ? "Полный видеоотчёт отправлен Owner и автору"
           : "Отчёт подготовлен, но Owner с подключённым Telegram не найден",
       );
+      setPreviewTarget(undefined);
     },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const previewVideo = useMutation({
+    mutationFn: ({ memberId, videoReportId }: { memberId: number; videoReportId: number }) =>
+      reportsService.previewVideo(org!.id, memberId, videoReportId),
     onError: (error: Error) => toast.error(error.message),
   });
   // После успешной загрузки 1С-снимок сохранён на backend. Обновляем только
@@ -245,14 +263,73 @@ export function EmployeeReportsWorkspace() {
                   queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
                 ]);
               }}
-              onSend={(videoReportId) =>
-                sendVideo.mutateAsync({ memberId: active.member.id, videoReportId })
-              }
+              onPreview={(videoReportId) => {
+                const target = { memberId: active.member.id, videoReportId };
+                setPreviewTarget(target);
+                previewVideo.mutate(target);
+              }}
               isSending={sendVideo.isPending}
             />
           )}
         </div>
       )}
+      <Dialog
+        open={Boolean(previewTarget)}
+        onOpenChange={(open) => {
+          if (!open && !sendVideo.isPending) setPreviewTarget(undefined);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Предпросмотр уведомления</DialogTitle>
+            <DialogDescription>
+              Так сообщение с прикреплённым видео будет выглядеть у Owner и автора. Оно не
+              отправлено.
+            </DialogDescription>
+          </DialogHeader>
+          {previewVideo.isPending ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Готовим предпросмотр…</p>
+          ) : previewVideo.data ? (
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="mb-3 text-xs font-medium text-muted-foreground">
+                🎥 Видеоролик будет прикреплён
+              </p>
+              <div
+                className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
+                dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
+              />
+              <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
+                📋 Открыть отчёты сотрудника
+              </p>
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-destructive">
+              Не удалось подготовить предпросмотр.
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sendVideo.isPending}
+              onClick={() => setPreviewTarget(undefined)}
+            >
+              Отмена
+            </Button>
+            <Button
+              type="button"
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={!previewTarget || !previewVideo.data || sendVideo.isPending}
+              onClick={() => {
+                if (previewTarget) void sendVideo.mutateAsync(previewTarget);
+              }}
+            >
+              <Send className="h-4 w-4" />
+              {sendVideo.isPending ? "Отправляем…" : "Отправить Owner и себе"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -265,7 +342,7 @@ function ReportPanel({
   selectedReportDate,
   onUploaded,
   onDeleted,
-  onSend,
+  onPreview,
   isSending,
 }: {
   report: Awaited<ReturnType<typeof reportsService.getEmployee>> extends infer T
@@ -278,7 +355,7 @@ function ReportPanel({
   selectedReportDate: string;
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
-  onSend: (videoReportId: number) => Promise<unknown>;
+  onPreview: (videoReportId: number) => void;
   isSending: boolean;
 }) {
   const gitReports = report.commits
@@ -325,7 +402,7 @@ function ReportPanel({
                   type="button"
                   className="bg-emerald-600 hover:bg-emerald-700"
                   disabled={isSending}
-                  onClick={() => void onSend(video.id)}
+                  onClick={() => onPreview(video.id)}
                 >
                   <Send className="h-4 w-4" />
                   {isSending ? "Отправляем…" : "Отправить отчёт"}

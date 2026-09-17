@@ -319,6 +319,12 @@ export const reportsService = {
       { method: "POST" },
     );
   },
+  async previewVideo(orgId: number, employeeId: number, videoReportId: number) {
+    return apiFetch<{ caption: string; has_video: boolean }>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}/preview`,
+      { method: "POST" },
+    );
+  },
 };
 
 function memberFromApi(employee: ApiEmployee): OrgMember {
