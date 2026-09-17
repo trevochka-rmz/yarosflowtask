@@ -444,6 +444,26 @@ export function rangeFor(kind: string) {
     const date = shiftIsoDate(end, -1);
     return { from: date, to: date };
   }
+  // В общих отчётах текущий незавершённый день не учитываем: он доступен
+  // отдельно через «Сегодня». Неделя начинается в понедельник, месяц — с 1-го.
+  const yesterday = shiftIsoDate(end, -1);
+  if (kind === "7") {
+    const [year, month, day] = end.split("-").map(Number);
+    const mondayOffset = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+    const monday = shiftIsoDate(end, -mondayOffset);
+    // В понедельник в текущей неделе ещё нет завершённых дней; показываем
+    // предыдущий день, чтобы не отправлять в API некорректный пустой диапазон.
+    return monday <= yesterday
+      ? { from: monday, to: yesterday }
+      : { from: yesterday, to: yesterday };
+  }
+  if (kind === "30") {
+    const monthStart = `${end.slice(0, 7)}-01`;
+    // Аналогично: в первый день месяца доступен последний завершённый день.
+    return monthStart <= yesterday
+      ? { from: monthStart, to: yesterday }
+      : { from: yesterday, to: yesterday };
+  }
   const days = Number(kind);
   return { from: shiftIsoDate(end, -Math.max(0, days - 1)), to: end };
 }

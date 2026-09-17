@@ -353,12 +353,17 @@ function ReportPanel({
                   <h3 className="text-sm font-medium">{formatReportDay(commit.date)}</h3>
                   {parsed ? (
                     <>
-                      <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
-                        {parsed.summary}
-                      </p>
                       <p className="mt-2 text-sm font-medium">
                         Отработано: {parsed.workedHours || "не указано"}
                       </p>
+                      <details className="mt-3">
+                        <summary className="w-fit cursor-pointer rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-muted">
+                          Посмотреть полностью
+                        </summary>
+                        <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                          {parsed.raw}
+                        </p>
+                      </details>
                     </>
                   ) : (
                     <p className="mt-2 text-sm text-muted-foreground">
@@ -414,8 +419,8 @@ function ReportPanel({
           </h2>
           {report.tasks.length ? (
             report.tasks.map((t) => (
-              <div key={t.id} className="mt-3 flex justify-between text-sm">
-                <span>
+              <div key={t.id} className="mt-3 flex items-start gap-4 text-sm">
+                <span className="min-w-0 flex-1 break-words">
                   {t.jira_url ? (
                     <a className="text-primary" href={t.jira_url}>
                       {t.jira_key || t.id}
@@ -425,7 +430,7 @@ function ReportPanel({
                   )}{" "}
                   · {t.title}
                 </span>
-                <span className="text-muted-foreground">
+                <span className="shrink-0 text-right text-muted-foreground">
                   {STATUS_LABELS[t.status as keyof typeof STATUS_LABELS] || t.status}
                 </span>
               </div>
