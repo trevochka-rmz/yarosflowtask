@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Columns3, List, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
@@ -59,7 +59,12 @@ export const Route = createFileRoute("/tasks/")({
       project: string(search.project),
       assignee: string(search.assignee),
       dateMode: oneOf(search.dateMode, ["week", "today", "month", "all", "date", "range"]),
-      dateField: oneOf(search.dateField, ["updated_at", "created_at", "deadline", "last_synced_at"]),
+      dateField: oneOf(search.dateField, [
+        "updated_at",
+        "created_at",
+        "deadline",
+        "last_synced_at",
+      ]),
       exactDate: string(search.exactDate),
       dateFrom: string(search.dateFrom),
       dateTo: string(search.dateTo),
@@ -184,6 +189,25 @@ function TasksPage() {
     queryFn: () => integrationApi.jiraUsers(organizationId!, activeJira!.id, newProjectKey),
   });
 
+  // В Jira есть внешние пользователи, которых нет в TaskFlow. Сначала
+  // показываем сотрудников организации с сопоставленным jira_username,
+  // затем остальных пользователей Jira.
+  const jiraAssigneeGroups = useMemo(() => {
+    const users = jiraUsers.data?.users ?? [];
+    const taskFlowUsernames = new Set(
+      (createMembers.data ?? [])
+        .map((member) => member.jira_username?.trim().toLowerCase())
+        .filter((username): username is string => Boolean(username)),
+    );
+    const taskFlowUsers = users.filter((jiraUser) =>
+      taskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
+    );
+    const externalJiraUsers = users.filter(
+      (jiraUser) => !taskFlowUsernames.has(jiraUser.username.trim().toLowerCase()),
+    );
+    return { taskFlowUsers, externalJiraUsers };
+  }, [createMembers.data, jiraUsers.data]);
+
   useEffect(() => {
     const projects = jiraProjects.data?.projects ?? [];
     if (!projects.length) return;
@@ -193,6 +217,13 @@ function TasksPage() {
         : (projects.find((project) => project.key === "PREDEV")?.key ?? projects[0].key),
     );
   }, [jiraProjects.data]);
+
+  useEffect(() => {
+    if (!createOpen || !hasActiveJira || newAssignee || !jiraAssigneeGroups.taskFlowUsers.length) {
+      return;
+    }
+    setNewAssignee(jiraAssigneeGroups.taskFlowUsers[0].username);
+  }, [createOpen, hasActiveJira, jiraAssigneeGroups.taskFlowUsers, newAssignee]);
 
   const createTask = useMutation({
     mutationFn: async () => {
@@ -439,9 +470,7 @@ function TasksPage() {
               type="button"
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground sm:w-auto"
               disabled={syncJira.isPending}
-              onClick={() =>
-                syncJira.mutate({ maxResults: 100, hardCap: 0 })
-              }
+              onClick={() => syncJira.mutate({ maxResults: 100, hardCap: 0 })}
             >
               {syncJira.isPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -543,13 +572,26 @@ function TasksPage() {
                 >
                   <option value="">Без исполнителя</option>
                   {hasActiveJira
-                    ? (jiraUsers.data?.users ?? []).map((jiraUser) => {
-                        return (
-                          <option key={jiraUser.username} value={jiraUser.username}>
-                            {jiraUser.displayName} ({jiraUser.username})
-                          </option>
-                        );
-                      })
+                    ? [
+                        jiraAssigneeGroups.taskFlowUsers.length ? (
+                          <optgroup key="taskflow" label="Сотрудники TaskFlow">
+                            {jiraAssigneeGroups.taskFlowUsers.map((jiraUser) => (
+                              <option key={jiraUser.username} value={jiraUser.username}>
+                                {jiraUser.displayName} ({jiraUser.username})
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null,
+                        jiraAssigneeGroups.externalJiraUsers.length ? (
+                          <optgroup key="jira" label="Остальные пользователи Jira">
+                            {jiraAssigneeGroups.externalJiraUsers.map((jiraUser) => (
+                              <option key={jiraUser.username} value={jiraUser.username}>
+                                {jiraUser.displayName} ({jiraUser.username})
+                              </option>
+                            ))}
+                          </optgroup>
+                        ) : null,
+                      ]
                     : (createMembers.data ?? []).map((member) => (
                         <option key={member.id} value={member.user_id}>
                           {userLabel({
@@ -572,7 +614,9 @@ function TasksPage() {
                 </p>
               ) : null}
               {!hasActiveJira && !createMembers.isPending && !createMembers.data?.length ? (
-                <p className="mt-1 text-xs text-muted-foreground">В организации нет доступных участников.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  В организации нет доступных участников.
+                </p>
               ) : null}
             </div>
           </div>
