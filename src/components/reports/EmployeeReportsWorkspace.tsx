@@ -217,6 +217,7 @@ export function EmployeeReportsWorkspace() {
               canUpload={
                 Number(currentUser?.id) === Number((activeReport.data ?? active).member.user_id)
               }
+              isSingleDay={filters.from === filters.to}
               selectedReportDate={filters.to}
               onUploaded={() => {
                 void queryClient.invalidateQueries({
@@ -249,6 +250,7 @@ function ReportPanel({
   tab,
   setTab,
   canUpload,
+  isSingleDay,
   selectedReportDate,
   onUploaded,
   onDeleted,
@@ -261,14 +263,21 @@ function ReportPanel({
   tab: string;
   setTab: (tab: "overview" | "git" | "tasks" | "video") => void;
   canUpload: boolean;
+  isSingleDay: boolean;
   selectedReportDate: string;
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
   onSend: (videoReportId: number) => Promise<unknown>;
   isSending: boolean;
 }) {
-  const git = parseGitReport(report.commits.find((x) => x.report_text)?.report_text);
+  const gitReports = report.commits
+    .filter((commit) => commit.report_text)
+    .map((commit) => ({ commit, parsed: parseGitReport(commit.report_text) }));
+  const git = gitReports[0]?.parsed;
   const video = report.videos[0];
+  const videosForPeriod = [...report.videos].sort((left, right) =>
+    right.date.localeCompare(left.date),
+  );
   const reportDateLabel = new Intl.DateTimeFormat("ru-RU", {
     day: "numeric",
     month: "long",
@@ -296,7 +305,7 @@ function ReportPanel({
             <CalendarDays className="h-3.5 w-3.5" />
             Отчет за {reportDateLabel}
           </span>
-          {canUpload && report.member.video_report_eligible ? (
+          {isSingleDay && canUpload && report.member.video_report_eligible ? (
             <div className="flex flex-col gap-2">
               <VideoReportUpload
                 employee={report.member}
@@ -327,7 +336,43 @@ function ReportPanel({
           <TabsTrigger value="video">Видеоотчет</TabsTrigger>
         </TabsList>
       </Tabs>
-      {tab === "git" || tab === "overview" ? (
+      {!isSingleDay && (tab === "git" || tab === "overview") ? (
+        <article className="mt-4 rounded-xl border p-4">
+          <h2 className="font-semibold">Отчёты из 1С по дням</h2>
+          {gitReports.length ? (
+            <div className="mt-3 space-y-3">
+              {gitReports.map(({ commit, parsed }) => (
+                <div key={commit.date} className="rounded-lg border bg-muted/20 p-3">
+                  <h3 className="text-sm font-medium">
+                    {new Intl.DateTimeFormat("ru-RU", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    }).format(new Date(`${commit.date}T12:00:00`))}
+                  </h3>
+                  {parsed ? (
+                    <>
+                      <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
+                        {parsed.summary}
+                      </p>
+                      <p className="mt-2 text-sm font-medium">
+                        Отработано: {parsed.workedHours || "не указано"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Отчёт получен, но его текст пока не удалось разобрать.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyReport type="commits" />
+          )}
+        </article>
+      ) : null}
+      {isSingleDay && (tab === "git" || tab === "overview") ? (
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <article className="rounded-xl border p-4">
             <h2 className="font-semibold">Краткая сводка дня</h2>
@@ -393,11 +438,18 @@ function ReportPanel({
         <article className="mt-4 rounded-xl border p-4">
           <h2 className="flex gap-2 font-semibold">
             <FileVideo className="h-5 w-5 text-primary" />
-            Видеоотчет
+            {isSingleDay ? "Видеоотчет" : `Видеоотчёты за период (${videosForPeriod.length})`}
           </h2>
-          {video ? (
-            <div className="mt-3">
-              <VideoReportCard video={video} canDelete={canUpload} onDelete={onDeleted} />
+          {videosForPeriod.length ? (
+            <div className="mt-3 space-y-4">
+              {videosForPeriod.map((periodVideo) => (
+                <VideoReportCard
+                  key={periodVideo.id ?? `${periodVideo.date}-${periodVideo.url ?? "video"}`}
+                  video={periodVideo}
+                  canDelete={canUpload}
+                  onDelete={onDeleted}
+                />
+              ))}
             </div>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">Видеоотчета нет.</p>
