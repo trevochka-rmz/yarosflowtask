@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { formatDate } from "@/lib/api";
 import type { ReportVideo } from "@/lib/reports";
 
@@ -86,7 +87,7 @@ export function VideoReportCard({
     if (!video.id || !onDelete || isDeleting) return;
     if (
       !window.confirm(
-        "Удалить видеоотчет? Старый ролик будет перенесён в архив, после этого можно загрузить новый.",
+        "Удалить видеоотчет? Ролик и его подготовленные копии будут удалены из хранилища. После этого можно загрузить новый.",
       )
     ) {
       return;
@@ -96,7 +97,9 @@ export function VideoReportCard({
     try {
       await onDelete(video.id);
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : "Не удалось удалить видеоотчет");
+      const message = error instanceof Error ? error.message : "Не удалось удалить видеоотчет";
+      setDeleteError(message);
+      toast.error(message);
       setIsDeleting(false);
     }
   };
