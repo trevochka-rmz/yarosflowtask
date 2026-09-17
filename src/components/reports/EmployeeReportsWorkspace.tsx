@@ -249,11 +249,22 @@ export function EmployeeReportsWorkspace() {
               }
               isSingleDay={filters.from === filters.to}
               selectedReportDate={filters.to}
-              onUploaded={() => {
+              onUploaded={(uploaded) => {
                 void queryClient.invalidateQueries({
                   queryKey: ["employee-report-detail", org.id, active.member.id],
                 });
                 void queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] });
+                // После успешной загрузки сразу показываем именно то
+                // уведомление, которое сотрудник сможет отправить. Дата
+                // берётся из ответа API: пользователь мог выбрать прошлый
+                // день в форме загрузки.
+                const target = {
+                  memberId: active.member.id,
+                  reportDate: String(uploaded.report_date).slice(0, 10),
+                };
+                setTab("video");
+                setPreviewTarget(target);
+                previewVideo.mutate(target);
               }}
               onDeleted={async (videoReportId) => {
                 await reportsService.deleteVideo(org.id, active.member.id, videoReportId);

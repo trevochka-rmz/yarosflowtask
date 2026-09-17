@@ -13,7 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useCurrentOrg } from "@/lib/org";
-import { isoDate, MAX_VIDEO_REPORT_SIZE, reportsService } from "@/lib/reports";
+import {
+  isoDate,
+  MAX_VIDEO_REPORT_SIZE,
+  reportsService,
+  type UploadedVideoReport,
+} from "@/lib/reports";
 
 export function VideoReportUpload({
   employee,
@@ -22,7 +27,7 @@ export function VideoReportUpload({
   alreadyUploaded = false,
 }: {
   employee: { id: number; full_name: string | null };
-  onUploaded: () => void;
+  onUploaded: (uploaded: UploadedVideoReport) => void;
   defaultReportDate?: string;
   alreadyUploaded?: boolean;
 }) {
@@ -47,12 +52,12 @@ export function VideoReportUpload({
         abortController.signal,
       );
     },
-    onSuccess: () => {
+    onSuccess: (uploaded) => {
       setOpen(false);
       setFile(undefined);
       setFileError(undefined);
       setUploadProgress(undefined);
-      onUploaded();
+      onUploaded(uploaded);
     },
     onSettled: () => {
       uploadAbortRef.current = undefined;
