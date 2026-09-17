@@ -103,6 +103,14 @@ export function TaskAttachments({ taskId, userId }: { taskId: number; userId: nu
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  const open = async (item: Attachment) => {
+    try {
+      await api.openAttachment(item.id, item.file_name || "file");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось открыть файл");
+    }
+  };
+
   const query = useQuery({
     queryKey: ["attachments", taskId],
     queryFn: () => api.attachments(taskId),
@@ -155,7 +163,11 @@ export function TaskAttachments({ taskId, userId }: { taskId: number; userId: nu
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
         >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Paperclip className="h-4 w-4" />
+          )}
         </Button>
       </div>
 
@@ -176,6 +188,12 @@ export function TaskAttachments({ taskId, userId }: { taskId: number; userId: nu
                 target="_blank"
                 rel="noreferrer"
                 className="min-w-0 flex-1"
+                onClick={(event) => {
+                  if (String(item.url || "").startsWith("/attachments/")) {
+                    event.preventDefault();
+                    void open(item);
+                  }
+                }}
               >
                 <span className="block truncate text-sm font-medium hover:underline">
                   {item.file_name}

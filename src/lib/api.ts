@@ -23,10 +23,19 @@ export interface User {
   updated_at: string;
 }
 
-export type MyProfile = Pick<User,
-  "username" | "first_name" | "last_name" | "full_name" | "avatar_url" |
-  "telegram_photo_url" | "has_custom_avatar" | "is_active" | "last_activity" |
-  "created_at" | "updated_at"
+export type MyProfile = Pick<
+  User,
+  | "username"
+  | "first_name"
+  | "last_name"
+  | "full_name"
+  | "avatar_url"
+  | "telegram_photo_url"
+  | "has_custom_avatar"
+  | "is_active"
+  | "last_activity"
+  | "created_at"
+  | "updated_at"
 > & {
   organization_id?: number;
   jira_username?: string | null;
@@ -367,6 +376,23 @@ async function uploadFiles(taskId: number, uploadedBy: number, files: File[]) {
   return payload?.data ?? [];
 }
 
+async function openAttachment(id: number, fallbackName = "file") {
+  const response = await fetch(`${API_BASE_URL}/attachments/${id}/file`, {
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error(`Не удалось открыть файл (${response.status})`);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const tab = window.open(url, "_blank", "noopener,noreferrer");
+  if (!tab) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fallbackName;
+    link.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export const api = {
   me: () => apiFetch<{ user: User }>("/auth/me"),
   myProfile: (organizationId: number) =>
@@ -376,7 +402,8 @@ export const api = {
     body: { jira_username?: string | null; gitlab_username?: string | null },
   ) =>
     apiFetch<MyProfile>(`/users/me?organizationId=${organizationId}`, {
-      method: "PATCH", body,
+      method: "PATCH",
+      body,
     }),
   uploadMyAvatar,
   removeMyAvatar: (organizationId: number) =>
@@ -501,13 +528,16 @@ export const api = {
   deleteTask: (id: number, organizationId: number) =>
     apiFetch<unknown>(`/tasks/${id}?organizationId=${organizationId}`, { method: "DELETE" }),
   syncTaskFromJira: (id: number, organizationId: number) =>
-    apiFetch<{ ok: boolean }>(`/tasks/${id}/sync-jira?organizationId=${organizationId}`, { method: "POST" }),
+    apiFetch<{ ok: boolean }>(`/tasks/${id}/sync-jira?organizationId=${organizationId}`, {
+      method: "POST",
+    }),
   comments: (taskId: number) => apiFetch<Comment[]>(`/comments/task/${taskId}`),
   addComment: (taskId: number, authorId: number, body: string) =>
     apiFetch<Comment>("/comments", { method: "POST", body: { taskId, authorId, body } }),
   deleteComment: (id: number) => apiFetch<unknown>(`/comments/${id}`, { method: "DELETE" }),
   history: (taskId: number) => apiFetch<HistoryEntry[]>(`/history/task/${taskId}`),
   attachments: (taskId: number) => apiFetch<Attachment[]>(`/attachments/task/${taskId}`),
+  openAttachment,
   uploadAttachments: uploadFiles,
   deleteAttachment: (id: number) => apiFetch<unknown>(`/attachments/${id}`, { method: "DELETE" }),
   exportTask,
