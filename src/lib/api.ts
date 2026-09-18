@@ -37,6 +37,7 @@ export type MyProfile = Pick<
   | "created_at"
   | "updated_at"
 > & {
+  theme_preference: "light" | "dark";
   organization_id?: number;
   jira_username?: string | null;
   gitlab_username?: string | null;
@@ -405,6 +406,8 @@ export const api = {
       method: "PATCH",
       body,
     }),
+  updateTheme: (theme_preference: "light" | "dark") =>
+    apiFetch<MyProfile>("/users/me", { method: "PATCH", body: { theme_preference } }),
   uploadMyAvatar,
   removeMyAvatar: (organizationId: number) =>
     apiFetch<User>(`/users/me/avatar?organizationId=${organizationId}`, { method: "DELETE" }),

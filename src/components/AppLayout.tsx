@@ -20,6 +20,8 @@ import {
   ChevronDown,
   LayoutGrid,
   MessageSquare,
+  Moon,
+  Sun,
   ChartNoAxesColumnIncreasing,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
@@ -32,6 +34,7 @@ import { clearToken, getTelegramInitData } from "@/lib/auth";
 import { TelegramLoginPage } from "@/components/TelegramLoginPage";
 import {
   useCurrentOrg,
+  usePlatformUser,
   orgApi,
   AVAILABILITY_LABELS,
   SELF_STATUSES,
@@ -613,12 +616,35 @@ export function AppLayout({
   allowWithoutOrg?: boolean;
 }) {
   const { data: user, isLoading, isError } = useCurrentUser();
+  const themeProfile = usePlatformUser();
   const authPresent = useAuthPresence();
   const { org, hasNoOrg, isPlatformAdmin, can } = useCurrentOrg();
   const locked = hasNoOrg && !isPlatformAdmin;
   const queryClient = useQueryClient();
   const [inMiniApp, setInMiniApp] = React.useState(false);
+  const [theme, setTheme] = React.useState<"light" | "dark">("light");
+  const themeUpdate = useMutation({
+    mutationFn: (nextTheme: "light" | "dark") => api.updateTheme(nextTheme),
+    onMutate: (nextTheme) => {
+      setTheme(nextTheme);
+      document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["users-me"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+    },
+    onError: () => {
+      const saved = themeProfile.data?.theme_preference === "dark" ? "dark" : "light";
+      setTheme(saved);
+      document.documentElement.classList.toggle("dark", saved === "dark");
+    },
+  });
   React.useEffect(() => setInMiniApp(getTelegramInitData() !== null), []);
+  React.useEffect(() => {
+    const saved = themeProfile.data?.theme_preference === "dark" ? "dark" : "light";
+    setTheme(saved);
+    document.documentElement.classList.toggle("dark", saved === "dark");
+  }, [themeProfile.data?.theme_preference]);
   const canUseSite = authPresent || import.meta.env.DEV;
 
   if (!canUseSite || (isError && !inMiniApp)) {
@@ -663,6 +689,17 @@ export function AppLayout({
                     canAll={can("employee.update")}
                   />
                 ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => themeUpdate.mutate(theme === "dark" ? "light" : "dark")}
+                  disabled={themeUpdate.isPending}
+                  aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"}
+                  title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
 
                 {/* Имя — видно только на sm+ */}
                 <div className="hidden min-w-0 leading-tight sm:block">

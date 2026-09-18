@@ -149,6 +149,7 @@ export interface PlatformUser {
   last_name: string | null;
   full_name: string | null;
   avatar_url?: string | null;
+  theme_preference?: "light" | "dark";
   is_active: boolean;
   is_platform_admin?: boolean;
   last_activity: string | null;
