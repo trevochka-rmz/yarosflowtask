@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   CalendarDays,
   CheckCircle2,
@@ -44,17 +44,39 @@ function formatReportDay(value: unknown) {
   }).format(date);
 }
 
+function searchDate(value: unknown) {
+  const date = typeof value === "string" ? value : "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
+}
+
+function searchId(value: unknown) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+}
+
+function searchSource(value: unknown): ReportType {
+  return ["all", "commits", "tasks", "video"].includes(String(value))
+    ? (value as ReportType)
+    : "all";
+}
+
 export function EmployeeReportsWorkspace() {
   const { org } = useCurrentOrg();
   const { data: currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
-  const linkedMemberId = useRouterState({
-    select: (state) => Number(state.location.search.memberId) || undefined,
-  });
+  const navigate = useNavigate();
+  const routeSearch = useRouterState({ select: (state) => state.location.search });
+  const linkedMemberId = searchId(routeSearch.memberId);
   const appliedLinkedMemberId = useRef<number>();
   const today = isoDate(new Date());
-  const [filters, setFilters] = useState<ReportFilters>({ from: today, to: today });
-  const [source, setSource] = useState<ReportType>("all");
+  const [filters, setFilters] = useState<ReportFilters>(() => ({
+    from: searchDate(routeSearch.reportFrom) ?? today,
+    to: searchDate(routeSearch.reportTo) ?? today,
+    departmentId: searchId(routeSearch.reportDepartmentId),
+    memberId: searchId(routeSearch.reportMemberId),
+    search: typeof routeSearch.reportSearch === "string" ? routeSearch.reportSearch : undefined,
+  }));
+  const [source, setSource] = useState<ReportType>(() => searchSource(routeSearch.reportSource));
   const [selected, setSelected] = useState<number>();
   const [tab, setTab] = useState<"overview" | "git" | "tasks" | "video">("overview");
   const [previewTarget, setPreviewTarget] = useState<{
@@ -65,6 +87,27 @@ export function EmployeeReportsWorkspace() {
   const isCurrentOrgOwner = ["owner", "владелец"].includes(
     String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
   );
+  const updateFilters = (next: ReportFilters) => {
+    setFilters(next);
+    void navigate({
+      replace: true,
+      search: (previous) => ({
+        ...previous,
+        reportFrom: next.from,
+        reportTo: next.to,
+        reportDepartmentId: next.departmentId,
+        reportMemberId: next.memberId,
+        reportSearch: next.search || undefined,
+      }),
+    });
+  };
+  const updateSource = (next: ReportType) => {
+    setSource(next);
+    void navigate({
+      replace: true,
+      search: (previous) => ({ ...previous, reportSource: next === "all" ? undefined : next }),
+    });
+  };
   const members = useQuery({
     queryKey: ["org-members", org?.id],
     queryFn: () => orgApi.members(org!.id),
@@ -80,7 +123,7 @@ export function EmployeeReportsWorkspace() {
       ["it", "ит"].includes(department.name.trim().toLowerCase()),
     );
     if (it && filters.departmentId !== it.id)
-      setFilters((current) => ({ ...current, departmentId: it.id }));
+      updateFilters({ ...filters, departmentId: it.id });
   }, [departments.data, filters.departmentId]);
   const reports = useQuery({
     queryKey: ["employee-reports", org?.id, filters],
@@ -167,12 +210,12 @@ export function EmployeeReportsWorkspace() {
         filters={filters}
         departments={departments.data ?? []}
         members={members.data ?? []}
-        onChange={setFilters}
+        onChange={updateFilters}
       />
       <ReportTypeTabs
         type={source}
         onChange={(value) => {
-          setSource(value);
+          updateSource(value);
           setTab(
             value === "commits"
               ? "git"
