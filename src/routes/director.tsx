@@ -4,17 +4,21 @@ import { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  BarChart3,
   CheckCircle2,
+  CirclePlus,
   Clock,
   ListChecks,
   Loader2,
   Lock,
+  TrendingUp,
   UserCog,
   Users,
   Zap,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import { AssigneeAvatars, UserAvatar } from "@/components/UserAvatar";
 import { formatDate } from "@/lib/api";
 import {
   orgApi,
@@ -23,6 +27,7 @@ import {
   type DashboardTask,
   type DashboardActivity,
   type DashboardEmployee,
+  type DashboardTrendPoint,
   type AvailabilityStatus,
 } from "@/lib/org";
 import { cn } from "@/lib/utils";
@@ -99,7 +104,89 @@ function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | unde
       >
         {PRIORITY_LABEL[task.priority] ?? task.priority}
       </span>
+      <AssigneeAvatars assignees={task.assignees} sizeClassName="h-6 w-6" />
     </Link>
+  );
+}
+
+function TaskTrend({ points }: { points: DashboardTrendPoint[] }) {
+  const normalized = points.map((point) => ({
+    ...point,
+    updates: Number(point.updates) || 0,
+    completed: Number(point.completed) || 0,
+  }));
+  const maximum = Math.max(1, ...normalized.flatMap((point) => [point.updates, point.completed]));
+  const width = 680;
+  const height = 190;
+  const padding = 22;
+  const pointAt = (value: number, index: number) => {
+    const x = normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1);
+    const y = height - padding - ((height - padding * 2) * value) / maximum;
+    return `${x},${y}`;
+  };
+  const line = (key: "updates" | "completed") => normalized.map((point, index) => pointAt(point[key], index)).join(" ");
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 font-semibold text-foreground">
+            <TrendingUp className="h-4 w-4 text-primary" /> Динамика задач
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Действия и завершения за последние 7 дней</p>
+        </div>
+        <div className="flex gap-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-primary" /> Действия</span>
+          <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-500" /> Выполнено</span>
+        </div>
+      </div>
+      {normalized.length === 0 ? (
+        <p className="flex h-48 items-center justify-center text-sm text-muted-foreground">Пока нет данных для графика.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <svg viewBox={`0 0 ${width} ${height + 28}`} className="h-52 w-full" role="img" aria-label="Динамика задач за неделю">
+            {[0.25, 0.5, 0.75, 1].map((factor) => (
+              <line key={factor} x1="0" x2={width} y1={height - padding - (height - padding * 2) * factor} y2={height - padding - (height - padding * 2) * factor} className="stroke-border" strokeDasharray="3 5" />
+            ))}
+            <polyline fill="none" points={line("updates")} className="stroke-primary" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <polyline fill="none" points={line("completed")} className="stroke-emerald-500" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {normalized.map((point, index) => (
+              <g key={point.date}>
+                <circle cx={pointAt(point.updates, index).split(",")[0]} cy={pointAt(point.updates, index).split(",")[1]} r="4" className="fill-primary" />
+                <circle cx={pointAt(point.completed, index).split(",")[0]} cy={pointAt(point.completed, index).split(",")[1]} r="4" className="fill-emerald-500" />
+                <text x={normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1)} y={height + 18} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                  {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(new Date(`${point.date}T12:00:00`))}
+                </text>
+              </g>
+            ))}
+          </svg>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function StatusOverview({ counters }: { counters: { total: number; new: number; in_progress: number; waiting: number; completed: number; overdue: number } }) {
+  const items = [
+    { label: "Новые", value: counters.new, color: "bg-sky-500" },
+    { label: "В работе", value: counters.in_progress, color: "bg-violet-500" },
+    { label: "Ожидают", value: counters.waiting, color: "bg-amber-500" },
+    { label: "Выполнено", value: counters.completed, color: "bg-emerald-500" },
+    { label: "Просрочено", value: counters.overdue, color: "bg-rose-500" },
+  ];
+  const total = Math.max(1, counters.total);
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+      <h2 className="flex items-center gap-2 font-semibold text-foreground"><BarChart3 className="h-4 w-4 text-primary" /> Статус задач</h2>
+      <div className="mt-5 flex items-center gap-5">
+        <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#10b981 0deg ${(counters.completed / total) * 360}deg, #8b5cf6 ${(counters.completed / total) * 360}deg ${((counters.completed + counters.in_progress) / total) * 360}deg, #f59e0b ${((counters.completed + counters.in_progress) / total) * 360}deg ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg, #0ea5e9 ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg 360deg)` }}>
+          <div className="grid h-20 w-20 place-items-center rounded-full bg-card text-center"><b className="text-xl">{counters.total}</b><span className="-mt-5 text-[10px] text-muted-foreground">всего</span></div>
+        </div>
+        <ul className="min-w-0 flex-1 space-y-2">
+          {items.map((item) => <li key={item.label} className="flex items-center gap-2 text-sm"><i className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.color}`} /><span className="min-w-0 flex-1 text-muted-foreground">{item.label}</span><b>{item.value}</b><span className="w-9 text-right text-xs text-muted-foreground">{Math.round((item.value / total) * 100)}%</span></li>)}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -264,10 +351,7 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
         <ul className="mt-3 space-y-1">
           {shownSorted.map((e) => (
             <li key={e.user_id} className="flex items-center gap-3 rounded-xl px-2 py-2">
-              {/* Аватар-инициал */}
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
-                {(e.full_name || e.username || "?").charAt(0).toUpperCase()}
-              </div>
+              <UserAvatar avatarUrl={e.avatar_url} name={e.full_name || e.username} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">
                   {e.full_name || (e.username ? `@${e.username}` : `#${e.user_id}`)}
@@ -306,7 +390,7 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
 ═══════════════════════════════════════════ */
 function DirectorPage() {
   const { org, can, isLoading: orgLoading } = useCurrentOrg();
-  const canView = can("organization.update");
+  const canView = can("task.read");
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["director-dashboard", org?.id],
@@ -334,7 +418,7 @@ function DirectorPage() {
         </h1>
         <p className="mt-4 flex items-start gap-2 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
           <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-          Для доступа нужно право <code>organization.update</code>.
+          Для доступа нужно право <code>task.read</code>.
         </p>
       </AppLayout>
     );
@@ -350,17 +434,21 @@ function DirectorPage() {
 
   return (
     <AppLayout>
-      {/* Заголовок */}
+      {/* Заголовок и действия */}
+      <div className="rounded-3xl border border-border bg-surface-gradient p-5 shadow-soft sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
-            Директорский центр
-          </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{org.name}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Управление организацией</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">Директорский центр</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{org.name} · оперативная картина по задачам и команде</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isPending}>
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить"}
-        </Button>
+        <div className="flex w-full gap-2 sm:w-auto">
+          <Button asChild className="flex-1 sm:flex-none"><Link to="/taskflow"><CirclePlus className="h-4 w-4" /> Создать задачу</Link></Button>
+          <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isPending}>
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить"}
+          </Button>
+        </div>
+      </div>
       </div>
 
       {isPending ? (
@@ -419,13 +507,9 @@ function DirectorPage() {
             />
           </div>
 
-          {/* ── Быстрая ссылка на все задачи ── */}
-          <div className="flex justify-end">
-            <Button asChild variant="outline" size="sm">
-              <Link to="/tasks">
-                <ListChecks className="mr-1.5 h-4 w-4" /> Все задачи
-              </Link>
-            </Button>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)]">
+            <TaskTrend points={data.task_trend ?? []} />
+            <StatusOverview counters={data.counters} />
           </div>
 
           {/* ── Три блока задач (2 колонки на md) ── */}

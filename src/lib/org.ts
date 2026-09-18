@@ -556,12 +556,19 @@ export interface DashboardActivity {
 }
 
 export interface DashboardEmployee {
+  membership_id?: number;
   user_id: number;
   full_name: string | null;
   username?: string | null;
   avatar_url?: string | null;
   availability_status: AvailabilityStatus | null;
   role_name: string | null;
+}
+
+export interface DashboardTrendPoint {
+  date: string;
+  updates: number;
+  completed: number;
 }
 
 /* ----------------------------- Bitrix24 types ----------------------------- */
@@ -643,6 +650,7 @@ export interface OrgDashboard {
   waiting_tasks: DashboardTask[];
   recent_activity: DashboardActivity[];
   employees: DashboardEmployee[];
+  task_trend?: DashboardTrendPoint[];
 }
 
 /* --------------------------- выбранная организация ------------------------- */

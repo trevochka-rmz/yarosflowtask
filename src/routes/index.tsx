@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -71,11 +71,20 @@ const FEATURES = [
 
 function Landing() {
   const { tenant, tenants, isLoading, canCreateTenant } = useCurrentTenant();
-  const { can } = useCurrentOrg();
+  const { can, org, isLoading: orgLoading } = useCurrentOrg();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Для роли Director стартовая страница — рабочая сводка.
+  // Другие роли, включая Owner, продолжают видеть обычную главную.
+  useEffect(() => {
+    const role = String(org?.role_code || org?.role_name || "").trim().toLowerCase();
+    if (!orgLoading && ["director", "директор"].includes(role)) {
+      void navigate({ to: "/director", replace: true });
+    }
+  }, [navigate, org?.role_code, org?.role_name, orgLoading]);
 
   const create = useMutation({
     mutationFn: () =>
