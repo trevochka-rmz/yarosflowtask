@@ -28,6 +28,7 @@ import {
   type DashboardActivity,
   type DashboardEmployee,
   type DashboardTrendPoint,
+  type DashboardProjectProgress,
   type AvailabilityStatus,
 } from "@/lib/org";
 import { cn } from "@/lib/utils";
@@ -186,6 +187,45 @@ function StatusOverview({ counters }: { counters: { total: number; new: number; 
           {items.map((item) => <li key={item.label} className="flex items-center gap-2 text-sm"><i className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.color}`} /><span className="min-w-0 flex-1 text-muted-foreground">{item.label}</span><b>{item.value}</b><span className="w-9 text-right text-xs text-muted-foreground">{Math.round((item.value / total) * 100)}%</span></li>)}
         </ul>
       </div>
+    </section>
+  );
+}
+
+function ProjectProgress({ projects }: { projects: DashboardProjectProgress[] }) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-4 w-4 text-primary" /> Прогресс по проектам</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">По активным задачам: выполнено / всего</p>
+        </div>
+        <Button asChild variant="ghost" size="sm" className="h-8 text-xs"><Link to="/tasks">Все задачи <ArrowRight className="h-3.5 w-3.5" /></Link></Button>
+      </div>
+      {projects.length === 0 ? (
+        <p className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">Задач по проектам пока нет.</p>
+      ) : (
+        <ul className="mt-4 space-y-4">
+          {projects.map((project) => {
+            const total = Math.max(1, Number(project.total) || 0);
+            const completed = Number(project.completed) || 0;
+            const inProgress = Number(project.in_progress) || 0;
+            const percent = Math.round((completed / total) * 100);
+            return (
+              <li key={project.project_key}>
+                <div className="flex items-baseline gap-3">
+                  <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" title={project.project_name}>{project.project_name}</p>
+                  <b className="shrink-0 text-sm">{percent}%</b>
+                  <span className="shrink-0 text-xs text-muted-foreground">{completed}/{total}</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${percent}%` }} />
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">В работе: {inProgress}</p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }
@@ -513,6 +553,8 @@ function DirectorPage() {
             <TaskTrend points={data.task_trend ?? []} />
             <StatusOverview counters={data.counters} />
           </div>
+
+          <ProjectProgress projects={data.project_progress ?? []} />
 
           {/* ── Три блока задач (2 колонки на md) ── */}
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

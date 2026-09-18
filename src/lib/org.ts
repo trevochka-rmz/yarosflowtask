@@ -572,6 +572,14 @@ export interface DashboardTrendPoint {
   completed: number;
 }
 
+export interface DashboardProjectProgress {
+  project_key: string;
+  project_name: string;
+  total: number;
+  completed: number;
+  in_progress: number;
+}
+
 /* ----------------------------- Bitrix24 types ----------------------------- */
 
 export interface BitrixIntegration {
@@ -652,6 +660,7 @@ export interface OrgDashboard {
   recent_activity: DashboardActivity[];
   employees: DashboardEmployee[];
   task_trend?: DashboardTrendPoint[];
+  project_progress?: DashboardProjectProgress[];
 }
 
 /* --------------------------- выбранная организация ------------------------- */
