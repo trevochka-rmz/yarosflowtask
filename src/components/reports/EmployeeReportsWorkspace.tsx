@@ -60,7 +60,11 @@ export function EmployeeReportsWorkspace() {
   const [previewTarget, setPreviewTarget] = useState<{
     memberId: number;
     reportDate: string;
+    ownerSendingForOther?: boolean;
   }>();
+  const isCurrentOrgOwner = ["owner", "владелец"].includes(
+    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
+  );
   const members = useQuery({
     queryKey: ["org-members", org?.id],
     queryFn: () => orgApi.members(org!.id),
@@ -262,6 +266,14 @@ export function EmployeeReportsWorkspace() {
               canUpload={
                 Number(currentUser?.id) === Number((activeReport.data ?? active).member.user_id)
               }
+              canSend={
+                Number(currentUser?.id) === Number((activeReport.data ?? active).member.user_id) ||
+                isCurrentOrgOwner
+              }
+              ownerSendingForOther={
+                isCurrentOrgOwner &&
+                Number(currentUser?.id) !== Number((activeReport.data ?? active).member.user_id)
+              }
               isSingleDay={filters.from === filters.to}
               selectedReportDate={filters.to}
               onUploaded={(uploaded) => {
@@ -276,6 +288,7 @@ export function EmployeeReportsWorkspace() {
                 const target = {
                   memberId: active.member.id,
                   reportDate: String(uploaded.report_date).slice(0, 10),
+                  ownerSendingForOther: false,
                 };
                 setTab("video");
                 setPreviewTarget(target);
@@ -291,7 +304,12 @@ export function EmployeeReportsWorkspace() {
                 ]);
               }}
               onPreview={() => {
-                const target = { memberId: active.member.id, reportDate: filters.to };
+                const target = {
+                  memberId: active.member.id,
+                  reportDate: filters.to,
+                  ownerSendingForOther:
+                    isCurrentOrgOwner && Number(currentUser?.id) !== Number(active.member.user_id),
+                };
                 setPreviewTarget(target);
                 previewVideo.mutate(target);
               }}
@@ -310,7 +328,9 @@ export function EmployeeReportsWorkspace() {
           <DialogHeader>
             <DialogTitle>Предпросмотр уведомления</DialogTitle>
             <DialogDescription>
-              Так сообщение будет выглядеть у руководства и у вас. Оно ещё не отправлено.
+              {previewTarget?.ownerSendingForOther
+                ? "Так сообщение будет выглядеть у получателей отчёта. Самому сотруднику оно не отправится."
+                : "Так сообщение будет выглядеть у руководства и у вас. Оно ещё не отправлено."}
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -367,7 +387,11 @@ export function EmployeeReportsWorkspace() {
               }}
             >
               <Send className="h-4 w-4" />
-              {sendVideo.isPending ? "Отправляем…" : "Отправить руководству и себе"}
+              {sendVideo.isPending
+                ? "Отправляем…"
+                : previewTarget?.ownerSendingForOther
+                  ? "Отправить руководству"
+                  : "Отправить руководству и себе"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -380,6 +404,8 @@ function ReportPanel({
   tab,
   setTab,
   canUpload,
+  canSend,
+  ownerSendingForOther,
   isSingleDay,
   selectedReportDate,
   onUploaded,
@@ -393,6 +419,8 @@ function ReportPanel({
   tab: string;
   setTab: (tab: "overview" | "git" | "tasks" | "video") => void;
   canUpload: boolean;
+  canSend: boolean;
+  ownerSendingForOther: boolean;
   isSingleDay: boolean;
   selectedReportDate: string;
   onUploaded: () => void;
@@ -432,27 +460,35 @@ function ReportPanel({
             <CalendarDays className="h-3.5 w-3.5" />
             Отчет за {reportDateLabel}
           </span>
-          {isSingleDay && canUpload && report.member.video_report_eligible ? (
+          {isSingleDay && report.member.video_report_eligible && (canUpload || canSend) ? (
             <div className="flex flex-col gap-2">
-              <VideoReportUpload
-                employee={report.member}
-                defaultReportDate={selectedReportDate}
-                alreadyUploaded={hasVideoForSelectedDate}
-                onUploaded={onUploaded}
-              />
-              <Button
-                type="button"
-                className="bg-emerald-600 hover:bg-emerald-700"
-                disabled={isSending}
-                onClick={onPreview}
-              >
-                <Send className="h-4 w-4" />
-                {isSending
-                  ? "Отправляем…"
-                  : reportWasSent
-                    ? "Переотправить руководству и себе"
-                    : "Отправить руководству и себе"}
-              </Button>
+              {canUpload ? (
+                <VideoReportUpload
+                  employee={report.member}
+                  defaultReportDate={selectedReportDate}
+                  alreadyUploaded={hasVideoForSelectedDate}
+                  onUploaded={onUploaded}
+                />
+              ) : null}
+              {canSend ? (
+                <Button
+                  type="button"
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                  disabled={isSending}
+                  onClick={onPreview}
+                >
+                  <Send className="h-4 w-4" />
+                  {isSending
+                    ? "Отправляем…"
+                    : reportWasSent
+                      ? ownerSendingForOther
+                        ? "Переотправить руководству"
+                        : "Переотправить руководству и себе"
+                      : ownerSendingForOther
+                        ? "Отправить руководству"
+                        : "Отправить руководству и себе"}
+                </Button>
+              ) : null}
             </div>
           ) : null}
         </div>

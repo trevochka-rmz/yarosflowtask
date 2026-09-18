@@ -20,6 +20,7 @@ export interface MyOrganization extends Organization {
   membership_id: number;
   role_id: number;
   role_name: string;
+  role_code?: string | null;
   department_id: number | null;
   permissions: string[];
 }
