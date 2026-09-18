@@ -64,10 +64,10 @@ function statusDotColor(s: AvailabilityStatus | null) {
 
 /* ── Цвет приоритета ── */
 const PRIORITY_BADGE: Record<string, string> = {
-  low: "bg-slate-100 text-slate-600",
-  medium: "bg-blue-100 text-blue-700",
-  high: "bg-amber-100 text-amber-700",
-  critical: "bg-red-100 text-red-700",
+  low: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200",
+  medium: "bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-200",
+  high: "bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-200",
+  critical: "bg-red-100 text-red-700 dark:bg-red-950/70 dark:text-red-200",
 };
 const PRIORITY_LABEL: Record<string, string> = {
   low: "Низкий",
@@ -472,23 +472,25 @@ function DirectorPage() {
             <CounterCard
               label="Новые"
               value={data.counters.new}
-              color="border-blue-200 bg-blue-50"
+              color="border-blue-200 bg-blue-50 dark:border-blue-900/70 dark:bg-blue-950/35"
             />
             <CounterCard
               label="В работе"
               value={data.counters.in_progress}
-              color="border-indigo-200 bg-indigo-50"
+              color="border-indigo-200 bg-indigo-50 dark:border-indigo-900/70 dark:bg-indigo-950/35"
             />
             <CounterCard
               label="Ожидание"
               value={data.counters.waiting}
-              color="border-amber-200 bg-amber-50"
+              color="border-amber-200 bg-amber-50 dark:border-amber-900/70 dark:bg-amber-950/35"
             />
             <CounterCard
               label="Просрочено"
               value={data.counters.overdue}
               color={
-                data.counters.overdue > 0 ? "border-red-200 bg-red-50" : "border-border bg-card"
+                data.counters.overdue > 0
+                  ? "border-red-200 bg-red-50 dark:border-red-900/70 dark:bg-red-950/35"
+                  : "border-border bg-card"
               }
             />
             <CounterCard
@@ -496,14 +498,14 @@ function DirectorPage() {
               value={data.counters.unassigned}
               color={
                 data.counters.unassigned > 0
-                  ? "border-orange-200 bg-orange-50"
+                  ? "border-orange-200 bg-orange-50 dark:border-orange-900/70 dark:bg-orange-950/35"
                   : "border-border bg-card"
               }
             />
             <CounterCard
               label="Выполнено"
               value={data.counters.completed}
-              color="border-emerald-200 bg-emerald-50"
+              color="border-emerald-200 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/35"
             />
           </div>
 
