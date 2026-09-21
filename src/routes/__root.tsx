@@ -162,13 +162,23 @@ function RootComponent() {
   useEffect(() => {
     const tg = (
       window as unknown as {
-        Telegram?: { WebApp?: { ready?: () => void; expand?: () => void } };
+        Telegram?: {
+          WebApp?: {
+            ready?: () => void;
+            expand?: () => void;
+            disableVerticalSwipes?: () => void;
+          };
+        };
       }
     ).Telegram?.WebApp;
 
     if (tg) {
       tg.ready?.();
       tg.expand?.();
+      // В Mini App прокрутка начинается прямо под шапкой. Отключаем жест
+      // вертикального свайпа Telegram, чтобы приложение не сворачивалось
+      // во время обычной прокрутки содержимого.
+      tg.disableVerticalSwipes?.();
     }
 
     // initData появляется не мгновенно — обновляем /auth/me

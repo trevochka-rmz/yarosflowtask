@@ -60,7 +60,7 @@ function EmployeeReportPage() {
     );
   return (
     <AppLayout wide>
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <Link
           to="/reports"
           className="inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -138,7 +138,7 @@ function EmployeeReportContent({
   const completed = report.tasks.filter(hasCompletedTask).length;
   return (
     <>
-      <header className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <header className="min-w-0 overflow-hidden flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <UserAvatar
             avatarUrl={report.member.avatar_url}
@@ -146,7 +146,7 @@ function EmployeeReportContent({
             className="h-14 w-14"
           />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">
+            <h1 className="break-words text-2xl font-semibold tracking-tight">
               {report.member.full_name || report.member.username || "Сотрудник"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -221,7 +221,7 @@ function ActivityTimeline({ activities }: { activities: EmployeeActivity[] }) {
   }, [activities]);
   if (!groups.length) return <EmptyReport />;
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft">
       <h2 className="font-semibold">Лента активности</h2>
       <div className="mt-5 space-y-6">
         {groups.map(([day, records]) => (
@@ -237,11 +237,11 @@ function ActivityTimeline({ activities }: { activities: EmployeeActivity[] }) {
                   <span
                     className={`absolute -left-[1.55rem] top-1.5 h-2 w-2 rounded-full ${activity.kind === "commits" ? "bg-blue-500" : activity.kind === "tasks" ? "bg-violet-500" : "bg-amber-500"}`}
                   />
-                  <div className="flex gap-3">
+                  <div className="flex min-w-0 gap-3">
                     <time className="w-10 text-xs text-muted-foreground">
                       {formatDate(activity.date).slice(-5)}
                     </time>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium">
                         {activity.kind === "commits"
                           ? "Commit"
@@ -249,7 +249,7 @@ function ActivityTimeline({ activities }: { activities: EmployeeActivity[] }) {
                             ? "Задача обновлена"
                             : "Видеоотчет"}
                       </p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">{activity.title}</p>
+                      <p className="mt-0.5 break-words text-sm text-muted-foreground">{activity.title}</p>
                       {activity.detail && (
                         <p className="mt-0.5 text-xs text-muted-foreground">{activity.detail}</p>
                       )}
@@ -267,7 +267,7 @@ function ActivityTimeline({ activities }: { activities: EmployeeActivity[] }) {
 function TasksTable({ report }: { report: EmployeeReport }) {
   if (!report.tasks.length) return <EmptyReport type="tasks" />;
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="border-b border-border px-5 py-4">
         <h2 className="font-semibold">Задачи</h2>
       </div>
@@ -320,7 +320,7 @@ function TasksTable({ report }: { report: EmployeeReport }) {
 function CommitsTable({ report }: { report: EmployeeReport }) {
   if (!report.commits.length) return <EmptyReport type="commits" />;
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="border-b border-border px-5 py-4">
         <h2 className="font-semibold">Коммиты</h2>
       </div>

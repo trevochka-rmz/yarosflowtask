@@ -205,7 +205,7 @@ export function EmployeeReportsWorkspace() {
   }, [activeReport.dataUpdatedAt, activeReport.data?.commits.length, org?.id, queryClient]);
   if (!org) return <p className="text-sm text-muted-foreground">Выберите организацию.</p>;
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <ReportsHeader
         filters={filters}
         departments={departments.data ?? []}
@@ -485,15 +485,15 @@ function ReportPanel({
     (item) => isoDate(new Date(item.date)) === selectedReportDate,
   );
   return (
-    <section className="rounded-2xl border bg-card p-5">
+    <section className="min-w-0 overflow-hidden rounded-2xl border bg-card p-5">
       <header className="flex flex-wrap items-center gap-3">
         <UserAvatar
           avatarUrl={report.member.avatar_url}
           name={report.member.full_name}
           className="h-14 w-14"
         />
-        <div>
-          <h1 className="text-xl font-semibold">{report.member.full_name}</h1>
+        <div className="min-w-0">
+          <h1 className="break-words text-xl font-semibold">{report.member.full_name}</h1>
           <p className="text-sm text-muted-foreground">
             {report.member.department_name || report.member.role_name || "Сотрудник"}
           </p>
