@@ -121,7 +121,7 @@ function TaskDetail() {
     mutationFn: (userIds: number[]) => api.assign(id, organizationId ?? 0, userIds),
     onSuccess: () => {
       invalidate();
-      toast.success("Исполнитель обновлён");
+      toast.success("Исполнители обновлены");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -188,6 +188,14 @@ function TaskDetail() {
   const jiraUrl = task.jira_url || task.external_url;
   const jiraStatus = task.jira_status || task.external_status;
   const jiraAssignee = task.jira_assignee || task.external_assignee_name;
+  const jiraAssignees = [
+    ...new Set(
+      (task.assignees ?? [])
+        .filter((assignee) => assignee.jira_username)
+        .map((assignee) => userLabel(assignee)),
+    ),
+  ];
+  if (!jiraAssignees.length && jiraAssignee) jiraAssignees.push(jiraAssignee);
   const jiraProjectKey = task.jira_project_key || task.external_project_key;
   const jiraProjectName = task.jira_project_name || task.external_project_name;
   const jiraReporter = task.jira_reporter || task.external_reporter_name;
@@ -280,9 +288,9 @@ function TaskDetail() {
                                 {STATUS_LABELS[task.status]}
                               </div>
                             )}
-                            {jiraAssignee && (
+                            {jiraAssignees.length > 0 && (
                               <div>
-                                Исполнитель (Jira): <span>{jiraAssignee}</span>
+                                Исполнители (Jira): <span>{jiraAssignees.join(", ")}</span>
                               </div>
                             )}
                             {jiraUrl && (
@@ -493,7 +501,7 @@ function TaskDetail() {
                     {[jiraProjectName, jiraProjectKey].filter(Boolean).join(" · ") || "—"}
                   </dd>
                 </div>
-                <TaskMeta label="Исполнитель Jira" value={jiraAssignee} />
+                <TaskMeta label="Исполнители Jira" value={jiraAssignees.join(", ") || null} />
                 <TaskMeta
                   label="Логин исполнителя"
                   value={task.jira_assignee_key || task.external_assignee_key}
@@ -511,7 +519,7 @@ function TaskDetail() {
 
           <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Исполнитель</h2>
+              <h2 className="text-lg font-semibold">Исполнители</h2>
             </div>
             {task.assignees?.length ? (
               <ul className="mt-3 space-y-1 text-sm">
@@ -554,7 +562,7 @@ function TaskDetail() {
               <div className="mt-4 border-t border-border pt-4 space-y-4">
                 <div>
                   <p className="text-sm font-medium">
-                    {isJira ? "Сменить исполнителя" : "Изменить исполнителей"}
+                    Изменить исполнителей
                   </p>
                   <div className="mt-2 max-h-40 space-y-1 overflow-y-auto">
                     {members.data?.map((m) => (
@@ -563,13 +571,11 @@ function TaskDetail() {
                         className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent/50"
                       >
                         <input
-                          type={isJira ? "radio" : "checkbox"}
-                          name={isJira ? "jira-assignee" : undefined}
+                          type="checkbox"
                           className="accent-primary"
                           checked={selected.includes(m.user_id)}
                           onChange={(e) =>
                             setSelected((prev) => {
-                              if (isJira) return e.target.checked ? [m.user_id] : [];
                               return e.target.checked
                                 ? [...prev, m.user_id]
                                 : prev.filter((x) => x !== m.user_id);
