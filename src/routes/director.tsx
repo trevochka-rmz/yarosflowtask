@@ -81,10 +81,10 @@ function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | unde
     <Link
       to="/tasks/$taskId"
       params={{ taskId: String(task.id) }}
-      className="flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/30"
+      className="flex min-w-0 items-start gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/30"
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{task.title}</p>
+        <p className="break-words text-sm font-medium text-foreground">{task.title}</p>
         {task.deadline && (
           <p className={cn("mt-0.5 text-xs", accent ?? "text-muted-foreground")}>
             <Clock className="mr-1 inline h-3 w-3" />
@@ -97,7 +97,7 @@ function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | unde
       </div>
       <span
         className={cn(
-          "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+          "max-w-24 shrink-0 truncate rounded-full px-2 py-0.5 text-xs font-medium",
           PRIORITY_BADGE[task.priority] ?? "bg-muted text-muted-foreground",
         )}
       >
@@ -151,7 +151,7 @@ function TaskTrend({
     normalized.map((point, index) => pointAt(point[key], index)).join(" ");
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 font-semibold text-foreground">
@@ -242,9 +242,9 @@ function StatusOverview({ counters }: { counters: { total: number; new: number; 
 
 function ProjectProgress({ projects }: { projects: DashboardProjectProgress[] }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-4 w-4 text-primary" /> Прогресс по проектам</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">По активным задачам: выполнено / всего</p>
         </div>
@@ -261,8 +261,8 @@ function ProjectProgress({ projects }: { projects: DashboardProjectProgress[] })
             const percent = Math.round((completed / total) * 100);
             return (
               <li key={project.project_key}>
-                <div className="flex items-baseline gap-3">
-                  <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" title={project.project_name}>{project.project_name}</p>
+                <div className="flex min-w-0 items-baseline gap-3">
+                  <p className="min-w-0 flex-1 break-words text-sm font-medium text-foreground" title={project.project_name}>{project.project_name}</p>
                   <b className="shrink-0 text-sm">{percent}%</b>
                   <span className="shrink-0 text-xs text-muted-foreground">{completed}/{total}</span>
                 </div>
@@ -300,7 +300,7 @@ function TaskBlock({
   const shown = expanded ? tasks : tasks.slice(0, PREVIEW);
 
   return (
-    <div className="rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
       <div className="flex items-center gap-2">
         <Icon className={cn("h-4 w-4 shrink-0", iconColor ?? "text-muted-foreground")} />
         <h3 className="font-semibold text-foreground">{title}</h3>
@@ -357,7 +357,7 @@ function ActivityFeed({ items }: { items: DashboardActivity[] }) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? items : items.slice(0, 8);
   return (
-    <div className="rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
       <h3 className="font-semibold text-foreground">Лента действий</h3>
       {items.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">Активности пока нет.</p>
@@ -434,7 +434,7 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
   const shownSorted = expanded ? sorted : sorted.slice(0, previewSize);
 
   return (
-    <div className="rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold text-foreground">Сотрудники</h3>
         <Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-xs">
@@ -449,10 +449,10 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
       ) : (
         <ul className="mt-3 space-y-1">
           {shownSorted.map((e) => (
-            <li key={e.user_id} className="flex items-center gap-3 rounded-xl px-2 py-2">
+            <li key={e.user_id} className="flex min-w-0 items-center gap-3 rounded-xl px-2 py-2">
               <UserAvatar avatarUrl={e.avatar_url} name={e.full_name || e.username} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
+                <p className="break-words text-sm font-medium text-foreground">
                   {e.full_name || (e.username ? `@${e.username}` : `#${e.user_id}`)}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">{e.role_name ?? "—"}</p>
@@ -619,7 +619,7 @@ function DirectorPage() {
           </div>
 
           {/* На широком экране ключевые рабочие блоки стоят рядом. */}
-          <div className="mx-auto grid w-full max-w-xl items-start gap-4 xl:max-w-none xl:grid-cols-3">
+          <div className="mx-auto grid w-full min-w-0 max-w-xl items-start gap-4 xl:max-w-none xl:grid-cols-3">
             <ProjectProgress projects={data.project_progress ?? []} />
             <TaskBlock
               title="Последние задачи"

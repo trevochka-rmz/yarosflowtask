@@ -236,8 +236,8 @@ export function EmployeeReportsWorkspace() {
       ) : !active ? (
         <EmptyReport />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-[29%_1fr]">
-          <aside className="overflow-hidden rounded-2xl border bg-card">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-[29%_1fr]">
+          <aside className="min-w-0 overflow-hidden rounded-2xl border bg-card">
             <div className="border-b p-4">
               <b>Сотрудники</b>
             </div>
@@ -250,7 +250,7 @@ export function EmployeeReportsWorkspace() {
                 <button
                   key={report.member.id}
                   onClick={() => setSelected(report.member.id)}
-                  className={`flex w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
+                  className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
                 >
                   <EmployeeName member={report.member} compact />
                   {isCurrentUser ? (

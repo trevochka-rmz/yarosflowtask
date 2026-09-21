@@ -269,7 +269,7 @@ export function EmployeeName({
         className={compact ? "h-8 w-8" : "h-10 w-10"}
       />
       <div className="min-w-0">
-        <p className="truncate font-medium">{member.full_name || member.username || "Без имени"}</p>
+        <p className="break-words font-medium">{member.full_name || member.username || "Без имени"}</p>
         {!compact && (
           <p className="truncate text-xs text-muted-foreground">
             {member.department_name || member.role_name || "Сотрудник"}
