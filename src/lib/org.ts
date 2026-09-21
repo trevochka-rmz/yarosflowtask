@@ -570,6 +570,7 @@ export interface DashboardEmployee {
 export interface DashboardTrendPoint {
   date: string;
   new: number;
+  selected: number;
   in_progress: number;
   waiting: number;
   review: number;

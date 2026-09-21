@@ -119,7 +119,8 @@ function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | unde
 }
 
 const TREND_SERIES = [
-  { key: "new", label: "Новые", color: "#0ea5e9" },
+  { key: "new", label: "Создано", color: "#0ea5e9" },
+  { key: "selected", label: "На утверждении", color: "#6366f1" },
   { key: "in_progress", label: "В работе", color: "#8b5cf6" },
   { key: "waiting", label: "Ожидают", color: "#f59e0b" },
   { key: "review", label: "На проверке", color: "#f97316" },
@@ -138,6 +139,7 @@ function TaskTrend({
   const normalized = points.map((point) => ({
     ...point,
     new: Number(point.new) || 0,
+    selected: Number(point.selected) || 0,
     in_progress: Number(point.in_progress) || 0,
     waiting: Number(point.waiting) || 0,
     review: Number(point.review) || 0,
@@ -165,7 +167,7 @@ function TaskTrend({
           <h2 className="flex items-center gap-2 font-semibold text-foreground">
             <TrendingUp className="h-4 w-4 text-primary" /> Динамика задач
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Переходы задач между статусами</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Создание и переходы задач по статусам</p>
         </div>
         <select
           value={period}
@@ -616,10 +618,9 @@ function DirectorPage() {
             <StatusOverview counters={data.counters} />
           </div>
 
-          <ProjectProgress projects={data.project_progress ?? []} />
-
-          {/* ── Последние задачи ── */}
-          <div>
+          {/* На широком экране ключевые рабочие блоки стоят рядом. */}
+          <div className="grid items-start gap-4 xl:grid-cols-3">
+            <ProjectProgress projects={data.project_progress ?? []} />
             <TaskBlock
               title="Последние задачи"
               icon={ListChecks}
@@ -627,13 +628,10 @@ function DirectorPage() {
               tasks={data.recent_tasks ?? []}
               empty="Задач пока нет."
             />
+            <EmployeesBlock employees={data.employees} />
           </div>
 
-          {/* ── Сотрудники + Лента (2 колонки на lg) ── */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <EmployeesBlock employees={data.employees} />
-            <ActivityFeed items={data.recent_activity} />
-          </div>
+          <ActivityFeed items={data.recent_activity} />
 
           {/* ── Итого по статусам (мини-таблица) ── */}
           {Object.keys(data.counters.by_status).length > 0 && (
