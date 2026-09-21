@@ -5,12 +5,12 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
-  CirclePlus,
   Clock,
   ListChecks,
   Loader2,
   Lock,
   TrendingUp,
+  Users,
   Zap,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -492,7 +492,7 @@ function DirectorPage() {
   const canView = can("task.read");
   const [trendPeriod, setTrendPeriod] = useState<"7d" | "30d">("7d");
 
-  const { data, isPending, isError, error, refetch } = useQuery({
+  const { data, isPending, isError, error } = useQuery({
     queryKey: ["director-dashboard", org?.id, trendPeriod],
     queryFn: () => orgApi.dashboard(org!.id, trendPeriod),
     enabled: !!org?.id && canView,
@@ -534,19 +534,13 @@ function DirectorPage() {
 
   return (
     <AppLayout wide>
-      {/* Заголовок и действия */}
+      {/* Заголовок */}
       <div className="rounded-3xl border border-border bg-surface-gradient p-5 shadow-soft sm:p-7">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">Управление организацией</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">Директорский центр</h1>
           <p className="mt-1 text-sm text-muted-foreground">{org.name} · оперативная картина по задачам и команде</p>
-        </div>
-        <div className="flex w-full gap-2 sm:w-auto">
-          <Button asChild className="flex-1 sm:flex-none"><Link to="/taskflow"><CirclePlus className="h-4 w-4" /> Создать задачу</Link></Button>
-          <Button variant="outline" size="sm" onClick={() => void refetch()} disabled={isPending}>
-            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Обновить"}
-          </Button>
         </div>
       </div>
       </div>
@@ -566,6 +560,30 @@ function DirectorPage() {
         <p className="mt-6 text-sm text-destructive">{(error as Error).message}</p>
       ) : data ? (
         <div className="mt-6 space-y-5">
+          <nav aria-label="Быстрые переходы директора" className="grid grid-cols-3 gap-2 md:hidden">
+            <Link
+              to="/tasks"
+              className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card px-2 py-2.5 text-xs font-medium text-foreground shadow-soft"
+            >
+              <ListChecks className="h-4 w-4 text-primary" />
+              Задачи
+            </Link>
+            <a
+              href="#director-projects"
+              className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card px-2 py-2.5 text-xs font-medium text-foreground shadow-soft"
+            >
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Проекты
+            </a>
+            <a
+              href="#director-employees"
+              className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card px-2 py-2.5 text-xs font-medium text-foreground shadow-soft"
+            >
+              <Users className="h-4 w-4 text-primary" />
+              Сотрудники
+            </a>
+          </nav>
+
           {/* ── Счётчики ── */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             <CounterCard label="Всего задач" value={data.counters.total} />
@@ -620,15 +638,21 @@ function DirectorPage() {
 
           {/* На широком экране ключевые рабочие блоки стоят рядом. */}
           <div className="mx-auto grid w-full min-w-0 max-w-xl items-start gap-4 xl:max-w-none xl:grid-cols-3">
-            <ProjectProgress projects={data.project_progress ?? []} />
-            <TaskBlock
-              title="Последние задачи"
-              icon={ListChecks}
-              iconColor="text-primary"
-              tasks={data.recent_tasks ?? []}
-              empty="Задач пока нет."
-            />
-            <EmployeesBlock employees={data.employees} />
+            <div id="director-projects" className="scroll-mt-20 min-w-0">
+              <ProjectProgress projects={data.project_progress ?? []} />
+            </div>
+            <div id="director-tasks" className="scroll-mt-20 min-w-0">
+              <TaskBlock
+                title="Последние задачи"
+                icon={ListChecks}
+                iconColor="text-primary"
+                tasks={data.recent_tasks ?? []}
+                empty="Задач пока нет."
+              />
+            </div>
+            <div id="director-employees" className="scroll-mt-20 min-w-0">
+              <EmployeesBlock employees={data.employees} />
+            </div>
           </div>
 
           <ActivityFeed items={data.recent_activity} />
