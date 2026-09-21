@@ -85,8 +85,8 @@ function PreviewCard({
   jiraProjects,
   selectedProjectKey,
   onSelectedProjectKeyChange,
-  selectedJiraUserId,
-  onSelectedJiraUserIdChange,
+  selectedJiraUserIds,
+  onSelectedJiraUserIdsChange,
 }: {
   preview: AiTaskPreview;
   onConfirm: (p: AiTaskPreview) => void;
@@ -106,13 +106,21 @@ function PreviewCard({
   jiraProjects: Array<{ key: string; name: string }>;
   selectedProjectKey: string;
   onSelectedProjectKeyChange: (projectKey: string) => void;
-  selectedJiraUserId: number | null;
-  onSelectedJiraUserIdChange: (userId: number | null) => void;
+  selectedJiraUserIds: number[];
+  onSelectedJiraUserIdsChange: (userIds: number[]) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(preview.title);
   const [desc, setDesc] = useState(preview.description);
   const [criteria, setCriteria] = useState(preview.acceptance_criteria);
+  const selectedAssigneeLabels = selectedJiraUserIds
+    .map((userId) => jiraMembers.find((member) => member.user_id === userId))
+    .filter((member): member is (typeof jiraMembers)[number] => Boolean(member))
+    .map((member) => userLabel({
+      id: member.user_id,
+      full_name: member.full_name,
+      username: member.username,
+    }));
 
   const current: AiTaskPreview = {
     ...preview,
@@ -230,17 +238,23 @@ function PreviewCard({
                 </select>
               </label>
               <label className="block space-y-1.5 text-sm font-medium">
-                Исполнитель Jira
+                Исполнители Jira
                 <select
-                  value={selectedJiraUserId ?? ""}
-                  onChange={(event) =>
-                    onSelectedJiraUserIdChange(
-                      event.target.value ? Number(event.target.value) : null,
-                    )
-                  }
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  multiple
+                  value={selectedJiraUserIds.map(String)}
+                  onChange={(event) => {
+                    const nextIds = Array.from(
+                      event.currentTarget.selectedOptions,
+                      (option) => Number(option.value),
+                    );
+                    // Сохраняем порядок AI-предложения; новые добавления идут в конец.
+                    onSelectedJiraUserIdsChange([
+                      ...selectedJiraUserIds.filter((userId) => nextIds.includes(userId)),
+                      ...nextIds.filter((userId) => !selectedJiraUserIds.includes(userId)),
+                    ]);
+                  }}
+                  className="min-h-28 w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
                 >
-                  <option value="">Без исполнителя</option>
                   {jiraMembers.map((member) => (
                     <option key={member.id} value={member.user_id}>
                       {userLabel({
@@ -252,6 +266,14 @@ function PreviewCard({
                     </option>
                   ))}
                 </select>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Выберите одного или нескольких сотрудников. Первый — основной исполнитель Jira.
+                </span>
+                {selectedAssigneeLabels.length ? (
+                  <span className="block text-xs font-normal text-foreground">
+                    Выбрано: {selectedAssigneeLabels.join(", ")}
+                  </span>
+                ) : null}
               </label>
             </div>
           ) : null}
@@ -288,7 +310,7 @@ function Index() {
   const [preview, setPreview] = useState<AiTaskPreview | null>(null);
   const [publishToJira, setPublishToJira] = useState(true);
   const [selectedProjectKey, setSelectedProjectKey] = useState("PREDEV");
-  const [selectedJiraUserId, setSelectedJiraUserId] = useState<number | null>(null);
+  const [selectedJiraUserIds, setSelectedJiraUserIds] = useState<number[]>([]);
 
   const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
   const { tenant } = useCurrentTenant();
@@ -320,7 +342,7 @@ function Index() {
   useEffect(() => {
     if (!hasActiveJira) {
       setPublishToJira(false);
-      setSelectedJiraUserId(null);
+      setSelectedJiraUserIds([]);
       return;
     }
     setPublishToJira(true);
@@ -345,19 +367,18 @@ function Index() {
   }, [preview?.project_key, jiraProjects.data]);
 
   useEffect(() => {
-    const suggested = preview?.suggested_assignee_user_ids?.[0] ?? null;
-    if (suggested != null) setSelectedJiraUserId(suggested);
+    setSelectedJiraUserIds(preview?.suggested_assignee_user_ids ?? []);
   }, [preview?.ai_action_id, preview?.suggested_assignee_user_ids]);
 
   useEffect(() => {
-    if (!hasActiveJira || selectedJiraUserId != null || !jiraMembers.data?.length) return;
+    if (!hasActiveJira || selectedJiraUserIds.length || !jiraMembers.data?.length) return;
     const timur = jiraMembers.data.find((member) =>
       [member.full_name, member.username, member.jira_username].some((value) =>
         /(^|\s)(timur|тимур)(\s|$)/i.test(value ?? ""),
       ),
     );
-    if (timur) setSelectedJiraUserId(timur.user_id);
-  }, [hasActiveJira, jiraMembers.data, selectedJiraUserId]);
+    if (timur) setSelectedJiraUserIds([timur.user_id]);
+  }, [hasActiveJira, jiraMembers.data, selectedJiraUserIds.length]);
 
   /* Шаг 1: генерация превью */
   const generate = useMutation({
@@ -373,7 +394,9 @@ function Index() {
   const confirm = useMutation({
     mutationFn: async (p: AiTaskPreview) => {
       if (!tenant?.id) throw new Error("Организация не выбрана");
-      const jiraMember = jiraMembers.data?.find((member) => member.user_id === selectedJiraUserId);
+      const selectedJiraMembers = selectedJiraUserIds
+        .map((userId) => jiraMembers.data?.find((member) => member.user_id === userId))
+        .filter((member): member is NonNullable<typeof member> => Boolean(member));
       const created = await api.createTaskFromAi(tenant.id, p.ai_action_id, {
         title: p.title,
         description: p.description,
@@ -384,13 +407,12 @@ function Index() {
         ...(hasActiveJira && publishToJira
           ? {
               projectKey: selectedProjectKey,
-              jiraAssignee: jiraMember?.jira_username ?? null,
-              assigneeUserId: selectedJiraUserId,
-              assigneeUserIds: preview.suggested_assignee_user_ids?.length
-                ? preview.suggested_assignee_user_ids
-                : selectedJiraUserId
-                  ? [selectedJiraUserId]
-                  : [],
+              jiraAssignee: selectedJiraMembers[0]?.jira_username ?? null,
+              assigneeUserId: selectedJiraUserIds[0] ?? null,
+              assigneeUserIds: selectedJiraUserIds,
+              additionalJiraAssignees: selectedJiraMembers
+                .map((member) => member.jira_username)
+                .filter((username): username is string => Boolean(username)),
             }
           : {}),
       });
@@ -625,8 +647,8 @@ function Index() {
           }
           selectedProjectKey={selectedProjectKey}
           onSelectedProjectKeyChange={setSelectedProjectKey}
-          selectedJiraUserId={selectedJiraUserId}
-          onSelectedJiraUserIdChange={setSelectedJiraUserId}
+          selectedJiraUserIds={selectedJiraUserIds}
+          onSelectedJiraUserIdsChange={setSelectedJiraUserIds}
         />
       )}
     </AppLayout>
