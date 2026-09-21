@@ -619,7 +619,7 @@ function DirectorPage() {
           </div>
 
           {/* На широком экране ключевые рабочие блоки стоят рядом. */}
-          <div className="grid items-start gap-4 xl:grid-cols-3">
+          <div className="mx-auto grid w-full max-w-xl items-start gap-4 xl:max-w-none xl:grid-cols-3">
             <ProjectProgress projects={data.project_progress ?? []} />
             <TaskBlock
               title="Последние задачи"

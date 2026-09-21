@@ -620,7 +620,7 @@ function MobileBottomNavigation({ locked }: { locked: boolean }) {
     exact ? pathname === url : pathname === url || pathname.startsWith(`${url}/`);
   const itemClass = (active: boolean) =>
     cn(
-      "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 pb-1 text-[10px] font-medium transition-colors",
+      "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 pb-2 text-xs font-medium transition-colors",
       active ? "text-primary" : "text-muted-foreground",
     );
 
@@ -629,35 +629,35 @@ function MobileBottomNavigation({ locked }: { locked: boolean }) {
       aria-label="Основная навигация"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
     >
-      <div className="flex h-16 items-end">
+      <div className="flex h-20 items-end">
         <Link to="/" className={itemClass(isActive("/", true))} aria-current={isActive("/", true) ? "page" : undefined}>
-          <Home className="h-5 w-5" />
+          <Home className="h-6 w-6" />
           <span>Главная</span>
         </Link>
 
         {can("task.read") && (
           <Link to="/tasks" className={itemClass(isActive("/tasks"))} aria-current={isActive("/tasks") ? "page" : undefined}>
-            <ListChecks className="h-5 w-5" />
+            <ListChecks className="h-6 w-6" />
             <span>Задачи</span>
           </Link>
         )}
 
         {can("task.create") && (
-          <Link to="/taskflow" className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-1 text-[10px] font-medium text-primary">
-            <span className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-lg">
-              <Plus className="h-6 w-6" />
+          <Link to="/taskflow" className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-2 text-xs font-medium text-primary">
+            <span className="-mt-7 flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-lg">
+              <Plus className="h-7 w-7" />
             </span>
             <span>Создать</span>
           </Link>
         )}
 
         <Link to="/reports" className={itemClass(isActive("/reports"))} aria-current={isActive("/reports") ? "page" : undefined}>
-          <ChartNoAxesColumnIncreasing className="h-5 w-5" />
+          <ChartNoAxesColumnIncreasing className="h-6 w-6" />
           <span>Отчёты</span>
         </Link>
 
         <button type="button" onClick={toggleSidebar} className={itemClass(false)} aria-label="Открыть ещё разделы">
-          <Menu className="h-5 w-5" />
+          <Menu className="h-6 w-6" />
           <span>Ещё</span>
         </button>
       </div>
@@ -800,10 +800,10 @@ export function AppLayout({
           <main
             className={
               fullscreen
-                ? "flex min-h-0 flex-1 flex-col overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0"
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0"
                 : wide
-                  ? "w-full px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
-                  : "mx-auto w-full max-w-6xl px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
+                  ? "w-full px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
+                  : "mx-auto w-full max-w-6xl px-4 py-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
             }
           >
             {locked && !allowWithoutOrg ? <NoTenantScreen /> : children}
