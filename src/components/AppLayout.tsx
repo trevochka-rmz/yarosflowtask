@@ -19,6 +19,7 @@ import {
   Plug,
   ChevronDown,
   LayoutGrid,
+  Menu,
   MessageSquare,
   Moon,
   Sun,
@@ -55,6 +56,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -604,6 +606,64 @@ function AppSidebar({ locked }: { locked?: boolean }) {
   );
 }
 
+function MobileBottomNavigation({ locked }: { locked: boolean }) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { org, can } = useCurrentOrg();
+  const { toggleSidebar } = useSidebar();
+
+  // Навигация доступна только участникам выбранной организации. Права на
+  // создание и чтение задач дополнительно определяют доступные быстрые действия.
+  if (locked || !org) return null;
+
+  const isActive = (url: string, exact = false) =>
+    exact ? pathname === url : pathname === url || pathname.startsWith(`${url}/`);
+  const itemClass = (active: boolean) =>
+    cn(
+      "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 pb-1 text-[10px] font-medium transition-colors",
+      active ? "text-primary" : "text-muted-foreground",
+    );
+
+  return (
+    <nav
+      aria-label="Основная навигация"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
+    >
+      <div className="flex h-16 items-end">
+        <Link to="/" className={itemClass(isActive("/", true))} aria-current={isActive("/", true) ? "page" : undefined}>
+          <Home className="h-5 w-5" />
+          <span>Главная</span>
+        </Link>
+
+        {can("task.read") && (
+          <Link to="/tasks" className={itemClass(isActive("/tasks"))} aria-current={isActive("/tasks") ? "page" : undefined}>
+            <ListChecks className="h-5 w-5" />
+            <span>Задачи</span>
+          </Link>
+        )}
+
+        {can("task.create") && (
+          <Link to="/taskflow" className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-1 text-[10px] font-medium text-primary">
+            <span className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-lg">
+              <Plus className="h-6 w-6" />
+            </span>
+            <span>Создать</span>
+          </Link>
+        )}
+
+        <Link to="/reports" className={itemClass(isActive("/reports"))} aria-current={isActive("/reports") ? "page" : undefined}>
+          <ChartNoAxesColumnIncreasing className="h-5 w-5" />
+          <span>Отчёты</span>
+        </Link>
+
+        <button type="button" onClick={toggleSidebar} className={itemClass(false)} aria-label="Открыть ещё разделы">
+          <Menu className="h-5 w-5" />
+          <span>Ещё</span>
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 export function AppLayout({
   children,
   fullscreen,
@@ -671,7 +731,7 @@ export function AppLayout({
 
         <SidebarInset className="flex min-h-0 min-w-0 flex-col">
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card/85 px-3 backdrop-blur sm:px-4">
-            <SidebarTrigger className="shrink-0" />
+            <SidebarTrigger className="hidden shrink-0 md:flex" />
             <Link to="/" className="flex min-w-0 items-center gap-2 lg:hidden">
               <img src={logo.url} alt="Yaya" className="h-7 w-7 shrink-0 rounded-full" />
               <span className="truncate text-sm font-semibold tracking-tight text-brand-deep">
@@ -739,14 +799,15 @@ export function AppLayout({
           <main
             className={
               fullscreen
-                ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0"
                 : wide
-                  ? "w-full px-4 py-6 sm:px-6 sm:py-8"
-                  : "mx-auto w-full max-w-6xl px-4 py-6 sm:py-8"
+                  ? "w-full px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
+                  : "mx-auto w-full max-w-6xl px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
             }
           >
             {locked && !allowWithoutOrg ? <NoTenantScreen /> : children}
           </main>
+          <MobileBottomNavigation locked={locked} />
         </SidebarInset>
       </div>
     </SidebarProvider>
