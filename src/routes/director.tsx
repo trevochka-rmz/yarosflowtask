@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
@@ -75,16 +75,6 @@ const PRIORITY_LABEL: Record<string, string> = {
   high: "Высокий",
   highest: "Самый высокий",
 };
-const STATUS_LABEL: Record<string, string> = {
-  BACKLOG: "Новые",
-  SELECTED: "На утверждении",
-  WAITING: "Ожидают",
-  IN_PROGRESS: "В работе",
-  REVIEW: "На проверке",
-  DONE: "Выполнено",
-  CANCELLED: "Отменено",
-};
-
 /* ── Карточка одной задачи ── */
 function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | undefined }) {
   return (
@@ -417,7 +407,17 @@ function ActivityFeed({ items }: { items: DashboardActivity[] }) {
 /* ── Блок сотрудников ── */
 function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
   const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? employees : employees.slice(0, 6);
+  const [previewSize, setPreviewSize] = useState(6);
+
+  useEffect(() => {
+    const updatePreviewSize = () => {
+      const height = window.innerHeight;
+      setPreviewSize(height >= 1100 ? 14 : height >= 900 ? 10 : 6);
+    };
+    updatePreviewSize();
+    window.addEventListener("resize", updatePreviewSize);
+    return () => window.removeEventListener("resize", updatePreviewSize);
+  }, []);
 
   // Группируем: сначала доступные, потом остальные
   const sorted = [...employees].sort((a, b) => {
@@ -431,7 +431,7 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
     };
     return (order[a.availability_status ?? ""] ?? 9) - (order[b.availability_status ?? ""] ?? 9);
   });
-  const shownSorted = expanded ? sorted : sorted.slice(0, 6);
+  const shownSorted = expanded ? sorted : sorted.slice(0, previewSize);
 
   return (
     <div className="rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
@@ -471,13 +471,13 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
         </ul>
       )}
 
-      {employees.length > 6 && (
+      {employees.length > previewSize && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="mt-2 w-full rounded-xl border border-dashed border-border py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
         >
-          {expanded ? "Свернуть" : `Ещё ${employees.length - 6} сотрудников`}
+          {expanded ? "Свернуть" : `Ещё ${employees.length - previewSize} сотрудников`}
         </button>
       )}
     </div>
@@ -633,23 +633,6 @@ function DirectorPage() {
 
           <ActivityFeed items={data.recent_activity} />
 
-          {/* ── Итого по статусам (мини-таблица) ── */}
-          {Object.keys(data.counters.by_status).length > 0 && (
-            <div className="rounded-2xl border border-border bg-card/50 p-4 shadow-soft">
-              <h3 className="mb-3 font-semibold text-foreground">Разбивка по статусам</h3>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                {Object.entries(data.counters.by_status).map(([status, count]) => (
-                  <div
-                    key={status}
-                    className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2"
-                  >
-                    <span className="text-xs text-muted-foreground">{STATUS_LABEL[status] ?? status}</span>
-                    <span className="text-sm font-semibold text-foreground">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       ) : null}
     </AppLayout>
