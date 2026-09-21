@@ -580,10 +580,11 @@ function TasksPage() {
                 onChange={(event) => setNewPriority(event.target.value as Task["priority"])}
                 className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
               >
+                <option value="lowest">Самый низкий</option>
                 <option value="low">Низкий</option>
                 <option value="medium">Средний</option>
                 <option value="high">Высокий</option>
-                <option value="critical">Критичный</option>
+                <option value="highest">Самый высокий</option>
               </select>
             </label>
 

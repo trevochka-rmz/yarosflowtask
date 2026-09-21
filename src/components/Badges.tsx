@@ -12,10 +12,11 @@ const STATUS_STYLES: Record<TaskStatus, string> = {
 };
 
 const PRIORITY_STYLES: Record<Priority, string> = {
+  lowest: "bg-muted/60 text-muted-foreground",
   low: "bg-muted text-muted-foreground",
   medium: "bg-secondary text-secondary-foreground",
   high: "bg-chart-5/15 text-chart-5",
-  critical: "bg-destructive/10 text-destructive",
+  highest: "bg-destructive/10 text-destructive",
 };
 
 function Pill({ className, children }: { className?: string; children: React.ReactNode }) {

@@ -54,17 +54,19 @@ const EXAMPLES = [
    Индикаторы приоритета
    =================================================================== */
 const PRIORITY_LABELS: Record<string, string> = {
+  lowest: "Самый низкий",
   low: "Низкий",
   medium: "Средний",
   high: "Высокий",
-  critical: "Критичный",
+  highest: "Самый высокий",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
+  lowest: "bg-slate-100 text-slate-500",
   low: "bg-slate-100 text-slate-600",
   medium: "bg-blue-100 text-blue-700",
   high: "bg-amber-100 text-amber-700",
-  critical: "bg-red-100 text-red-700",
+  highest: "bg-red-100 text-red-700",
 };
 
 /* ===================================================================
@@ -343,6 +345,11 @@ function Index() {
   }, [preview?.project_key, jiraProjects.data]);
 
   useEffect(() => {
+    const suggested = preview?.suggested_assignee_user_ids?.[0] ?? null;
+    if (suggested != null) setSelectedJiraUserId(suggested);
+  }, [preview?.ai_action_id, preview?.suggested_assignee_user_ids]);
+
+  useEffect(() => {
     if (!hasActiveJira || selectedJiraUserId != null || !jiraMembers.data?.length) return;
     const timur = jiraMembers.data.find((member) =>
       [member.full_name, member.username, member.jira_username].some((value) =>
@@ -379,6 +386,11 @@ function Index() {
               projectKey: selectedProjectKey,
               jiraAssignee: jiraMember?.jira_username ?? null,
               assigneeUserId: selectedJiraUserId,
+              assigneeUserIds: preview.suggested_assignee_user_ids?.length
+                ? preview.suggested_assignee_user_ids
+                : selectedJiraUserId
+                  ? [selectedJiraUserId]
+                  : [],
             }
           : {}),
       });

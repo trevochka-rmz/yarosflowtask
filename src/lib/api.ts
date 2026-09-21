@@ -4,7 +4,7 @@ export const API_BASE_URL =
 export type Role = "manager" | "employee";
 export type TaskStatus =
   "BACKLOG" | "SELECTED" | "WAITING" | "IN_PROGRESS" | "REVIEW" | "DONE" | "CANCELLED";
-export type Priority = "low" | "medium" | "high" | "critical";
+export type Priority = "lowest" | "low" | "medium" | "high" | "highest";
 
 export interface User {
   id: number;
@@ -503,6 +503,9 @@ export const api = {
       pushToJira?: boolean;
       projectKey?: string;
       jiraAssignee?: string | null;
+      assigneeUserId?: number | null;
+      assigneeUserIds?: number[];
+      additionalJiraAssignees?: string[];
     },
   ) =>
     apiFetch<Task>("/tasks", {
@@ -557,10 +560,11 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
+  lowest: "Самый низкий",
   low: "Низкий",
   medium: "Средний",
   high: "Высокий",
-  critical: "Критичный",
+  highest: "Самый высокий",
 };
 
 export function nextStatuses(status: TaskStatus, role: Role): TaskStatus[] {

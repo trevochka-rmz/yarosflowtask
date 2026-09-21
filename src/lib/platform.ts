@@ -289,6 +289,9 @@ export interface AiTaskPreview {
   acceptance_criteria: string;
   priority: string;
   project_key: string | null;
+  project_mention?: string[];
+  assignee_mentions?: string[];
+  suggested_assignee_user_ids?: number[];
   suggested_deadline: string | null;
   input_text: string;
   ai_model: string | null;
