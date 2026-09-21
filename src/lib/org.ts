@@ -248,7 +248,8 @@ export const orgApi = {
     ),
 
   /** Директорский дашборд */
-  dashboard: (orgId: number) => apiFetch<OrgDashboard>(`/organizations/${orgId}/dashboard`),
+  dashboard: (orgId: number, period: "7d" | "30d" = "7d") =>
+    apiFetch<OrgDashboard>(`/organizations/${orgId}/dashboard?period=${period}`),
 
   /* ---- Bitrix24 ---- */
   bitrixConnect: (
@@ -568,7 +569,10 @@ export interface DashboardEmployee {
 
 export interface DashboardTrendPoint {
   date: string;
-  updates: number;
+  new: number;
+  in_progress: number;
+  waiting: number;
+  review: number;
   completed: number;
 }
 
@@ -657,6 +661,7 @@ export interface OrgDashboard {
   overdue_tasks: DashboardTask[];
   unassigned_tasks: DashboardTask[];
   waiting_tasks: DashboardTask[];
+  recent_tasks: DashboardTask[];
   recent_activity: DashboardActivity[];
   employees: DashboardEmployee[];
   task_trend?: DashboardTrendPoint[];

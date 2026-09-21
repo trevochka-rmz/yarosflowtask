@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  AlertTriangle,
   ArrowRight,
   BarChart3,
   CheckCircle2,
@@ -12,8 +11,6 @@ import {
   Loader2,
   Lock,
   TrendingUp,
-  UserCog,
-  Users,
   Zap,
 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
@@ -78,6 +75,15 @@ const PRIORITY_LABEL: Record<string, string> = {
   high: "Высокий",
   highest: "Самый высокий",
 };
+const STATUS_LABEL: Record<string, string> = {
+  BACKLOG: "Новые",
+  SELECTED: "На утверждении",
+  WAITING: "Ожидают",
+  IN_PROGRESS: "В работе",
+  REVIEW: "На проверке",
+  DONE: "Выполнено",
+  CANCELLED: "Отменено",
+};
 
 /* ── Карточка одной задачи ── */
 function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | undefined }) {
@@ -112,13 +118,35 @@ function TaskRow({ task, accent }: { task: DashboardTask; accent?: string | unde
   );
 }
 
-function TaskTrend({ points }: { points: DashboardTrendPoint[] }) {
+const TREND_SERIES = [
+  { key: "new", label: "Новые", color: "#0ea5e9" },
+  { key: "in_progress", label: "В работе", color: "#8b5cf6" },
+  { key: "waiting", label: "Ожидают", color: "#f59e0b" },
+  { key: "review", label: "На проверке", color: "#f97316" },
+  { key: "completed", label: "Выполнено", color: "#10b981" },
+] as const;
+
+function TaskTrend({
+  points,
+  period,
+  onPeriodChange,
+}: {
+  points: DashboardTrendPoint[];
+  period: "7d" | "30d";
+  onPeriodChange: (period: "7d" | "30d") => void;
+}) {
   const normalized = points.map((point) => ({
     ...point,
-    updates: Number(point.updates) || 0,
+    new: Number(point.new) || 0,
+    in_progress: Number(point.in_progress) || 0,
+    waiting: Number(point.waiting) || 0,
+    review: Number(point.review) || 0,
     completed: Number(point.completed) || 0,
   }));
-  const maximum = Math.max(1, ...normalized.flatMap((point) => [point.updates, point.completed]));
+  const maximum = Math.max(
+    1,
+    ...normalized.flatMap((point) => TREND_SERIES.map((series) => point[series.key])),
+  );
   const width = 680;
   const height = 190;
   const padding = 22;
@@ -127,7 +155,8 @@ function TaskTrend({ points }: { points: DashboardTrendPoint[] }) {
     const y = height - padding - ((height - padding * 2) * value) / maximum;
     return `${x},${y}`;
   };
-  const line = (key: "updates" | "completed") => normalized.map((point, index) => pointAt(point[key], index)).join(" ");
+  const line = (key: (typeof TREND_SERIES)[number]["key"]) =>
+    normalized.map((point, index) => pointAt(point[key], index)).join(" ");
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
@@ -136,12 +165,25 @@ function TaskTrend({ points }: { points: DashboardTrendPoint[] }) {
           <h2 className="flex items-center gap-2 font-semibold text-foreground">
             <TrendingUp className="h-4 w-4 text-primary" /> Динамика задач
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Действия и завершения за последние 7 дней</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Переходы задач между статусами</p>
         </div>
-        <div className="flex gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-primary" /> Действия</span>
-          <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-500" /> Выполнено</span>
-        </div>
+        <select
+          value={period}
+          onChange={(event) => onPeriodChange(event.target.value as "7d" | "30d")}
+          className="h-8 rounded-lg border border-input bg-background px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
+          aria-label="Период динамики задач"
+        >
+          <option value="7d">Последние 7 дней</option>
+          <option value="30d">Последний месяц</option>
+        </select>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+        {TREND_SERIES.map((series) => (
+          <span key={series.key} className="flex items-center gap-1.5">
+            <i className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />
+            {series.label}
+          </span>
+        ))}
       </div>
       {normalized.length === 0 ? (
         <p className="flex h-48 items-center justify-center text-sm text-muted-foreground">Пока нет данных для графика.</p>
@@ -151,15 +193,28 @@ function TaskTrend({ points }: { points: DashboardTrendPoint[] }) {
             {[0.25, 0.5, 0.75, 1].map((factor) => (
               <line key={factor} x1="0" x2={width} y1={height - padding - (height - padding * 2) * factor} y2={height - padding - (height - padding * 2) * factor} className="stroke-border" strokeDasharray="3 5" />
             ))}
-            <polyline fill="none" points={line("updates")} className="stroke-primary" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <polyline fill="none" points={line("completed")} className="stroke-emerald-500" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {TREND_SERIES.map((series) => (
+              <polyline
+                key={series.key}
+                fill="none"
+                points={line(series.key)}
+                stroke={series.color}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ))}
             {normalized.map((point, index) => (
               <g key={point.date}>
-                <circle cx={pointAt(point.updates, index).split(",")[0]} cy={pointAt(point.updates, index).split(",")[1]} r="4" className="fill-primary" />
-                <circle cx={pointAt(point.completed, index).split(",")[0]} cy={pointAt(point.completed, index).split(",")[1]} r="4" className="fill-emerald-500" />
-                <text x={normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1)} y={height + 18} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                  {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(new Date(`${point.date}T12:00:00`))}
-                </text>
+                {TREND_SERIES.map((series) => {
+                  const [cx, cy] = pointAt(point[series.key], index).split(",");
+                  return <circle key={series.key} cx={cx} cy={cy} r="3" fill={series.color} />;
+                })}
+                {(normalized.length <= 7 || index % 5 === 0 || index === normalized.length - 1) && (
+                  <text x={normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1)} y={height + 18} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                    {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(new Date(`${point.date}T12:00:00`))}
+                  </text>
+                )}
               </g>
             ))}
           </svg>
@@ -243,7 +298,7 @@ function TaskBlock({
   empty,
 }: {
   title: string;
-  icon: typeof AlertTriangle;
+  icon: typeof ListChecks;
   tasks: DashboardTask[];
   accentText?: string;
   iconColor?: string;
@@ -433,10 +488,11 @@ function EmployeesBlock({ employees }: { employees: DashboardEmployee[] }) {
 function DirectorPage() {
   const { org, can, isLoading: orgLoading } = useCurrentOrg();
   const canView = can("task.read");
+  const [trendPeriod, setTrendPeriod] = useState<"7d" | "30d">("7d");
 
   const { data, isPending, isError, error, refetch } = useQuery({
-    queryKey: ["director-dashboard", org?.id],
-    queryFn: () => orgApi.dashboard(org!.id),
+    queryKey: ["director-dashboard", org?.id, trendPeriod],
+    queryFn: () => orgApi.dashboard(org!.id, trendPeriod),
     enabled: !!org?.id && canView,
     staleTime: 30_000,
     refetchInterval: 60_000, // автообновление раз в минуту
@@ -444,7 +500,7 @@ function DirectorPage() {
 
   if (orgLoading) {
     return (
-      <AppLayout>
+      <AppLayout wide>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Загрузка…
         </div>
@@ -454,7 +510,7 @@ function DirectorPage() {
 
   if (!canView) {
     return (
-      <AppLayout>
+      <AppLayout wide>
         <h1 className="text-2xl font-semibold tracking-tight text-brand-deep">
           Директорский центр
         </h1>
@@ -468,14 +524,14 @@ function DirectorPage() {
 
   if (!org) {
     return (
-      <AppLayout>
+      <AppLayout wide>
         <p className="text-sm text-muted-foreground">Организация не выбрана.</p>
       </AppLayout>
     );
   }
 
   return (
-    <AppLayout>
+    <AppLayout wide>
       {/* Заголовок и действия */}
       <div className="rounded-3xl border border-border bg-surface-gradient p-5 shadow-soft sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -552,35 +608,24 @@ function DirectorPage() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)]">
-            <TaskTrend points={data.task_trend ?? []} />
+            <TaskTrend
+              points={data.task_trend ?? []}
+              period={trendPeriod}
+              onPeriodChange={setTrendPeriod}
+            />
             <StatusOverview counters={data.counters} />
           </div>
 
           <ProjectProgress projects={data.project_progress ?? []} />
 
-          {/* ── Три блока задач (2 колонки на md) ── */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {/* ── Последние задачи ── */}
+          <div>
             <TaskBlock
-              title="Просроченные"
-              icon={AlertTriangle}
-              iconColor="text-red-500"
-              tasks={data.overdue_tasks}
-              accentText="text-red-500"
-              empty="Просроченных задач нет — отлично!"
-            />
-            <TaskBlock
-              title="Без исполнителя"
-              icon={UserCog}
-              iconColor="text-orange-500"
-              tasks={data.unassigned_tasks}
-              empty="Все задачи назначены."
-            />
-            <TaskBlock
-              title="В ожидании"
-              icon={Clock}
-              iconColor="text-amber-500"
-              tasks={data.waiting_tasks}
-              empty="Ожидающих задач нет."
+              title="Последние задачи"
+              icon={ListChecks}
+              iconColor="text-primary"
+              tasks={data.recent_tasks ?? []}
+              empty="Задач пока нет."
             />
           </div>
 
@@ -600,7 +645,7 @@ function DirectorPage() {
                     key={status}
                     className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2"
                   >
-                    <span className="text-xs text-muted-foreground">{status}</span>
+                    <span className="text-xs text-muted-foreground">{STATUS_LABEL[status] ?? status}</span>
                     <span className="text-sm font-semibold text-foreground">{count}</span>
                   </div>
                 ))}
