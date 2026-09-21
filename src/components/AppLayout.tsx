@@ -802,8 +802,8 @@ export function AppLayout({
               fullscreen
                 ? "flex min-h-0 flex-1 flex-col overflow-hidden pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0"
                 : wide
-                  ? "w-full px-4 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
-                  : "mx-auto w-full max-w-6xl px-4 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
+                  ? "w-full px-5 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
+                  : "mx-auto w-full max-w-6xl px-5 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
             }
           >
             {locked && !allowWithoutOrg ? <NoTenantScreen /> : children}
