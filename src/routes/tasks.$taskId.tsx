@@ -5,6 +5,8 @@ import {
   ArrowLeft,
   CalendarDays,
   Clock3,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   Loader2,
   Pencil,
@@ -20,12 +22,6 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TaskEditForm } from "@/components/TaskEditForm";
 import { UserAvatar } from "@/components/UserAvatar";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -77,6 +73,7 @@ function TaskDetail() {
   const queryClient = useQueryClient();
   const [comment, setComment] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
+  const [salymRationaleOpen, setSalymRationaleOpen] = useState(false);
   const syncedJiraTask = useRef<string | null>(null);
   const [editing, setEditing] = useState(false);
   const taskQuery = useQuery({
@@ -389,43 +386,38 @@ function TaskDetail() {
                       </th>
                       <td className="px-4 py-0 sm:px-6">
                         {task.salym_assessment ? (
-                          <Accordion type="single" collapsible>
-                            <AccordionItem value="salym-assessment" className="border-0">
-                              <AccordionTrigger>
-                                {task.salym_assessment.score} / 10 · {({
-                                  salym: "Салым",
-                                  neutral: "Нейтрально",
-                                  anti_salym: "Анти-Салым",
-                                }[task.salym_assessment.verdict] ?? task.salym_assessment.verdict)}
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                                  <div>
-                                    <dt className="text-xs text-muted-foreground">Балл</dt>
-                                    <dd className="mt-1 font-medium">
-                                      {task.salym_assessment.score} / 10
-                                    </dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-xs text-muted-foreground">Вердикт</dt>
-                                    <dd className="mt-1 font-medium">
-                                      {{
-                                        salym: "Салым",
-                                        neutral: "Нейтрально",
-                                        anti_salym: "Анти-Салым",
-                                      }[task.salym_assessment.verdict] ?? task.salym_assessment.verdict}
-                                    </dd>
-                                  </div>
-                                  <div className="sm:col-span-2">
-                                    <dt className="text-xs text-muted-foreground">Обоснование</dt>
-                                    <dd className="mt-1 whitespace-pre-wrap">
-                                      {task.salym_assessment.rationale}
-                                    </dd>
-                                  </div>
-                                </dl>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
+                          <div className="py-3 text-sm">
+                            <p className="font-medium">
+                              {task.salym_assessment.score} / 10 · {({
+                                salym: "Салым",
+                                neutral: "Нейтрально",
+                                anti_salym: "Анти-Салым",
+                              }[task.salym_assessment.verdict] ?? task.salym_assessment.verdict)}
+                            </p>
+                            {salymRationaleOpen ? (
+                              <div className="mt-3 border-l-2 border-primary/30 pl-3">
+                                <p className="text-xs text-muted-foreground">Обоснование</p>
+                                <p className="mt-1 whitespace-pre-wrap">
+                                  {task.salym_assessment.rationale}
+                                </p>
+                              </div>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => setSalymRationaleOpen((open) => !open)}
+                              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                            >
+                              {salymRationaleOpen ? (
+                                <>
+                                  Свернуть <ChevronUp className="h-3.5 w-3.5" />
+                                </>
+                              ) : (
+                                <>
+                                  Показать обоснование <ChevronDown className="h-3.5 w-3.5" />
+                                </>
+                              )}
+                            </button>
+                          </div>
                         ) : (
                           <p className="py-3 text-sm text-muted-foreground">
                             Оценка ещё не сформирована для этой задачи.
