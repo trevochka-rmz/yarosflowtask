@@ -372,12 +372,13 @@ function Index() {
 
   useEffect(() => {
     if (!hasActiveJira || selectedJiraUserIds.length || !jiraMembers.data?.length) return;
-    const timur = jiraMembers.data.find((member) =>
+    const ramazan = jiraMembers.data.find((member) =>
       [member.full_name, member.username, member.jira_username].some((value) =>
-        /(^|\s)(timur|тимур)(\s|$)/i.test(value ?? ""),
+        /(^|\s)(ramazan|рамазан)(\s|$)/i.test(value ?? "") ||
+        String(member.jira_username || "").trim().toLowerCase() === "tr3volka",
       ),
     );
-    if (timur) setSelectedJiraUserIds([timur.user_id]);
+    if (ramazan) setSelectedJiraUserIds([ramazan.user_id]);
   }, [hasActiveJira, jiraMembers.data, selectedJiraUserIds.length]);
 
   /* Шаг 1: генерация превью */
