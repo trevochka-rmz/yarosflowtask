@@ -383,16 +383,16 @@ function TaskDetail() {
                         </div>
                       </td>
                     </tr>
-                    {task.salym_assessment ? (
-                      <tr className="max-sm:block">
-                        <th className="bg-muted/40 px-4 py-2 text-left align-top font-medium text-muted-foreground sm:px-6 sm:py-3">
-                          Оценка по Салым
-                        </th>
-                        <td className="px-4 py-0 sm:px-6">
-                          <Accordion type="single" collapsible>
-                            <AccordionItem value="salym-assessment" className="border-0">
-                              <AccordionTrigger>Показать оценку</AccordionTrigger>
-                              <AccordionContent>
+                    <tr className="max-sm:block">
+                      <th className="bg-muted/40 px-4 py-2 text-left align-top font-medium text-muted-foreground sm:px-6 sm:py-3">
+                        Оценка по Салым
+                      </th>
+                      <td className="px-4 py-0 sm:px-6">
+                        <Accordion type="single" collapsible>
+                          <AccordionItem value="salym-assessment" className="border-0">
+                            <AccordionTrigger>Показать оценку</AccordionTrigger>
+                            <AccordionContent>
+                              {task.salym_assessment ? (
                                 <dl className="grid gap-3 text-sm sm:grid-cols-2">
                                   <div>
                                     <dt className="text-xs text-muted-foreground">Балл</dt>
@@ -417,12 +417,16 @@ function TaskDetail() {
                                     </dd>
                                   </div>
                                 </dl>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-                        </td>
-                      </tr>
-                    ) : null}
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  Оценка ещё не сформирована для этой задачи.
+                                </p>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </td>
+                    </tr>
                     <tr className="max-sm:block">
                       <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                         Исходная заметка
