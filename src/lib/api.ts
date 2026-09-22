@@ -98,6 +98,9 @@ export interface Task {
   jira_assignee_key?: string | null;
   jira_reporter?: string | null;
   jira_issuetype?: string | null;
+  jira_epic_key?: string | null;
+  jira_epic_summary?: string | null;
+  jira_epic_url?: string | null;
   jira_created_at?: string | null;
   jira_updated_at?: string | null;
   /**
@@ -124,6 +127,10 @@ export interface Task {
   external_project_name?: string | null;
   /** Тип задачи во внешней системе (Задача / Ошибка и т.п.). */
   external_issuetype?: string | null;
+  /** Связанный эпик Jira, если задача входит в эпик. */
+  external_epic_key?: string | null;
+  external_epic_summary?: string | null;
+  external_epic_url?: string | null;
   /** ID интеграции, через которую синхронизирована задача. */
   integration_id?: number | null;
   /** Время последней успешной синхронизации с внешней системой. */
@@ -149,6 +156,8 @@ export interface BoardTask {
   external_url?: string | null;
   external_status?: string | null;
   external_issuetype?: string | null;
+  external_epic_key?: string | null;
+  external_epic_summary?: string | null;
   assignees?: Array<{
     id: number | null;
     full_name: string | null;

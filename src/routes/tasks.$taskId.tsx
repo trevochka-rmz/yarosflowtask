@@ -9,6 +9,7 @@ import {
   ChevronUp,
   ExternalLink,
   Loader2,
+  Layers3,
   Pencil,
   Send,
   Trash2,
@@ -203,6 +204,9 @@ function TaskDetail() {
   const jiraProjectName = task.jira_project_name || task.external_project_name;
   const jiraReporter = task.jira_reporter || task.external_reporter_name;
   const jiraIssueType = task.jira_issuetype || task.external_issuetype;
+  const jiraEpicKey = task.jira_epic_key || task.external_epic_key;
+  const jiraEpicSummary = task.jira_epic_summary || task.external_epic_summary;
+  const jiraEpicUrl = task.jira_epic_url || task.external_epic_url;
   const assignedByNames = [
     ...new Set(
       (task.assignees ?? [])
@@ -294,6 +298,28 @@ function TaskDetail() {
                             {jiraAssignees.length > 0 && (
                               <div>
                                 Исполнители (Jira): <span>{jiraAssignees.join(", ")}</span>
+                              </div>
+                            )}
+                            {jiraEpicKey && (
+                              <div>
+                                {jiraEpicUrl ? (
+                                  <a
+                                    href={jiraEpicUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[#6554C0] hover:underline"
+                                  >
+                                    <Layers3 className="h-3.5 w-3.5" />
+                                    Эпик: {jiraEpicKey}
+                                    {jiraEpicSummary ? ` · ${jiraEpicSummary}` : ""}
+                                  </a>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Layers3 className="h-3.5 w-3.5 text-[#6554C0]" />
+                                    Эпик: {jiraEpicKey}
+                                    {jiraEpicSummary ? ` · ${jiraEpicSummary}` : ""}
+                                  </span>
+                                )}
                               </div>
                             )}
                             {jiraUrl && (

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Columns3, List, Loader2, Plus, RefreshCw, Search } from "lucide-react";
+import { Columns3, Layers3, List, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import {
@@ -1228,6 +1228,9 @@ function KanbanTaskCard({
   onMove: (column: BoardColumnKey) => void;
 }) {
   const project = task.project_name || task.project_key || "Без проекта";
+  const epicLabel = task.external_epic_summary
+    ? `${task.external_epic_key} · ${task.external_epic_summary}`
+    : task.external_epic_key;
 
   return (
     <article
@@ -1260,6 +1263,12 @@ function KanbanTaskCard({
         <p className="truncate" title={project}>
           Проект: <span className="font-medium text-foreground">{project}</span>
         </p>
+        {epicLabel ? (
+          <p className="flex min-w-0 items-center gap-1.5 truncate" title={epicLabel}>
+            <Layers3 className="h-3.5 w-3.5 shrink-0 text-[#8777D9]" />
+            <span className="truncate">Эпик: {epicLabel}</span>
+          </p>
+        ) : null}
         <p className="flex items-center gap-1.5">
           <AssigneeAvatars assignees={task.assignees} sizeClassName="h-6 w-6" />
           <span className="line-clamp-2">{getTaskAssignee(task)}</span>
