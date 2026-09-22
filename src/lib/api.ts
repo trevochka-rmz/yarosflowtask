@@ -148,6 +148,7 @@ export interface BoardTask {
   external_key?: string | null;
   external_url?: string | null;
   external_status?: string | null;
+  external_issuetype?: string | null;
   assignees?: Array<{
     id: number | null;
     full_name: string | null;

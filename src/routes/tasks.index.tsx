@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Columns3, List, Loader2, Plus, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
-import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
+import {
+  AssignmentBadge,
+  PriorityBadge,
+  SourceBadge,
+  StatusBadge,
+  TaskTypeBadge,
+} from "@/components/Badges";
 import { DeleteTaskButton } from "@/components/DeleteTaskButton";
 import { ExportMenu } from "@/components/ExportMenu";
 import { AssigneeAvatars } from "@/components/UserAvatar";
@@ -873,6 +879,7 @@ function TasksPage() {
                           source={task.source ?? undefined}
                           externalKey={task.external_key ?? undefined}
                         />
+                        <TaskTypeBadge issueType={task.external_issuetype} compact />
                       </div>
                       <Link
                         to="/tasks/$taskId"
@@ -957,6 +964,7 @@ function TasksPage() {
                     <tr>
                       <th className="px-4 py-3 font-medium">#</th>
                       <th className="px-4 py-3 font-medium">Источник</th>
+                      <th className="px-4 py-3 font-medium">Тип</th>
                       <th className="px-4 py-3 font-medium">Название</th>
                       <th className="px-4 py-3 font-medium">Статус</th>
                       <th className="px-4 py-3 font-medium">Исполнитель</th>
@@ -975,6 +983,9 @@ function TasksPage() {
                             source={task.source ?? undefined}
                             externalKey={task.external_key ?? undefined}
                           />
+                        </td>
+                        <td className="px-4 py-3">
+                          <TaskTypeBadge issueType={task.external_issuetype} />
                         </td>
                         <td className="px-4 py-3">
                           <Link
@@ -1234,6 +1245,7 @@ function KanbanTaskCard({
     >
       <div className="flex flex-wrap items-center gap-1.5">
         <SourceBadge source={task.source} externalKey={task.external_key} />
+        <TaskTypeBadge issueType={task.external_issuetype} compact />
         <StatusBadge status={task.status} />
       </div>
       <Link

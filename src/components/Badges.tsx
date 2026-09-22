@@ -1,3 +1,13 @@
+import {
+  BookOpen,
+  Bug,
+  ClipboardList,
+  Lightbulb,
+  ListTree,
+  type LucideIcon,
+  Layers3,
+  LifeBuoy,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PRIORITY_LABELS, STATUS_LABELS, type Priority, type TaskStatus } from "@/lib/api";
 
@@ -75,4 +85,52 @@ export function SourceBadge({
     );
   }
   return <Pill className="bg-muted text-muted-foreground">Внутренняя</Pill>;
+}
+
+type TaskTypeMeta = {
+  label: string;
+  icon: LucideIcon;
+  className: string;
+};
+
+function getTaskTypeMeta(issueType: string): TaskTypeMeta {
+  const normalized = issueType.trim().toLowerCase();
+  if (normalized.includes("epic") || normalized.includes("эпик")) {
+    return { label: issueType, icon: Layers3, className: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" };
+  }
+  if (normalized.includes("bug") || normalized.includes("ошиб") || normalized.includes("дефект")) {
+    return { label: issueType, icon: Bug, className: "bg-destructive/10 text-destructive" };
+  }
+  if (normalized.includes("improvement") || normalized.includes("улучш")) {
+    return { label: issueType, icon: Lightbulb, className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" };
+  }
+  if (normalized.includes("story") || normalized.includes("истори")) {
+    return { label: issueType, icon: BookOpen, className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" };
+  }
+  if (normalized.includes("sub-task") || normalized.includes("подзадач")) {
+    return { label: issueType, icon: ListTree, className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" };
+  }
+  if (normalized.includes("support") || normalized.includes("поддерж")) {
+    return { label: issueType, icon: LifeBuoy, className: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400" };
+  }
+  return { label: issueType, icon: ClipboardList, className: "bg-muted text-muted-foreground" };
+}
+
+export function TaskTypeBadge({
+  issueType,
+  compact = false,
+}: {
+  issueType?: string | null;
+  compact?: boolean;
+}) {
+  if (!issueType?.trim()) return null;
+  const meta = getTaskTypeMeta(issueType);
+  const Icon = meta.icon;
+
+  return (
+    <Pill className={cn("gap-1.5", meta.className)}>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span className={compact ? "sr-only" : undefined}>{meta.label}</span>
+    </Pill>
+  );
 }
