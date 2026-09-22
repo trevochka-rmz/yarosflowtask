@@ -348,9 +348,9 @@ function CounterCard({
   color?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border p-3 shadow-soft sm:rounded-2xl sm:p-4", color ?? "border-border bg-card")}>
-      <p className="text-[10px] font-medium text-muted-foreground sm:text-xs">{label}</p>
-      <p className="mt-0.5 text-xl font-bold text-foreground sm:mt-1 sm:text-3xl">{value}</p>
+    <div className={cn("rounded-xl border px-2.5 py-2 shadow-soft sm:rounded-2xl sm:p-4", color ?? "border-border bg-card")}>
+      <p className="text-[10px] font-medium leading-tight text-muted-foreground sm:text-xs">{label}</p>
+      <p className="mt-0.5 text-xl font-bold leading-none text-foreground sm:mt-1 sm:text-3xl">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -563,7 +563,7 @@ function DirectorPage() {
       ) : isError ? (
         <p className="mt-6 text-sm text-destructive">{(error as Error).message}</p>
       ) : data ? (
-        <div className="mt-6 space-y-5">
+        <div className="mt-4 space-y-3 sm:mt-6 sm:space-y-5">
           <nav aria-label="Быстрые переходы директора" className="grid grid-cols-3 gap-2 md:hidden">
             <a
               href="#director-tasks"
@@ -589,7 +589,7 @@ function DirectorPage() {
           </nav>
 
           {/* ── Счётчики ── */}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
             <CounterCard label="Всего задач" value={data.counters.total} />
             <CounterCard
               label="Новые"
