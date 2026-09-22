@@ -6,6 +6,12 @@ export type TaskStatus =
   "BACKLOG" | "SELECTED" | "WAITING" | "IN_PROGRESS" | "REVIEW" | "DONE" | "CANCELLED";
 export type Priority = "lowest" | "low" | "medium" | "high" | "highest";
 
+export interface SalymAssessment {
+  score: number;
+  verdict: "salym" | "neutral" | "anti_salym";
+  rationale: string;
+}
+
 export interface User {
   id: number;
   tg_id: number;
@@ -69,6 +75,7 @@ export interface Task {
   title: string;
   description: string;
   acceptance_criteria: string;
+  salym_assessment?: SalymAssessment | null;
   priority: Priority;
   status: TaskStatus;
   deadline: string | null;

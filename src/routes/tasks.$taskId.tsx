@@ -20,6 +20,12 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
 import { TaskEditForm } from "@/components/TaskEditForm";
 import { UserAvatar } from "@/components/UserAvatar";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -377,6 +383,46 @@ function TaskDetail() {
                         </div>
                       </td>
                     </tr>
+                    {task.salym_assessment ? (
+                      <tr className="max-sm:block">
+                        <th className="bg-muted/40 px-4 py-2 text-left align-top font-medium text-muted-foreground sm:px-6 sm:py-3">
+                          Оценка по Салым
+                        </th>
+                        <td className="px-4 py-0 sm:px-6">
+                          <Accordion type="single" collapsible>
+                            <AccordionItem value="salym-assessment" className="border-0">
+                              <AccordionTrigger>Показать оценку</AccordionTrigger>
+                              <AccordionContent>
+                                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                  <div>
+                                    <dt className="text-xs text-muted-foreground">Балл</dt>
+                                    <dd className="mt-1 font-medium">
+                                      {task.salym_assessment.score} / 10
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-xs text-muted-foreground">Вердикт</dt>
+                                    <dd className="mt-1 font-medium">
+                                      {{
+                                        salym: "Салым",
+                                        neutral: "Нейтрально",
+                                        anti_salym: "Анти-Салым",
+                                      }[task.salym_assessment.verdict] ?? task.salym_assessment.verdict}
+                                    </dd>
+                                  </div>
+                                  <div className="sm:col-span-2">
+                                    <dt className="text-xs text-muted-foreground">Обоснование</dt>
+                                    <dd className="mt-1 whitespace-pre-wrap">
+                                      {task.salym_assessment.rationale}
+                                    </dd>
+                                  </div>
+                                </dl>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </td>
+                      </tr>
+                    ) : null}
                     <tr className="max-sm:block">
                       <th className="bg-muted/40 px-4 py-2 sm:px-6 sm:py-3 text-left align-top font-medium text-muted-foreground">
                         Исходная заметка

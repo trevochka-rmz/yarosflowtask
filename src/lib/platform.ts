@@ -288,6 +288,7 @@ export interface AiTaskPreview {
   description: string;
   acceptance_criteria: string;
   priority: string;
+  salym_assessment?: import("./api").SalymAssessment | null;
   project_key: string | null;
   project_mention?: string[];
   assignee_mentions?: string[];
