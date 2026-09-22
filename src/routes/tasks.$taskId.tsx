@@ -388,11 +388,17 @@ function TaskDetail() {
                         Оценка по Салым
                       </th>
                       <td className="px-4 py-0 sm:px-6">
-                        <Accordion type="single" collapsible>
-                          <AccordionItem value="salym-assessment" className="border-0">
-                            <AccordionTrigger>Показать оценку</AccordionTrigger>
-                            <AccordionContent>
-                              {task.salym_assessment ? (
+                        {task.salym_assessment ? (
+                          <Accordion type="single" collapsible>
+                            <AccordionItem value="salym-assessment" className="border-0">
+                              <AccordionTrigger>
+                                {task.salym_assessment.score} / 10 · {({
+                                  salym: "Салым",
+                                  neutral: "Нейтрально",
+                                  anti_salym: "Анти-Салым",
+                                }[task.salym_assessment.verdict] ?? task.salym_assessment.verdict)}
+                              </AccordionTrigger>
+                              <AccordionContent>
                                 <dl className="grid gap-3 text-sm sm:grid-cols-2">
                                   <div>
                                     <dt className="text-xs text-muted-foreground">Балл</dt>
@@ -417,14 +423,14 @@ function TaskDetail() {
                                     </dd>
                                   </div>
                                 </dl>
-                              ) : (
-                                <p className="text-sm text-muted-foreground">
-                                  Оценка ещё не сформирована для этой задачи.
-                                </p>
-                              )}
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        ) : (
+                          <p className="py-3 text-sm text-muted-foreground">
+                            Оценка ещё не сформирована для этой задачи.
+                          </p>
+                        )}
                       </td>
                     </tr>
                     <tr className="max-sm:block">
