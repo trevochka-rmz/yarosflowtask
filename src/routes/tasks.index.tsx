@@ -145,7 +145,7 @@ function TasksPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newPriority, setNewPriority] = useState<Task["priority"]>("medium");
-  const [newAssignee, setNewAssignee] = useState<string>("");
+  const [newAssignees, setNewAssignees] = useState<string[]>([]);
   const [newProjectKey, setNewProjectKey] = useState("");
   const [newIssueType, setNewIssueType] = useState("Задача");
   const [newEpicKey, setNewEpicKey] = useState("");
@@ -182,7 +182,7 @@ function TasksPage() {
 
   useEffect(() => {
     if (!createOpen || !hasActiveJira || !activeJira?.id) return;
-    setNewAssignee("");
+    setNewAssignees([]);
   }, [createOpen, hasActiveJira, activeJira?.id]);
 
   const jiraProjects = useQuery({
@@ -285,19 +285,23 @@ function TasksPage() {
   }, [newProjectKey]);
 
   useEffect(() => {
-    if (!createOpen || !hasActiveJira || newAssignee || !jiraAssigneeGroups.defaultTaskFlowUser) {
+    if (!createOpen || !hasActiveJira || newAssignees.length || !jiraAssigneeGroups.defaultTaskFlowUser) {
       return;
     }
-    setNewAssignee(jiraAssigneeGroups.defaultTaskFlowUser.username);
-  }, [createOpen, hasActiveJira, jiraAssigneeGroups.defaultTaskFlowUser, newAssignee]);
+    setNewAssignees([jiraAssigneeGroups.defaultTaskFlowUser.username]);
+  }, [createOpen, hasActiveJira, jiraAssigneeGroups.defaultTaskFlowUser, newAssignees.length]);
 
   const createTask = useMutation({
     mutationFn: async () => {
       if (!organizationId) throw new Error("Организация не выбрана");
-      const selectedMember = hasActiveJira
-        ? createMembers.data?.find((member) => member.jira_username === newAssignee)
-        : createMembers.data?.find((member) => String(member.user_id) === newAssignee);
-      const selectedJiraUser = jiraUsers.data?.users.find((user) => user.username === newAssignee);
+      const selectedMembers = hasActiveJira
+        ? (createMembers.data ?? []).filter((member) =>
+            member.jira_username && newAssignees.includes(member.jira_username),
+          )
+        : (createMembers.data ?? []).filter((member) => newAssignees.includes(String(member.user_id)));
+      const selectedJiraUsers = (jiraUsers.data?.users ?? []).filter((user) =>
+        newAssignees.includes(user.username),
+      );
       const selectedProject = jiraProjects.data?.projects.find(
         (project) => project.key === newProjectKey,
       );
@@ -306,14 +310,16 @@ function TasksPage() {
         title: newTitle.trim(),
         description: newDescription.trim() || undefined,
         priority: newPriority,
-        assigneeUserId: selectedMember?.user_id ?? null,
+        assigneeUserId: selectedMembers[0]?.user_id ?? null,
+        assigneeUserIds: selectedMembers.map((member) => member.user_id),
         ...(hasActiveJira
           ? {
               pushToJira: true,
               projectKey: newProjectKey,
               projectName: selectedProject?.name,
-              jiraAssignee: selectedJiraUser?.username ?? null,
-              jiraAssigneeDisplayName: selectedJiraUser?.displayName ?? null,
+              jiraAssignee: selectedJiraUsers[0]?.username ?? null,
+              jiraAssigneeDisplayName: selectedJiraUsers[0]?.displayName ?? null,
+              additionalJiraAssignees: selectedJiraUsers.map((jiraUser) => jiraUser.username),
               issueType: newIssueType,
               epicKey: selectedEpic?.key ?? null,
               epicSummary: selectedEpic?.summary ?? null,
@@ -332,7 +338,7 @@ function TasksPage() {
       setNewTitle("");
       setNewDescription("");
       setNewPriority("medium");
-      setNewAssignee("");
+      setNewAssignees([]);
       setNewProjectKey("");
       setNewIssueType("Задача");
       setNewEpicKey("");
@@ -560,7 +566,7 @@ function TasksPage() {
         onOpenChange={(open) => {
           setCreateOpen(open);
           if (!open) {
-            setNewAssignee("");
+            setNewAssignees([]);
             setNewProjectKey("");
             setNewIssueType("Задача");
             setNewEpicKey("");
@@ -678,14 +684,18 @@ function TasksPage() {
 
             <div>
               <label className="block space-y-1.5 text-sm font-medium">
-                Исполнитель
+                Исполнители
                 <select
-                  value={newAssignee}
+                  multiple
+                  value={newAssignees}
                   disabled={hasActiveJira ? jiraUsers.isPending : createMembers.isPending}
-                  onChange={(event) => setNewAssignee(event.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  onChange={(event) =>
+                    setNewAssignees(
+                      Array.from(event.currentTarget.selectedOptions, (option) => option.value),
+                    )
+                  }
+                  className="min-h-28 w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
                 >
-                  <option value="">Без исполнителя</option>
                   {hasActiveJira
                     ? [
                         jiraAssigneeGroups.taskFlowUsers.length ? (
@@ -718,6 +728,9 @@ function TasksPage() {
                       ))}
                 </select>
               </label>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Можно выбрать нескольких. Первый станет основным исполнителем Jira.
+              </p>
               {hasActiveJira && jiraUsers.isError ? (
                 <p className="mt-1 text-xs text-destructive">
                   Не удалось загрузить исполнителей Jira: {(jiraUsers.error as Error).message}

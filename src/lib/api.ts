@@ -500,6 +500,8 @@ export const api = {
       jiraAssignee?: string | null;
       jiraAssigneeDisplayName?: string | null;
       assigneeUserId?: number | null;
+      assigneeUserIds?: number[];
+      additionalJiraAssignees?: string[];
       issueType?: string;
       epicKey?: string | null;
       epicSummary?: string | null;
