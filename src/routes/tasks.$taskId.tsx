@@ -388,7 +388,7 @@ function TaskDetail() {
                         {task.salym_assessment ? (
                           <div className="py-3 text-sm">
                             <p className="font-medium">
-                              {task.salym_assessment.score} / 10 · {({
+                              {task.salym_assessment.score} / 10 · Вердикт: {({
                                 salym: "Салым",
                                 neutral: "Нейтрально",
                                 anti_salym: "Анти-Салым",
