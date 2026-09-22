@@ -79,8 +79,6 @@ function PreviewCard({
   onCancel,
   isPending,
   jiraEnabled,
-  publishToJira,
-  onPublishToJiraChange,
   jiraMembers,
   jiraProjects,
   selectedProjectKey,
@@ -94,8 +92,6 @@ function PreviewCard({
   onCancel: () => void;
   isPending: boolean;
   jiraEnabled: boolean;
-  publishToJira: boolean;
-  onPublishToJiraChange: (checked: boolean) => void;
   jiraMembers: Array<{
     id: number;
     user_id: number;
@@ -121,7 +117,6 @@ function PreviewCard({
       full_name: member.full_name,
       username: member.username,
     }));
-
   const current: AiTaskPreview = {
     ...preview,
     title,
@@ -207,76 +202,63 @@ function PreviewCard({
 
       {jiraEnabled ? (
         <div className="border-t border-border px-5 py-4">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-0.5 accent-primary"
-              checked={publishToJira}
-              onChange={(event) => onPublishToJiraChange(event.target.checked)}
-            />
-            <span>
-              <span className="block text-sm font-medium">Добавить задачу в Jira</span>
-              <span className="block text-xs text-muted-foreground">
-                Проект по умолчанию — PREDEV. Публикация включена по умолчанию.
+          <p className="font-medium">Задача будет добавлена в Jira</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Проект и исполнителей можно изменить перед созданием задачи.
+          </p>
+          <div className="mt-3 space-y-3">
+            <label className="block space-y-1.5 text-sm font-medium">
+              Проект Jira
+              <select
+                value={selectedProjectKey}
+                onChange={(event) => onSelectedProjectKeyChange(event.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+              >
+                {jiraProjects.map((project) => (
+                  <option key={project.key} value={project.key}>
+                    {project.name} ({project.key})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Исполнители Jira
+              <select
+                multiple
+                value={selectedJiraUserIds.map(String)}
+                onChange={(event) => {
+                  const nextIds = Array.from(
+                    event.currentTarget.selectedOptions,
+                    (option) => Number(option.value),
+                  );
+                  onSelectedJiraUserIdsChange([
+                    ...selectedJiraUserIds.filter((userId) => nextIds.includes(userId)),
+                    ...nextIds.filter((userId) => !selectedJiraUserIds.includes(userId)),
+                  ]);
+                }}
+                className="min-h-28 w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+              >
+                {jiraMembers.map((member) => (
+                  <option key={member.id} value={member.user_id}>
+                    {userLabel({
+                      id: member.user_id,
+                      full_name: member.full_name,
+                      username: member.username,
+                    })}
+                    {member.jira_username ? ` — ${member.jira_username}` : ""}
+                  </option>
+                ))}
+              </select>
+              <span className="block text-xs font-normal text-muted-foreground">
+                Можно выбрать одного или нескольких сотрудников. Первый станет основным исполнителем Jira.
               </span>
-            </span>
-          </label>
-          {publishToJira ? (
-            <div className="mt-3 space-y-3">
-              <label className="block space-y-1.5 text-sm font-medium">
-                Проект Jira
-                <select
-                  value={selectedProjectKey}
-                  onChange={(event) => onSelectedProjectKeyChange(event.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
-                >
-                  {jiraProjects.map((project) => (
-                    <option key={project.key} value={project.key}>
-                      {project.name} ({project.key})
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block space-y-1.5 text-sm font-medium">
-                Исполнители Jira
-                <select
-                  multiple
-                  value={selectedJiraUserIds.map(String)}
-                  onChange={(event) => {
-                    const nextIds = Array.from(
-                      event.currentTarget.selectedOptions,
-                      (option) => Number(option.value),
-                    );
-                    // Сохраняем порядок AI-предложения; новые добавления идут в конец.
-                    onSelectedJiraUserIdsChange([
-                      ...selectedJiraUserIds.filter((userId) => nextIds.includes(userId)),
-                      ...nextIds.filter((userId) => !selectedJiraUserIds.includes(userId)),
-                    ]);
-                  }}
-                  className="min-h-28 w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                >
-                  {jiraMembers.map((member) => (
-                    <option key={member.id} value={member.user_id}>
-                      {userLabel({
-                        id: member.user_id,
-                        full_name: member.full_name,
-                        username: member.username,
-                      })}
-                      {member.jira_username ? ` — ${member.jira_username}` : ""}
-                    </option>
-                  ))}
-                </select>
-                <span className="block text-xs font-normal text-muted-foreground">
-                  Выберите одного или нескольких сотрудников. Первый — основной исполнитель Jira.
+              {selectedAssigneeLabels.length ? (
+                <span className="block text-xs font-normal text-foreground">
+                  Выбрано: {selectedAssigneeLabels.join(", ")}
                 </span>
-                {selectedAssigneeLabels.length ? (
-                  <span className="block text-xs font-normal text-foreground">
-                    Выбрано: {selectedAssigneeLabels.join(", ")}
-                  </span>
-                ) : null}
-              </label>
-            </div>
-          ) : null}
+              ) : null}
+            </label>
+          </div>
         </div>
       ) : null}
 
@@ -288,7 +270,7 @@ function PreviewCard({
           ) : (
             <Check className="mr-1 h-4 w-4" />
           )}
-          {jiraEnabled && publishToJira ? "Создать и добавить в Jira" : "Создать задачу"}
+          {jiraEnabled ? "Создать и добавить в Jira" : "Создать задачу"}
         </Button>
         <Button variant="outline" disabled={isPending} onClick={() => setEditing(true)}>
           <Edit2 className="mr-1 h-4 w-4" /> Изменить
@@ -308,7 +290,6 @@ function Index() {
   const [text, setText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<AiTaskPreview | null>(null);
-  const [publishToJira, setPublishToJira] = useState(true);
   const [selectedProjectKey, setSelectedProjectKey] = useState("PREDEV");
   const [selectedJiraUserIds, setSelectedJiraUserIds] = useState<number[]>([]);
 
@@ -341,11 +322,8 @@ function Index() {
 
   useEffect(() => {
     if (!hasActiveJira) {
-      setPublishToJira(false);
       setSelectedJiraUserIds([]);
-      return;
     }
-    setPublishToJira(true);
   }, [hasActiveJira, tenant?.id]);
 
   useEffect(() => {
@@ -404,8 +382,7 @@ function Index() {
         acceptanceCriteria: p.acceptance_criteria,
         priority: p.priority as Priority,
         deadline: null,
-        pushToJira: hasActiveJira && publishToJira,
-        ...(hasActiveJira && publishToJira
+        ...(hasActiveJira
           ? {
               projectKey: selectedProjectKey,
               jiraAssignee: selectedJiraMembers[0]?.jira_username ?? null,
@@ -439,7 +416,7 @@ function Index() {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       void queryClient.invalidateQueries({ queryKey: ["tasks-board"] });
       toast.success(
-        hasActiveJira && publishToJira
+        hasActiveJira
           ? "Техническое задание создано и добавлено в Jira"
           : "Техническое задание создано",
       );
@@ -638,8 +615,6 @@ function Index() {
           onCancel={() => setPreview(null)}
           isPending={confirming}
           jiraEnabled={hasActiveJira}
-          publishToJira={publishToJira}
-          onPublishToJiraChange={setPublishToJira}
           jiraMembers={jiraMembers.data ?? []}
           jiraProjects={
             jiraProjects.data?.projects?.length
