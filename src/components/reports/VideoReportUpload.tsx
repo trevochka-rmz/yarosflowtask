@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function VideoReportUpload({
   const [file, setFile] = useState<File>();
   const [fileError, setFileError] = useState<string>();
   const [uploadProgress, setUploadProgress] = useState<number>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadAbortRef = useRef<AbortController>();
   const upload = useMutation({
     mutationFn: async () => {
@@ -72,110 +74,141 @@ export function VideoReportUpload({
     setUploadProgress(undefined);
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) {
+      setOpen(true);
+      return;
+    }
+
+    upload.reset();
+    if (selectedFile.size > MAX_VIDEO_REPORT_SIZE) {
+      setFile(undefined);
+      setFileError("Размер видеоотчёта не должен превышать 200 МБ");
+      event.target.value = "";
+      setOpen(true);
+      return;
+    }
+    setFile(selectedFile);
+    setFileError(undefined);
+    event.target.value = "";
+    setOpen(true);
+  };
+
+  const openFilePicker = () => {
+    // iOS and Telegram WebView can leave a Dialog overlay on screen when the
+    // native picker is opened from inside a modal. Close it before the picker.
+    flushSync(() => setOpen(false));
+    fileInputRef.current?.click();
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && upload.isPending) {
-          cancelUploadAndClose();
-          return;
-        }
-        setOpen(nextOpen);
-      }}
-    >
-      <Button
-        type="button"
-        className="ml-auto"
-        variant={alreadyUploaded ? "secondary" : "default"}
-        disabled={alreadyUploaded}
-        onClick={() => {
-          setReportDate(defaultReportDate ?? today);
-          setFileError(undefined);
-          setUploadProgress(undefined);
-          upload.reset();
-          setOpen(true);
+    <>
+      <Input
+        ref={fileInputRef}
+        className="sr-only"
+        type="file"
+        accept="video/*"
+        tabIndex={-1}
+        onCancel={() => setOpen(true)}
+        onChange={handleFileChange}
+      />
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && upload.isPending) {
+            cancelUploadAndClose();
+            return;
+          }
+          setOpen(nextOpen);
         }}
       >
-        <Upload className="mr-2 h-4 w-4" />
-        {alreadyUploaded ? "Видеоотчет добавлен" : "Добавить видеоотчет"}
-      </Button>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Добавить видеоотчет</DialogTitle>
-          <DialogDescription>
-            {employee.full_name || "Сотрудник"}. Можно выбрать сегодня или прошедшую дату.
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (file && !upload.isPending) {
-              setUploadProgress(0);
-              upload.mutate();
-            }
+        <Button
+          type="button"
+          className="ml-auto"
+          variant={alreadyUploaded ? "secondary" : "default"}
+          disabled={alreadyUploaded}
+          onClick={() => {
+            setReportDate(defaultReportDate ?? today);
+            setFileError(undefined);
+            setUploadProgress(undefined);
+            upload.reset();
+            setOpen(true);
           }}
         >
-          <label className="block space-y-1.5 text-sm font-medium">
-            Дата отчёта
-            <Input
-              type="date"
-              value={reportDate}
-              max={today}
-              onChange={(event) => setReportDate(event.target.value)}
-              disabled={upload.isPending}
-              required
-            />
-          </label>
-          <label className="block space-y-1.5 text-sm font-medium">
-            Видео (до 200 МБ)
-            <Input
-              type="file"
-              accept="video/*"
-              disabled={upload.isPending}
-              onChange={(event) => {
-                const selectedFile = event.target.files?.[0];
-                upload.reset();
-                if (selectedFile && selectedFile.size > MAX_VIDEO_REPORT_SIZE) {
-                  setFile(undefined);
-                  setFileError("Размер видеоотчёта не должен превышать 200 МБ");
-                  event.target.value = "";
-                  return;
-                }
-                setFile(selectedFile);
-                setFileError(undefined);
-              }}
-              required
-            />
-          </label>
-          {file ? <p className="text-xs text-muted-foreground">{file.name}</p> : null}
-          {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
-          {upload.isPending ? (
-            <div
-              className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3"
-              aria-live="polite"
-            >
-              <Progress value={uploadProgress ?? 0} />
-              <p className="text-sm font-medium">
-                {uploadProgress === undefined || uploadProgress < 100
-                  ? `Загружаем видео: ${uploadProgress ?? 0}%`
-                  : "Видео отправлено. Сохраняем файл…"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Можно закрыть окно, если передумали — загрузка будет отменена.
-              </p>
-            </div>
-          ) : null}
-          {upload.isError ? (
-            <p className="text-sm text-destructive">{upload.error.message}</p>
-          ) : null}
-          <DialogFooter>
-            <Button type="submit" disabled={!file || upload.isPending}>
-              {upload.isPending ? "Загружаем…" : "Загрузить"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <Upload className="mr-2 h-4 w-4" />
+          {alreadyUploaded ? "Видеоотчет добавлен" : "Добавить видеоотчет"}
+        </Button>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Добавить видеоотчет</DialogTitle>
+            <DialogDescription>
+              {employee.full_name || "Сотрудник"}. Можно выбрать сегодня или прошедшую дату.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (file && !upload.isPending) {
+                setUploadProgress(0);
+                upload.mutate();
+              }
+            }}
+          >
+            <label className="block space-y-1.5 text-sm font-medium">
+              Дата отчёта
+              <Input
+                type="date"
+                value={reportDate}
+                max={today}
+                onChange={(event) => setReportDate(event.target.value)}
+                disabled={upload.isPending}
+                required
+              />
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
+              Видео (до 200 МБ)
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start font-normal"
+                disabled={upload.isPending}
+                onClick={openFilePicker}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {file ? "Выбрать другое видео" : "Выбрать видео"}
+              </Button>
+            </label>
+            {file ? <p className="text-xs text-muted-foreground">{file.name}</p> : null}
+            {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
+            {upload.isPending ? (
+              <div
+                className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3"
+                aria-live="polite"
+              >
+                <Progress value={uploadProgress ?? 0} />
+                <p className="text-sm font-medium">
+                  {uploadProgress === undefined || uploadProgress < 100
+                    ? `Загружаем видео: ${uploadProgress ?? 0}%`
+                    : "Видео отправлено. Сохраняем файл…"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Можно закрыть окно, если передумали — загрузка будет отменена.
+                </p>
+              </div>
+            ) : null}
+            {upload.isError ? (
+              <p className="text-sm text-destructive">{upload.error.message}</p>
+            ) : null}
+            <DialogFooter>
+              <Button type="submit" disabled={!file || upload.isPending}>
+                {upload.isPending ? "Загружаем…" : "Загрузить"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
