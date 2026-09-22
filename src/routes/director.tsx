@@ -173,7 +173,7 @@ function TaskTrend({
           <option value="30d">Последний месяц</option>
         </select>
       </div>
-      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+      <div className="mt-3 flex flex-wrap gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground sm:gap-x-3 sm:gap-y-1.5 sm:text-xs">
         {TREND_SERIES.map((series) => (
           <span key={series.key} className="flex items-center gap-1.5">
             <i className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />
@@ -184,8 +184,8 @@ function TaskTrend({
       {normalized.length === 0 ? (
         <p className="flex h-48 items-center justify-center text-sm text-muted-foreground">Пока нет данных для графика.</p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          <svg viewBox={`0 0 ${width} ${height + 28}`} className="h-52 w-full" role="img" aria-label="Динамика задач за неделю">
+        <div className="mt-3 overflow-x-auto sm:mt-4">
+          <svg viewBox={`0 0 ${width} ${height + 28}`} className="h-36 w-full sm:h-52" role="img" aria-label="Динамика задач за неделю">
             {[0.25, 0.5, 0.75, 1].map((factor) => (
               <line key={factor} x1="0" x2={width} y1={height - padding - (height - padding * 2) * factor} y2={height - padding - (height - padding * 2) * factor} className="stroke-border" strokeDasharray="3 5" />
             ))}
@@ -230,14 +230,14 @@ function StatusOverview({ counters }: { counters: { total: number; new: number; 
   ];
   const total = Math.max(1, counters.total);
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
+    <section className="rounded-2xl border border-border bg-card p-3 shadow-soft sm:p-5">
       <h2 className="flex items-center gap-2 font-semibold text-foreground"><BarChart3 className="h-4 w-4 text-primary" /> Статус задач</h2>
-      <div className="mt-5 flex items-center gap-5">
-        <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(#10b981 0deg ${(counters.completed / total) * 360}deg, #8b5cf6 ${(counters.completed / total) * 360}deg ${((counters.completed + counters.in_progress) / total) * 360}deg, #f59e0b ${((counters.completed + counters.in_progress) / total) * 360}deg ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg, #0ea5e9 ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg 360deg)` }}>
-          <div className="grid h-20 w-20 place-items-center rounded-full bg-card text-center"><b className="text-xl">{counters.total}</b><span className="-mt-5 text-[10px] text-muted-foreground">всего</span></div>
+      <div className="mt-3 flex items-center gap-3 sm:mt-5 sm:gap-5">
+        <div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full sm:h-28 sm:w-28" style={{ background: `conic-gradient(#10b981 0deg ${(counters.completed / total) * 360}deg, #8b5cf6 ${(counters.completed / total) * 360}deg ${((counters.completed + counters.in_progress) / total) * 360}deg, #f59e0b ${((counters.completed + counters.in_progress) / total) * 360}deg ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg, #0ea5e9 ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg 360deg)` }}>
+          <div className="grid h-14 w-14 place-items-center rounded-full bg-card text-center sm:h-20 sm:w-20"><b className="text-base sm:text-xl">{counters.total}</b><span className="-mt-4 text-[9px] text-muted-foreground sm:-mt-5 sm:text-[10px]">всего</span></div>
         </div>
-        <ul className="min-w-0 flex-1 space-y-2">
-          {items.map((item) => <li key={item.label} className="flex items-center gap-2 text-sm"><i className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.color}`} /><span className="min-w-0 flex-1 text-muted-foreground">{item.label}</span><b>{item.value}</b><span className="w-9 text-right text-xs text-muted-foreground">{Math.round((item.value / total) * 100)}%</span></li>)}
+        <ul className="min-w-0 flex-1 space-y-1 sm:space-y-2">
+          {items.map((item) => <li key={item.label} className="flex items-center gap-1.5 text-[11px] sm:gap-2 sm:text-sm"><i className={`h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5 ${item.color}`} /><span className="min-w-0 flex-1 text-muted-foreground">{item.label}</span><b>{item.value}</b><span className="hidden w-9 text-right text-xs text-muted-foreground sm:inline">{Math.round((item.value / total) * 100)}%</span></li>)}
         </ul>
       </div>
     </section>
@@ -348,9 +348,9 @@ function CounterCard({
   color?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl border p-4 shadow-soft", color ?? "border-border bg-card")}>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-foreground sm:text-3xl">{value}</p>
+    <div className={cn("rounded-xl border p-3 shadow-soft sm:rounded-2xl sm:p-4", color ?? "border-border bg-card")}>
+      <p className="text-[10px] font-medium text-muted-foreground sm:text-xs">{label}</p>
+      <p className="mt-0.5 text-xl font-bold text-foreground sm:mt-1 sm:text-3xl">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -565,13 +565,13 @@ function DirectorPage() {
       ) : data ? (
         <div className="mt-6 space-y-5">
           <nav aria-label="Быстрые переходы директора" className="grid grid-cols-3 gap-2 md:hidden">
-            <Link
-              to="/tasks"
+            <a
+              href="#director-tasks"
               className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card px-2 py-2.5 text-xs font-medium text-foreground shadow-soft"
             >
               <ListChecks className="h-4 w-4 text-primary" />
               Задачи
-            </Link>
+            </a>
             <a
               href="#director-projects"
               className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card px-2 py-2.5 text-xs font-medium text-foreground shadow-soft"
@@ -589,7 +589,7 @@ function DirectorPage() {
           </nav>
 
           {/* ── Счётчики ── */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-7">
             <CounterCard label="Всего задач" value={data.counters.total} />
             <CounterCard
               label="Новые"
@@ -624,11 +624,13 @@ function DirectorPage() {
                   : "border-border bg-card"
               }
             />
-            <CounterCard
-              label="Выполнено"
-              value={data.counters.completed}
-              color="border-emerald-200 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/35"
-            />
+            <div className="col-span-3 sm:col-span-1">
+              <CounterCard
+                label="Выполнено"
+                value={data.counters.completed}
+                color="border-emerald-200 bg-emerald-50 dark:border-emerald-900/70 dark:bg-emerald-950/35"
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)]">
@@ -642,10 +644,10 @@ function DirectorPage() {
 
           {/* На широком экране ключевые рабочие блоки стоят рядом. */}
           <div className="mx-auto grid w-full min-w-0 max-w-xl items-start gap-4 xl:max-w-none xl:grid-cols-3">
-            <div id="director-projects" className="scroll-mt-20 min-w-0">
+            <div id="director-projects" className="order-2 scroll-mt-20 min-w-0 xl:order-none">
               <ProjectProgress projects={data.project_progress ?? []} />
             </div>
-            <div id="director-tasks" className="scroll-mt-20 min-w-0">
+            <div id="director-tasks" className="order-1 scroll-mt-20 min-w-0 xl:order-none">
               <TaskBlock
                 title="Последние задачи"
                 icon={ListChecks}
@@ -654,7 +656,7 @@ function DirectorPage() {
                 empty="Задач пока нет."
               />
             </div>
-            <div id="director-employees" className="scroll-mt-20 min-w-0">
+            <div id="director-employees" className="order-3 scroll-mt-20 min-w-0 xl:order-none">
               <EmployeesBlock employees={data.employees} />
             </div>
           </div>
