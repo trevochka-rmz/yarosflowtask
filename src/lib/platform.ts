@@ -277,6 +277,22 @@ export const integrationApi = {
         projectKey ? `&projectKey=${encodeURIComponent(projectKey)}` : ""
       }`,
     ),
+  jiraIssueTypes: (orgId: number, integrationId: number, projectKey: string) =>
+    apiFetch<{
+      ok: boolean;
+      error?: string;
+      issueTypes: Array<{ id: string | null; name: string; description: string | null; iconUrl: string | null }>;
+    }>(
+      `/organizations/${orgId}/integrations/${integrationId}/jira/issue-types?projectKey=${encodeURIComponent(projectKey)}`,
+    ),
+  jiraSearch: (orgId: number, integrationId: number, jql: string, limit = 100) =>
+    apiFetch<{
+      ok: boolean;
+      error?: string;
+      issues: Array<{ key: string; summary: string; issuetype?: string | null }>;
+    }>(
+      `/organizations/${orgId}/integrations/${integrationId}/jira/search?jql=${encodeURIComponent(jql)}&limit=${limit}`,
+    ),
 };
 
 /* ======================================================================== */

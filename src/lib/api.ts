@@ -500,6 +500,9 @@ export const api = {
       jiraAssignee?: string | null;
       jiraAssigneeDisplayName?: string | null;
       assigneeUserId?: number | null;
+      issueType?: string;
+      epicKey?: string | null;
+      epicSummary?: string | null;
     },
   ) =>
     apiFetch<Task>("/tasks", {

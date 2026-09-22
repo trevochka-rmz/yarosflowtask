@@ -147,6 +147,8 @@ function TasksPage() {
   const [newPriority, setNewPriority] = useState<Task["priority"]>("medium");
   const [newAssignee, setNewAssignee] = useState<string>("");
   const [newProjectKey, setNewProjectKey] = useState("");
+  const [newIssueType, setNewIssueType] = useState("Задача");
+  const [newEpicKey, setNewEpicKey] = useState("");
   const userId = user?.id ?? 0;
   const organizationId = tenant?.id;
   const canModifyTasks = !isManagerRole(tenant?.role_name ?? user?.role);
@@ -194,6 +196,25 @@ function TasksPage() {
     enabled: !!organizationId && createOpen && !!activeJira?.id,
     queryFn: () => integrationApi.jiraUsers(organizationId!, activeJira!.id, newProjectKey),
   });
+  const jiraIssueTypes = useQuery({
+    queryKey: ["jira-issue-types", organizationId, activeJira?.id, newProjectKey],
+    enabled: !!organizationId && createOpen && !!activeJira?.id && !!newProjectKey,
+    queryFn: () => integrationApi.jiraIssueTypes(organizationId!, activeJira!.id, newProjectKey),
+  });
+  const jiraEpics = useQuery({
+    queryKey: ["jira-project-epics", organizationId, activeJira?.id, newProjectKey],
+    enabled: !!organizationId && createOpen && !!activeJira?.id && !!newProjectKey,
+    queryFn: () =>
+      integrationApi.jiraSearch(
+        organizationId!,
+        activeJira!.id,
+        `project = ${newProjectKey} ORDER BY updated DESC`,
+      ),
+  });
+  const availableIssueTypes = jiraIssueTypes.data?.issueTypes ?? [];
+  const availableEpics = (jiraEpics.data?.issues ?? []).filter((issue) =>
+    /epic|эпик/i.test(String(issue.issuetype || "")),
+  );
 
   // В Jira есть внешние пользователи, которых нет в TaskFlow. Сначала
   // показываем сотрудников организации с сопоставленным jira_username,
@@ -251,6 +272,19 @@ function TasksPage() {
   }, [jiraProjects.data]);
 
   useEffect(() => {
+    if (!availableIssueTypes.length) return;
+    setNewIssueType((current) =>
+      availableIssueTypes.some((type) => type.name === current)
+        ? current
+        : (availableIssueTypes.find((type) => /^(задача|task)$/i.test(type.name))?.name ?? availableIssueTypes[0].name),
+    );
+  }, [availableIssueTypes]);
+
+  useEffect(() => {
+    setNewEpicKey("");
+  }, [newProjectKey]);
+
+  useEffect(() => {
     if (!createOpen || !hasActiveJira || newAssignee || !jiraAssigneeGroups.defaultTaskFlowUser) {
       return;
     }
@@ -267,6 +301,7 @@ function TasksPage() {
       const selectedProject = jiraProjects.data?.projects.find(
         (project) => project.key === newProjectKey,
       );
+      const selectedEpic = availableEpics.find((epic) => epic.key === newEpicKey);
       const created = await api.createManualTask(organizationId, {
         title: newTitle.trim(),
         description: newDescription.trim() || undefined,
@@ -279,6 +314,9 @@ function TasksPage() {
               projectName: selectedProject?.name,
               jiraAssignee: selectedJiraUser?.username ?? null,
               jiraAssigneeDisplayName: selectedJiraUser?.displayName ?? null,
+              issueType: newIssueType,
+              epicKey: selectedEpic?.key ?? null,
+              epicSummary: selectedEpic?.summary ?? null,
             }
           : {}),
       });
@@ -296,6 +334,8 @@ function TasksPage() {
       setNewPriority("medium");
       setNewAssignee("");
       setNewProjectKey("");
+      setNewIssueType("Задача");
+      setNewEpicKey("");
       void qc.invalidateQueries({ queryKey: ["tasks"] });
       void qc.invalidateQueries({ queryKey: ["tasks-board"] });
       toast.success(hasActiveJira ? "Задача создана и добавлена в Jira" : "Задача создана");
@@ -522,6 +562,8 @@ function TasksPage() {
           if (!open) {
             setNewAssignee("");
             setNewProjectKey("");
+            setNewIssueType("Задача");
+            setNewEpicKey("");
           }
         }}
       >
@@ -559,6 +601,46 @@ function TasksPage() {
                   ))}
                 </select>
               </label>
+            ) : null}
+
+            {hasActiveJira ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block space-y-1.5 text-sm font-medium">
+                  Тип задачи Jira
+                  <select
+                    value={newIssueType}
+                    disabled={jiraIssueTypes.isPending}
+                    onChange={(event) => setNewIssueType(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  >
+                    {availableIssueTypes.length ? (
+                      availableIssueTypes.map((type) => (
+                        <option key={type.id ?? type.name} value={type.name}>
+                          {type.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="Задача">{jiraIssueTypes.isPending ? "Загрузка типов…" : "Задача"}</option>
+                    )}
+                  </select>
+                </label>
+                <label className="block space-y-1.5 text-sm font-medium">
+                  Эпик Jira
+                  <select
+                    value={newEpicKey}
+                    disabled={jiraEpics.isPending}
+                    onChange={(event) => setNewEpicKey(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+                  >
+                    <option value="">Без эпика</option>
+                    {availableEpics.map((epic) => (
+                      <option key={epic.key} value={epic.key}>
+                        {epic.key} — {epic.summary}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             ) : null}
 
             <label className="block space-y-1.5 text-sm font-medium">
