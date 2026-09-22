@@ -149,6 +149,10 @@ function TaskTrend({
   };
   const line = (key: (typeof TREND_SERIES)[number]["key"]) =>
     normalized.map((point, index) => pointAt(point[key], index)).join(" ");
+  const trendLabelIndexes =
+    period === "30d"
+      ? new Set([0, 7, 14, 21, normalized.length - 1])
+      : new Set(normalized.map((_, index) => index));
 
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
@@ -202,7 +206,7 @@ function TaskTrend({
                   const [cx, cy] = pointAt(point[series.key], index).split(",");
                   return <circle key={series.key} cx={cx} cy={cy} r="3" fill={series.color} />;
                 })}
-                {(normalized.length <= 7 || index % 5 === 0 || index === normalized.length - 1) && (
+                {trendLabelIndexes.has(index) && (
                   <text x={normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1)} y={height + 18} textAnchor="middle" className="fill-muted-foreground text-[11px]">
                     {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(new Date(`${point.date}T12:00:00`))}
                   </text>
