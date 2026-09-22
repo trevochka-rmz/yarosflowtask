@@ -160,6 +160,11 @@ function TasksPage() {
         .toLowerCase(),
     );
   const selectedAssigneeId = assigneeId === "me" ? String(userId) : assigneeId;
+  const toggleNewAssignee = (value: string) => {
+    setNewAssignees((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+    );
+  };
 
   const integrations = useQuery({
     queryKey: ["integrations", organizationId],
@@ -685,48 +690,63 @@ function TasksPage() {
             <div>
               <label className="block space-y-1.5 text-sm font-medium">
                 Исполнители
-                <select
-                  multiple
-                  value={newAssignees}
-                  disabled={hasActiveJira ? jiraUsers.isPending : createMembers.isPending}
-                  onChange={(event) =>
-                    setNewAssignees(
-                      Array.from(event.currentTarget.selectedOptions, (option) => option.value),
-                    )
-                  }
-                  className="min-h-28 w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                >
-                  {hasActiveJira
-                    ? [
-                        jiraAssigneeGroups.taskFlowUsers.length ? (
-                          <optgroup key="taskflow" label="Сотрудники TaskFlow">
+                <div className="max-h-56 overflow-y-auto rounded-md border border-input bg-card p-1.5 text-sm">
+                  {hasActiveJira ? (
+                    jiraUsers.isPending ? (
+                      <p className="px-2 py-2 text-xs font-normal text-muted-foreground">Загрузка исполнителей…</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {jiraAssigneeGroups.taskFlowUsers.length ? (
+                          <div>
+                            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Сотрудники TaskFlow</p>
                             {jiraAssigneeGroups.taskFlowUsers.map((jiraUser) => (
-                              <option key={jiraUser.username} value={jiraUser.username}>
-                                {jiraUser.displayName} ({jiraUser.username})
-                              </option>
+                              <label key={jiraUser.username} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 font-normal hover:bg-accent">
+                                <input
+                                  type="checkbox"
+                                  checked={newAssignees.includes(jiraUser.username)}
+                                  onChange={() => toggleNewAssignee(jiraUser.username)}
+                                  className="h-4 w-4 accent-primary"
+                                />
+                                <span>{jiraUser.displayName} ({jiraUser.username})</span>
+                              </label>
                             ))}
-                          </optgroup>
-                        ) : null,
-                        jiraAssigneeGroups.externalJiraUsers.length ? (
-                          <optgroup key="jira" label="Остальные пользователи Jira">
+                          </div>
+                        ) : null}
+                        {jiraAssigneeGroups.externalJiraUsers.length ? (
+                          <div>
+                            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">Остальные пользователи Jira</p>
                             {jiraAssigneeGroups.externalJiraUsers.map((jiraUser) => (
-                              <option key={jiraUser.username} value={jiraUser.username}>
-                                {jiraUser.displayName} ({jiraUser.username})
-                              </option>
+                              <label key={jiraUser.username} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 font-normal hover:bg-accent">
+                                <input
+                                  type="checkbox"
+                                  checked={newAssignees.includes(jiraUser.username)}
+                                  onChange={() => toggleNewAssignee(jiraUser.username)}
+                                  className="h-4 w-4 accent-primary"
+                                />
+                                <span>{jiraUser.displayName} ({jiraUser.username})</span>
+                              </label>
                             ))}
-                          </optgroup>
-                        ) : null,
-                      ]
-                    : (createMembers.data ?? []).map((member) => (
-                        <option key={member.id} value={member.user_id}>
-                          {userLabel({
-                            id: member.user_id,
-                            full_name: member.full_name,
-                            username: member.username,
-                          })}
-                        </option>
-                      ))}
-                </select>
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  ) : (
+                    (createMembers.data ?? []).map((member) => {
+                      const value = String(member.user_id);
+                      return (
+                        <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 font-normal hover:bg-accent">
+                          <input
+                            type="checkbox"
+                            checked={newAssignees.includes(value)}
+                            onChange={() => toggleNewAssignee(value)}
+                            className="h-4 w-4 accent-primary"
+                          />
+                          <span>{userLabel({ id: member.user_id, full_name: member.full_name, username: member.username })}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </label>
               <p className="mt-1 text-xs text-muted-foreground">
                 Можно выбрать нескольких. Первый станет основным исполнителем Jira.
