@@ -503,6 +503,7 @@ export const api = {
       assigneeUserIds?: number[];
       additionalJiraAssignees?: string[];
       issueType?: string;
+      issueTypeId?: string | null;
       epicKey?: string | null;
       epicSummary?: string | null;
     },
@@ -525,6 +526,7 @@ export const api = {
       pushToJira?: boolean;
       projectKey?: string;
       issueType?: string;
+      issueTypeId?: string | null;
       jiraAssignee?: string | null;
       assigneeUserId?: number | null;
       assigneeUserIds?: number[];

@@ -426,6 +426,9 @@ function Index() {
           ? {
               projectKey: selectedProjectKey,
               issueType: selectedIssueType,
+              issueTypeId: jiraIssueTypes.data?.issueTypes.find(
+                (issueType) => issueType.name === selectedIssueType,
+              )?.id ?? null,
               jiraAssignee: selectedJiraMembers[0]?.jira_username ?? null,
               assigneeUserId: selectedJiraUserIds[0] ?? null,
               assigneeUserIds: selectedJiraUserIds,
