@@ -643,7 +643,7 @@ function DirectorPage() {
           </div>
 
           {/* На широком экране ключевые рабочие блоки стоят рядом. */}
-          <div className="mx-auto grid w-full min-w-0 max-w-xl items-start gap-4 xl:max-w-none xl:grid-cols-3">
+          <div className="grid w-full min-w-0 items-start gap-4 xl:grid-cols-3">
             <div id="director-projects" className="order-2 scroll-mt-20 min-w-0 xl:order-none">
               <ProjectProgress projects={data.project_progress ?? []} />
             </div>

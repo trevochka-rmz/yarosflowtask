@@ -58,7 +58,7 @@ function NotificationSettingsPage() {
   const owner = isOwner(org.role_code) || isOwner(org.role_name);
   return (
     <AppLayout wide>
-      <main className="mx-auto max-w-4xl space-y-5 p-4 pb-28 sm:p-6">
+      <main className="w-full space-y-5 p-4 pb-28 sm:p-6">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight"><BellRing className="h-6 w-6 text-primary" /> Уведомления</h1>
           <p className="mt-1 text-sm text-muted-foreground">Telegram-уведомления для «{org.name}»: расписание, получатели и текст сообщений. Изменения не отменяют уже отправленные сообщения.</p>
