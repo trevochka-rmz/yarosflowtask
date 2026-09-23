@@ -524,6 +524,7 @@ export const api = {
       deadline?: string | null;
       pushToJira?: boolean;
       projectKey?: string;
+      issueType?: string;
       jiraAssignee?: string | null;
       assigneeUserId?: number | null;
       assigneeUserIds?: number[];

@@ -83,6 +83,9 @@ function PreviewCard({
   jiraProjects,
   selectedProjectKey,
   onSelectedProjectKeyChange,
+  jiraIssueTypes,
+  selectedIssueType,
+  onSelectedIssueTypeChange,
   selectedJiraUserIds,
   onSelectedJiraUserIdsChange,
 }: {
@@ -102,6 +105,9 @@ function PreviewCard({
   jiraProjects: Array<{ key: string; name: string }>;
   selectedProjectKey: string;
   onSelectedProjectKeyChange: (projectKey: string) => void;
+  jiraIssueTypes: Array<{ id: string | null; name: string; description: string | null }>;
+  selectedIssueType: string;
+  onSelectedIssueTypeChange: (issueType: string) => void;
   selectedJiraUserIds: number[];
   onSelectedJiraUserIdsChange: (userIds: number[]) => void;
 }) {
@@ -222,6 +228,24 @@ function PreviewCard({
               </select>
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
+              Тип задачи Jira
+              <select
+                value={selectedIssueType}
+                onChange={(event) => onSelectedIssueTypeChange(event.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+              >
+                {jiraIssueTypes.length ? (
+                  jiraIssueTypes.map((issueType) => (
+                    <option key={issueType.id ?? issueType.name} value={issueType.name}>
+                      {issueType.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="Задача">Задача</option>
+                )}
+              </select>
+            </label>
+            <label className="block space-y-1.5 text-sm font-medium">
               Исполнители Jira
               <select
                 multiple
@@ -291,6 +315,7 @@ function Index() {
   const [files, setFiles] = useState<File[]>([]);
   const [preview, setPreview] = useState<AiTaskPreview | null>(null);
   const [selectedProjectKey, setSelectedProjectKey] = useState("PREDEV");
+  const [selectedIssueType, setSelectedIssueType] = useState("Задача");
   const [selectedJiraUserIds, setSelectedJiraUserIds] = useState<number[]>([]);
 
   const { data: user, isLoading: userLoading, isError: userError } = useCurrentUser();
@@ -319,6 +344,11 @@ function Index() {
     enabled: !!tenant?.id && hasActiveJira,
     queryFn: () => orgApi.members(tenant!.id, { forJira: true }),
   });
+  const jiraIssueTypes = useQuery({
+    queryKey: ["jira-issue-types", tenant?.id, activeJira?.id, selectedProjectKey],
+    enabled: !!tenant?.id && !!activeJira?.id && !!selectedProjectKey,
+    queryFn: () => integrationApi.jiraIssueTypes(tenant!.id, activeJira!.id, selectedProjectKey),
+  });
 
   useEffect(() => {
     if (!hasActiveJira) {
@@ -343,6 +373,16 @@ function Index() {
       setSelectedProjectKey(projectKey);
     }
   }, [preview?.project_key, jiraProjects.data]);
+
+  useEffect(() => {
+    const types = jiraIssueTypes.data?.issueTypes ?? [];
+    if (!types.length) return;
+    setSelectedIssueType((current) =>
+      types.some((type) => type.name === current)
+        ? current
+        : (types.find((type) => type.name === "Задача")?.name ?? types[0].name),
+    );
+  }, [jiraIssueTypes.data]);
 
   useEffect(() => {
     setSelectedJiraUserIds(preview?.suggested_assignee_user_ids ?? []);
@@ -385,6 +425,7 @@ function Index() {
         ...(hasActiveJira
           ? {
               projectKey: selectedProjectKey,
+              issueType: selectedIssueType,
               jiraAssignee: selectedJiraMembers[0]?.jira_username ?? null,
               assigneeUserId: selectedJiraUserIds[0] ?? null,
               assigneeUserIds: selectedJiraUserIds,
@@ -623,6 +664,9 @@ function Index() {
           }
           selectedProjectKey={selectedProjectKey}
           onSelectedProjectKeyChange={setSelectedProjectKey}
+          jiraIssueTypes={jiraIssueTypes.data?.issueTypes ?? []}
+          selectedIssueType={selectedIssueType}
+          onSelectedIssueTypeChange={setSelectedIssueType}
           selectedJiraUserIds={selectedJiraUserIds}
           onSelectedJiraUserIdsChange={setSelectedJiraUserIds}
         />
