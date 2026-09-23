@@ -88,15 +88,19 @@ export interface OrganizationNotificationRecipient {
   roleName: string | null;
   departmentName: string | null;
   videoEligible: boolean;
+  reminderEligible: boolean;
 }
 
 export interface OrganizationNotificationSetting {
-  key: "video_report_reminder" | "daily_task_summary";
+  key: "video_report_reminder" | "daily_task_summary" | "video_report_delivery";
   title: string;
   isEnabled: boolean;
   sendTime: string;
+  scheduled: boolean;
   recipientMemberIds: number[];
   defaultRecipientMemberIds: number[];
+  includeAuthor: boolean;
+  messageTemplate: string | null;
 }
 
 export interface OrganizationNotificationSettings {
@@ -197,6 +201,8 @@ export const orgApi = {
     isEnabled: boolean;
     sendTime: string;
     recipientMemberIds: number[];
+    includeAuthor?: boolean;
+    messageTemplate?: string | null;
   }) => apiFetch(`/organizations/${id}/notification-settings`, { method: "PUT", body }),
   testVideoReminder: (id: number, memberId: number) =>
     apiFetch<{ recipientCount: number; sentCount: number; failedCount: number }>(
