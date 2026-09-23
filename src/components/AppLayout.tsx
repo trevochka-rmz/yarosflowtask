@@ -24,6 +24,7 @@ import {
   Moon,
   Sun,
   ChartNoAxesColumnIncreasing,
+  BellRing,
 } from "lucide-react";
 // Teams/team link removed — route not implemented yet
 import type { ReactNode } from "react";
@@ -484,6 +485,7 @@ const GROUPS: NavGroup[] = [
       { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList, perm: "task.create" },
       { title: "Задачи", url: "/tasks", icon: ListChecks, perm: "task.read" },
       { title: "Отчёты", url: "/reports", icon: ChartNoAxesColumnIncreasing },
+      { title: "Уведомления", url: "/notification-settings", icon: BellRing },
     ],
   },
   {
@@ -520,6 +522,9 @@ const GROUPS: NavGroup[] = [
 function AppSidebar({ locked }: { locked?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { org, can, isPlatformAdmin } = useCurrentOrg();
+  const canManageNotifications = isPlatformAdmin || ["owner", "владелец", "director", "директор", "administrator", "администратор", "admin", "админ"].includes(
+    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
+  );
 
   const isActive = (item: NavItem) => {
     if (item.exact) return pathname === item.url;
@@ -558,7 +563,11 @@ function AppSidebar({ locked }: { locked?: boolean }) {
             const baseGroups = GROUPS.filter((g) => (g.adminOnly ? isPlatformAdmin : true))
               .map((group) => ({
                 ...group,
-                items: group.items.filter((i) => (i.perm ? can(i.perm) : true)),
+                items: group.items.filter((i) =>
+                  i.url === "/notification-settings"
+                    ? canManageNotifications
+                    : i.perm ? can(i.perm) : true,
+                ),
               }))
               .filter((g) => g.items.length > 0);
 

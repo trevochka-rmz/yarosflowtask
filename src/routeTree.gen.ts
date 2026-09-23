@@ -17,6 +17,7 @@ import { Route as ChatRouteImport } from './routes/chat'
 import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as DirectorRouteImport } from './routes/director'
 import { Route as MembersRouteImport } from './routes/members'
+import { Route as NotificationSettingsRouteImport } from './routes/notification-settings'
 import { Route as OrgRouteImport } from './routes/org'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ReportsRouteImport } from './routes/reports'
@@ -75,6 +76,11 @@ const DirectorRoute = DirectorRouteImport.update({
 const MembersRoute = MembersRouteImport.update({
   id: '/members',
   path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationSettingsRoute = NotificationSettingsRouteImport.update({
+  id: '/notification-settings',
+  path: '/notification-settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrgRoute = OrgRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/departments': typeof DepartmentsRoute
   '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
+  '/notification-settings': typeof NotificationSettingsRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
   '/reports': typeof ReportsRouteWithChildren
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/departments': typeof DepartmentsRoute
   '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
+  '/notification-settings': typeof NotificationSettingsRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
   '/reports': typeof ReportsRouteWithChildren
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/departments': typeof DepartmentsRoute
   '/director': typeof DirectorRoute
   '/members': typeof MembersRoute
+  '/notification-settings': typeof NotificationSettingsRoute
   '/org': typeof OrgRoute
   '/profile': typeof ProfileRoute
   '/reports': typeof ReportsRouteWithChildren
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/director'
     | '/members'
+    | '/notification-settings'
     | '/org'
     | '/profile'
     | '/reports'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/director'
     | '/members'
+    | '/notification-settings'
     | '/org'
     | '/profile'
     | '/reports'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/departments'
     | '/director'
     | '/members'
+    | '/notification-settings'
     | '/org'
     | '/profile'
     | '/reports'
@@ -362,6 +374,7 @@ export interface RootRouteChildren {
   DepartmentsRoute: typeof DepartmentsRoute
   DirectorRoute: typeof DirectorRoute
   MembersRoute: typeof MembersRoute
+  NotificationSettingsRoute: typeof NotificationSettingsRoute
   OrgRoute: typeof OrgRoute
   ProfileRoute: typeof ProfileRoute
   ReportsRoute: typeof ReportsRouteWithChildren
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/members'
       preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notification-settings': {
+      id: '/notification-settings'
+      path: '/notification-settings'
+      fullPath: '/notification-settings'
+      preLoaderRoute: typeof NotificationSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/org': {
@@ -628,6 +648,7 @@ const rootRouteChildren: RootRouteChildren = {
   DepartmentsRoute: DepartmentsRoute,
   DirectorRoute: DirectorRoute,
   MembersRoute: MembersRoute,
+  NotificationSettingsRoute: NotificationSettingsRoute,
   OrgRoute: OrgRoute,
   ProfileRoute: ProfileRoute,
   ReportsRoute: ReportsRouteWithChildren,

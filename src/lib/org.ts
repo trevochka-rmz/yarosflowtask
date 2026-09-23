@@ -81,6 +81,29 @@ export interface OrgMember {
   video_report_eligible?: boolean;
 }
 
+export interface OrganizationNotificationRecipient {
+  id: number;
+  fullName: string;
+  username: string | null;
+  roleName: string | null;
+  departmentName: string | null;
+  videoEligible: boolean;
+}
+
+export interface OrganizationNotificationSetting {
+  key: "video_report_reminder" | "daily_task_summary";
+  title: string;
+  isEnabled: boolean;
+  sendTime: string;
+  recipientMemberIds: number[];
+  defaultRecipientMemberIds: number[];
+}
+
+export interface OrganizationNotificationSettings {
+  notifications: OrganizationNotificationSetting[];
+  recipients: OrganizationNotificationRecipient[];
+}
+
 export interface PermissionInfo {
   id: number;
   code: string;
@@ -167,6 +190,19 @@ export const orgApi = {
   update: (id: number, body: { name?: string; description?: string }) =>
     apiFetch<Organization>(`/organizations/${id}`, { method: "PATCH", body }),
   deactivate: (id: number) => apiFetch<Organization>(`/organizations/${id}`, { method: "DELETE" }),
+  notificationSettings: (id: number) =>
+    apiFetch<OrganizationNotificationSettings>(`/organizations/${id}/notification-settings`),
+  updateNotificationSettings: (id: number, body: {
+    notificationKey: OrganizationNotificationSetting["key"];
+    isEnabled: boolean;
+    sendTime: string;
+    recipientMemberIds: number[];
+  }) => apiFetch(`/organizations/${id}/notification-settings`, { method: "PUT", body }),
+  testVideoReminder: (id: number, memberId: number) =>
+    apiFetch<{ recipientCount: number; sentCount: number; failedCount: number }>(
+      `/organizations/${id}/notification-settings/test-video-reminder`,
+      { method: "POST", body: { memberId } },
+    ),
 
   members: (id: number, opts?: { forJira?: boolean; hasJiraUsername?: boolean }) => {
     const params = new URLSearchParams();
