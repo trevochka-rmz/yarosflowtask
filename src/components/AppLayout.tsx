@@ -636,7 +636,7 @@ function MobileBottomNavigation({ locked }: { locked: boolean }) {
   return (
     <nav
       aria-label="Основная навигация"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 pb-[max(env(safe-area-inset-bottom),1rem)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-40 w-full max-w-full border-t border-border bg-card/95 pb-[max(env(safe-area-inset-bottom),1rem)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
     >
       <div className="flex h-[5.5rem] items-end">
         <Link to="/" className={itemClass(isActive("/", true))} aria-current={isActive("/", true) ? "page" : undefined}>
@@ -736,10 +736,10 @@ export function AppLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex min-h-screen w-full overflow-x-hidden bg-background">
         <AppSidebar locked={locked} />
 
-        <SidebarInset className="flex min-h-0 min-w-0 flex-col">
+        <SidebarInset className="flex min-h-0 min-w-0 flex-col overflow-x-hidden">
           <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-card/85 px-3 backdrop-blur sm:px-4">
             <SidebarTrigger className="hidden shrink-0 md:flex" />
             <Link to="/" className="flex min-w-0 items-center gap-2 lg:hidden">
@@ -811,7 +811,7 @@ export function AppLayout({
               fullscreen
                 ? "flex min-h-0 flex-1 flex-col overflow-hidden pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-0"
                 : wide
-                  ? "w-full px-5 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
+                  ? "w-full min-w-0 px-5 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 md:pb-8"
                   : "mx-auto w-full max-w-6xl px-5 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:py-8 md:pb-8"
             }
           >

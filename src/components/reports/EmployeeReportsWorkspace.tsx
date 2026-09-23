@@ -537,7 +537,7 @@ function ReportPanel({
         </div>
       </header>
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
-        <TabsList className="w-full justify-start">
+        <TabsList className="h-auto w-full max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">Обзор</TabsTrigger>
           <TabsTrigger value="git">Git-отчет</TabsTrigger>
           <TabsTrigger value="tasks">Задачи (Jira)</TabsTrigger>
