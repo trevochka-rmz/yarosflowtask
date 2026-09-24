@@ -5,7 +5,6 @@ import {
   LoaderCircle,
   Maximize2,
   Play,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,21 +29,16 @@ export function VideoReportCard({
   video,
   canDelete = false,
   onDelete,
-  canRegenerateAnalysis = false,
-  onRegenerateAnalysis,
 }: {
   video: ReportVideo;
   canDelete?: boolean;
   onDelete?: (videoReportId: number) => Promise<void>;
-  canRegenerateAnalysis?: boolean;
-  onRegenerateAnalysis?: (videoReportId: number) => Promise<void>;
 }) {
   const [hasStartedPlayback, setHasStartedPlayback] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
   const [detectedDuration, setDetectedDuration] = useState<string>();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isRegeneratingAnalysis, setIsRegeneratingAnalysis] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -106,19 +100,6 @@ export function VideoReportCard({
     }
   };
 
-  const regenerateAnalysis = async () => {
-    if (!video.id || !onRegenerateAnalysis || isRegeneratingAnalysis) return;
-    setIsRegeneratingAnalysis(true);
-    try {
-      await onRegenerateAnalysis(video.id);
-      toast.success("Видеоанализ обновлён");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Не удалось создать видеоанализ");
-    } finally {
-      setIsRegeneratingAnalysis(false);
-    }
-  };
-
   return (
     <article className="rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -132,21 +113,6 @@ export function VideoReportCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {canRegenerateAnalysis && video.id && onRegenerateAnalysis ? (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isRegeneratingAnalysis}
-              onClick={() => void regenerateAnalysis()}
-            >
-              {isRegeneratingAnalysis ? (
-                <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-3.5 w-3.5" />
-              )}
-              {isRegeneratingAnalysis ? "Анализируем…" : "Видеоанализ"}
-            </Button>
-          ) : null}
           {canDelete && video.id && onDelete ? (
             <Button variant="outline" size="sm" disabled={isDeleting} onClick={deleteVideo}>
               <Trash2 className="mr-2 h-3.5 w-3.5" />

@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  FileVideo,
   GitBranch,
   ListChecks,
   LoaderCircle,
@@ -600,12 +599,28 @@ function ReportPanel({
     .filter((commit) => commit.report_text)
     .map((commit) => ({ commit, parsed: parseGitReport(commit.report_text) }));
   const git = gitReports[0]?.parsed;
-  const video = report.videos[0];
   const reportWasSent = Boolean(report.reportDelivery?.sent_at);
   const videosForPeriod = [...report.videos].sort((left, right) =>
     right.date.localeCompare(left.date),
   );
   const reportDateLabel = formatReportDay(selectedReportDate);
+  const videoForAnalysis =
+    report.videos.find((item) => isoDate(new Date(item.date)) === selectedReportDate) ??
+    (isSingleDay ? undefined : videosForPeriod[0]);
+  const [isGeneratingShortReport, setIsGeneratingShortReport] = useState(false);
+  const canGenerateShortReport = Boolean(canRegenerateVideoAnalysis && videoForAnalysis?.id);
+  const generateShortReport = async () => {
+    if (!videoForAnalysis?.id || isGeneratingShortReport) return;
+    setIsGeneratingShortReport(true);
+    try {
+      await onRegenerateVideoAnalysis(videoForAnalysis.id);
+      toast.success("Краткий отчёт обновлён");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось создать краткий отчёт");
+    } finally {
+      setIsGeneratingShortReport(false);
+    }
+  };
   const hasVideoForSelectedDate = report.videos.some(
     (item) => isoDate(new Date(item.date)) === selectedReportDate,
   );
@@ -675,9 +690,27 @@ function ReportPanel({
       </header>
       {report.shortReports.length ? (
         <section className="mt-5 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-          <div className="flex items-center gap-2 font-semibold">
-            <FileText className="h-4 w-4 text-violet-600" />
-            Краткий отчёт из отчетов за сегодня
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 font-semibold">
+              <FileText className="h-4 w-4 text-violet-600" />
+              Краткий отчёт из отчетов за сегодня
+            </div>
+            {canGenerateShortReport ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isGeneratingShortReport}
+                onClick={() => void generateShortReport()}
+              >
+                {isGeneratingShortReport ? (
+                  <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-3.5 w-3.5" />
+                )}
+                {isGeneratingShortReport ? "Генерируем…" : "Перегенерировать"}
+              </Button>
+            ) : null}
           </div>
           <div className="mt-3 space-y-3">
             {report.shortReports.map((shortReport) => (
@@ -692,6 +725,24 @@ function ReportPanel({
             ))}
           </div>
         </section>
+      ) : null}
+      {!report.shortReports.length && canGenerateShortReport ? (
+        <div className="mt-5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isGeneratingShortReport}
+            onClick={() => void generateShortReport()}
+          >
+            {isGeneratingShortReport ? (
+              <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-3.5 w-3.5" />
+            )}
+            {isGeneratingShortReport ? "Генерируем…" : "Сгенерировать краткий отчёт"}
+          </Button>
+        </div>
       ) : null}
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
         <TabsList className="h-auto w-full max-w-full justify-start overflow-x-auto">
@@ -799,28 +850,22 @@ function ReportPanel({
         </article>
       ) : null}
       {tab === "video" || tab === "overview" ? (
-        <article className="mt-4 rounded-xl border p-4">
-          <h2 className="flex gap-2 font-semibold">
-            <FileVideo className="h-5 w-5 text-primary" />
-            {isSingleDay ? "Видеоотчет" : `Видеоотчёты за период (${videosForPeriod.length})`}
-          </h2>
+        <section className="mt-4">
           {videosForPeriod.length ? (
-            <div className="mt-3 space-y-4">
+            <div className="space-y-4">
               {videosForPeriod.map((periodVideo) => (
                 <VideoReportCard
                   key={periodVideo.id ?? `${periodVideo.date}-${periodVideo.url ?? "video"}`}
                   video={periodVideo}
                   canDelete={canUpload}
                   onDelete={onDeleted}
-                  canRegenerateAnalysis={canRegenerateVideoAnalysis}
-                  onRegenerateAnalysis={onRegenerateVideoAnalysis}
                 />
               ))}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-muted-foreground">Видеоотчета нет.</p>
+            <p className="text-sm text-muted-foreground">Видеоотчета нет.</p>
           )}
-        </article>
+        </section>
       ) : null}
     </section>
   );
