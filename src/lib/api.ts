@@ -88,6 +88,8 @@ export interface Task {
   updated_at: string;
   assignees?: Assignee[];
   assignee_count?: number;
+  /** Удаление разрешено текущему пользователю. Рассчитывается сервером. */
+  can_delete?: boolean;
   is_jira?: boolean;
   jira_key?: string | null;
   jira_url?: string | null;
@@ -166,6 +168,8 @@ export interface BoardTask {
   }>;
   assignee_label?: string | null;
   external_assignee_name?: string | null;
+  /** Удаление разрешено текущему пользователю. Рассчитывается сервером. */
+  can_delete?: boolean;
 }
 
 export interface TasksBoard {

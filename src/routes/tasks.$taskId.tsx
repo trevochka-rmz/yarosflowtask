@@ -248,25 +248,29 @@ function TaskDetail() {
                     {task.title}
                   </h1>
                 </div>
-                {canModifyTask ? (
+                {canModifyTask || task.can_delete ? (
                   <div className="flex shrink-0 items-center gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
-                      title={editing ? "Отменить редактирование" : "Редактировать задачу"}
-                      className="h-9 w-9 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
-                      onClick={() => setEditing((v) => !v)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <DeleteTaskButton
-                      taskId={task.id}
-                      title={task.title}
-                      tenantId={organizationId}
-                      className="text-primary-foreground hover:bg-destructive/30 hover:text-primary-foreground"
-                      onDeleted={() => void navigate({ to: "/tasks" })}
-                    />
+                    {canModifyTask ? (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                        title={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                        className="h-9 w-9 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+                        onClick={() => setEditing((v) => !v)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+                    {task.can_delete ? (
+                      <DeleteTaskButton
+                        taskId={task.id}
+                        title={task.title}
+                        tenantId={organizationId}
+                        className="text-primary-foreground hover:bg-destructive/30 hover:text-primary-foreground"
+                        onDeleted={() => void navigate({ to: "/tasks" })}
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </div>

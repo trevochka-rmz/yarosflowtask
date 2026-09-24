@@ -1013,7 +1013,7 @@ function TasksPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <ExportMenu taskId={task.id} />
-                      {canModifyTasks ? (
+                      {task.can_delete ? (
                         <DeleteTaskButton
                           taskId={task.id}
                           title={task.title}
@@ -1160,7 +1160,7 @@ function TasksPage() {
                               </a>
                             ) : null}
                             <ExportMenu taskId={task.id} />
-                            {canModifyTasks ? (
+                            {task.can_delete ? (
                               <DeleteTaskButton
                                 taskId={task.id}
                                 title={task.title}
