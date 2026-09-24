@@ -438,7 +438,7 @@ export function EmployeeReportsWorkspace() {
                 dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
               />
               <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
-                📋 Открыть отчёты сотрудника
+                📋 Открыть полный отчёт
               </p>
               </div>
             ) : (
