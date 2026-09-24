@@ -69,17 +69,21 @@ function NotificationSettingsPage() {
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight"><BellRing className="h-6 w-6 text-primary" /> Настройки</h1>
           <p className="mt-1 text-sm text-muted-foreground">Уведомления и список сотрудников для отчётов организации «{org.name}».</p>
         </div>
-        {settings.data.notifications.map((notification) => (
-          <NotificationCard
-            key={notification.key}
-            setting={notification}
-            recipients={settings.data.recipients}
-            saving={save.isPending}
-            onSave={(body) => save.mutate(body)}
-          />
-        ))}
-        <EmployeeReportMembersCard settings={reportSettings.data} loading={reportSettings.isPending} orgId={org.id} />
-        {owner && (
+        <nav className="sticky top-2 z-10 flex gap-2 overflow-x-auto rounded-xl border bg-card/95 p-2 backdrop-blur">
+          <Button size="sm" variant="outline" onClick={() => document.getElementById("settings-notifications")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Уведомления</Button>
+          <Button size="sm" variant="outline" onClick={() => document.getElementById("settings-reports")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Отчёты сотрудников</Button>
+        </nav>
+        <section id="settings-notifications" className="scroll-mt-20 space-y-5">
+          {settings.data.notifications.map((notification) => (
+            <NotificationCard
+              key={notification.key}
+              setting={notification}
+              recipients={settings.data.recipients}
+              saving={save.isPending}
+              onSave={(body) => save.mutate(body)}
+            />
+          ))}
+          {owner && (
           <Card className="border-dashed">
             <CardHeader><CardTitle className="text-base">Тестовое напоминание о видеоотчёте</CardTitle><CardDescription>Отправляется только по нажатию Owner, не меняет расписание и не влияет на рабочую рассылку.</CardDescription></CardHeader>
             <CardContent className="flex flex-wrap gap-2">
@@ -92,7 +96,11 @@ function NotificationSettingsPage() {
               {!settings.data.recipients.some((recipient) => recipient.reminderEligible) && <p className="text-sm text-muted-foreground">Нет Owner или сотрудников IT с подключённым Telegram.</p>}
             </CardContent>
           </Card>
-        )}
+          )}
+        </section>
+        <section id="settings-reports" className="scroll-mt-20">
+          <EmployeeReportMembersCard settings={reportSettings.data} loading={reportSettings.isPending} orgId={org.id} />
+        </section>
       </main>
     </AppLayout>
   );
