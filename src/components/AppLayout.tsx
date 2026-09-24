@@ -237,7 +237,9 @@ function UserProfileSheet({
     enabled: !!org && open,
   });
   const [jiraDraft, setJiraDraft] = React.useState<string | null>(null);
-  React.useEffect(() => { setJiraDraft(null); }, [org?.id, open]);
+  React.useEffect(() => {
+    setJiraDraft(null);
+  }, [org?.id, open]);
   const jira = useMutation({
     mutationFn: ({ organizationId, value }: { organizationId: number; value: string }) =>
       api.updateMyProfile(organizationId, { jira_username: value.trim() || null }),
@@ -320,14 +322,19 @@ function UserProfileSheet({
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="max-h-[90dvh] overflow-y-auto rounded-t-2xl px-0 pb-safe">
+        <SheetContent
+          side="bottom"
+          className="max-h-[90dvh] overflow-y-auto rounded-t-2xl px-0 pb-safe"
+        >
           {/* Профиль */}
           {/* text-left переопределяет text-center из shadcn SheetHeader */}
           <SheetHeader className="px-5 pb-4 pt-2 [&>*]:text-left">
             <div className="flex items-start gap-4">
               <div className="relative h-14 w-14 shrink-0">
                 <UserAvatar
-                  avatarUrl={profile.data?.avatar_url || myMember?.avatar_url || user.avatar_url || null}
+                  avatarUrl={
+                    profile.data?.avatar_url || myMember?.avatar_url || user.avatar_url || null
+                  }
                   name={displayName}
                   className="h-14 w-14"
                   fallbackClassName="text-xl font-bold"
@@ -354,8 +361,17 @@ function UserProfileSheet({
                 )}
               </div>
             </div>
-            {profile.data?.jira_username && <p className="mt-2 text-sm text-muted-foreground">Jira: <span className="font-medium text-foreground">{profile.data.jira_username}</span></p>}
-            <Link to="/profile" onClick={() => setOpen(false)} className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground">
+            {profile.data?.jira_username && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Jira:{" "}
+                <span className="font-medium text-foreground">{profile.data.jira_username}</span>
+              </p>
+            )}
+            <Link
+              to="/profile"
+              onClick={() => setOpen(false)}
+              className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
+            >
               <UserCog className="h-4 w-4" /> Открыть страницу профиля
             </Link>
             <div className="mt-3 flex items-center gap-2">
@@ -373,7 +389,7 @@ function UserProfileSheet({
                   }}
                 />
               </label>
-              {profile.data?.has_custom_avatar ?? Boolean(myMember?.avatar_storage_path) ? (
+              {(profile.data?.has_custom_avatar ?? Boolean(myMember?.avatar_storage_path)) ? (
                 <button
                   type="button"
                   disabled={!org || avatar.isPending || removeAvatar.isPending}
@@ -390,28 +406,62 @@ function UserProfileSheet({
               )}
             </div>
             {org ? (
-              <form className="mt-4 space-y-2" onSubmit={(event) => {
-                event.preventDefault();
-                jira.mutate({ organizationId: org.id, value: jiraDraft ?? profile.data?.jira_username ?? "" });
-              }}>
-                <label htmlFor="profile-jira" className="text-sm font-medium">Jira username</label>
-                <p className="text-xs text-muted-foreground">Логин и фото сохраняются для {org.name}. Пустое поле удалит Jira-логин.</p>
+              <form
+                className="mt-4 space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  jira.mutate({
+                    organizationId: org.id,
+                    value: jiraDraft ?? profile.data?.jira_username ?? "",
+                  });
+                }}
+              >
+                <label htmlFor="profile-jira" className="text-sm font-medium">
+                  Jira username
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Логин и фото сохраняются для {org.name}. Пустое поле удалит Jira-логин.
+                </p>
                 <div className="flex gap-2">
-                  <input id="profile-jira" type="text" maxLength={255}
+                  <input
+                    id="profile-jira"
+                    type="text"
+                    maxLength={255}
                     value={jiraDraft ?? profile.data?.jira_username ?? ""}
                     disabled={profile.isPending || profile.isError || jira.isPending}
-                    onChange={(event) => { setJiraDraft(event.target.value); jira.reset(); }}
+                    onChange={(event) => {
+                      setJiraDraft(event.target.value);
+                      jira.reset();
+                    }}
                     className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    placeholder="Введите логин Jira" />
-                  <button type="submit" disabled={profile.isPending || profile.isError || jira.isPending || jiraDraft === null}
-                    className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">
+                    placeholder="Введите логин Jira"
+                  />
+                  <button
+                    type="submit"
+                    disabled={
+                      profile.isPending || profile.isError || jira.isPending || jiraDraft === null
+                    }
+                    className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
+                  >
                     {jira.isPending ? "Сохранение…" : "Сохранить"}
                   </button>
                 </div>
-                {(jira.error || profile.error) && <p role="alert" className="text-xs text-destructive">{(jira.error || profile.error)?.message}</p>}
-                {jira.isSuccess && <p role="status" className="text-xs text-muted-foreground">Jira-логин сохранён</p>}
+                {(jira.error || profile.error) && (
+                  <p role="alert" className="text-xs text-destructive">
+                    {(jira.error || profile.error)?.message}
+                  </p>
+                )}
+                {jira.isSuccess && (
+                  <p role="status" className="text-xs text-muted-foreground">
+                    Jira-логин сохранён
+                  </p>
+                )}
               </form>
-            ) : <p className="mt-2 text-xs text-muted-foreground">Выберите организацию для изменения фото и Jira-логина.</p>}
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Выберите организацию для изменения фото и Jira-логина.
+              </p>
+            )}
           </SheetHeader>
 
           <div className="border-t border-border" />
@@ -517,9 +567,22 @@ const GROUPS: NavGroup[] = [
 function AppSidebar({ locked }: { locked?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { org, can, isPlatformAdmin } = useCurrentOrg();
-  const canManageNotifications = isPlatformAdmin || ["owner", "владелец", "director", "директор", "administrator", "администратор", "admin", "админ"].includes(
-    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
-  );
+  const canManageNotifications =
+    isPlatformAdmin ||
+    [
+      "owner",
+      "владелец",
+      "director",
+      "директор",
+      "administrator",
+      "администратор",
+      "admin",
+      "админ",
+    ].includes(
+      String(org?.role_code || org?.role_name || "")
+        .trim()
+        .toLowerCase(),
+    );
 
   const isActive = (item: NavItem) => {
     if (item.exact) return pathname === item.url;
@@ -548,7 +611,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-y-auto pb-20">
+      <SidebarContent className="overflow-y-auto pb-40">
         {locked ? (
           <div className="px-4 py-6 text-center text-xs text-muted-foreground">
             Навигация недоступна — вас ещё не добавили в организацию.
@@ -562,8 +625,10 @@ function AppSidebar({ locked }: { locked?: boolean }) {
                   i.platformOnly
                     ? isPlatformAdmin
                     : i.url === "/notification-settings"
-                    ? canManageNotifications
-                    : i.perm ? can(i.perm) : true,
+                      ? canManageNotifications
+                      : i.perm
+                        ? can(i.perm)
+                        : true,
                 ),
               }))
               .filter((g) => g.items.length > 0);
@@ -636,20 +701,31 @@ function MobileBottomNavigation({ locked }: { locked: boolean }) {
       className="fixed bottom-0 left-0 right-0 z-40 w-full max-w-full border-t border-border bg-card/95 pb-[max(env(safe-area-inset-bottom),1rem)] shadow-[0_-8px_24px_rgb(15_23_42_/_0.08)] backdrop-blur md:hidden"
     >
       <div className="flex h-[5.5rem] items-end">
-        <Link to="/" className={itemClass(isActive("/", true))} aria-current={isActive("/", true) ? "page" : undefined}>
+        <Link
+          to="/"
+          className={itemClass(isActive("/", true))}
+          aria-current={isActive("/", true) ? "page" : undefined}
+        >
           <Home className="h-6 w-6" />
           <span>Главная</span>
         </Link>
 
         {can("task.read") && (
-          <Link to="/tasks" className={itemClass(isActive("/tasks"))} aria-current={isActive("/tasks") ? "page" : undefined}>
+          <Link
+            to="/tasks"
+            className={itemClass(isActive("/tasks"))}
+            aria-current={isActive("/tasks") ? "page" : undefined}
+          >
             <ListChecks className="h-6 w-6" />
             <span>Задачи</span>
           </Link>
         )}
 
         {can("task.create") && (
-          <Link to="/taskflow" className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-3 text-xs font-medium text-primary">
+          <Link
+            to="/taskflow"
+            className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-3 text-xs font-medium text-primary"
+          >
             <span className="-mt-7 flex h-16 w-16 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-lg">
               <Plus className="h-7 w-7" />
             </span>
@@ -657,12 +733,21 @@ function MobileBottomNavigation({ locked }: { locked: boolean }) {
           </Link>
         )}
 
-        <Link to="/reports" className={itemClass(isActive("/reports"))} aria-current={isActive("/reports") ? "page" : undefined}>
+        <Link
+          to="/reports"
+          className={itemClass(isActive("/reports"))}
+          aria-current={isActive("/reports") ? "page" : undefined}
+        >
           <ChartNoAxesColumnIncreasing className="h-6 w-6" />
           <span>Отчёты</span>
         </Link>
 
-        <button type="button" onClick={toggleSidebar} className={itemClass(false)} aria-label="Открыть ещё разделы">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className={itemClass(false)}
+          aria-label="Открыть ещё разделы"
+        >
           <Menu className="h-6 w-6" />
           <span>Ещё</span>
         </button>
