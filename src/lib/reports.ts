@@ -50,6 +50,15 @@ export type UploadedVideoReport = {
   file_size: number | null;
   created_at: string;
 };
+export type ReportSettingsMember = Pick<
+  OrgMember,
+  "id" | "full_name" | "department_name" | "role_name" | "avatar_url"
+>;
+export type ReportMemberSettings = {
+  memberIds: number[];
+  defaultMemberIds: number[];
+  members: ReportSettingsMember[];
+};
 
 export const MAX_VIDEO_REPORT_SIZE = 200 * 1024 * 1024;
 export type EmployeeActivity = {
@@ -206,6 +215,13 @@ function textCommitActivity(value: unknown) {
 }
 
 export const reportsService = {
+  reportMemberSettings: (orgId: number) =>
+    apiFetch<ReportMemberSettings>(`/organizations/${orgId}/reports/settings/members`),
+  updateReportMemberSettings: (orgId: number, memberIds: number[]) =>
+    apiFetch<ReportMemberSettings>(`/organizations/${orgId}/reports/settings/members`, {
+      method: "PUT",
+      body: { memberIds },
+    }),
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
     if (filters.departmentId) params.set("departmentId", String(filters.departmentId));
