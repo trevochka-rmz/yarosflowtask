@@ -11,12 +11,10 @@ import {
   ListChecks,
   LoaderCircle,
   Send,
-  Settings2,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -88,8 +86,6 @@ export function EmployeeReportsWorkspace() {
     ownerSendingForOther?: boolean;
   }>();
   const [deliveryInProgress, setDeliveryInProgress] = useState(false);
-  const [reportSettingsOpen, setReportSettingsOpen] = useState(false);
-  const [reportMemberIds, setReportMemberIds] = useState<number[]>([]);
   const isCurrentOrgOwner = ["owner", "владелец"].includes(
     String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
   );
@@ -97,7 +93,6 @@ export function EmployeeReportsWorkspace() {
     "owner", "bot_owner", "владелец", "administrator", "admin", "platform_admin",
     "администратор", "director", "директор",
   ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
-  const canManageReportMembers = canRegenerateVideoAnalysis;
   const updateFilters = (next: ReportFilters) => {
     setFilters(next);
     void navigate({
@@ -128,26 +123,6 @@ export function EmployeeReportsWorkspace() {
     queryKey: ["org-departments", org?.id],
     queryFn: () => orgApi.departments(org!.id),
     enabled: !!org,
-  });
-  const reportMemberSettings = useQuery({
-    queryKey: ["employee-report-members-settings", org?.id],
-    queryFn: () => reportsService.reportMemberSettings(org!.id),
-    enabled: Boolean(org && canManageReportMembers),
-  });
-  useEffect(() => {
-    if (!reportSettingsOpen && reportMemberSettings.data) {
-      setReportMemberIds(reportMemberSettings.data.memberIds);
-    }
-  }, [reportMemberSettings.data, reportSettingsOpen]);
-  const saveReportMembers = useMutation({
-    mutationFn: () => reportsService.updateReportMemberSettings(org!.id, reportMemberIds),
-    onSuccess: () => {
-      toast.success("Список сотрудников отчётов сохранён");
-      setReportSettingsOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["employee-report-members-settings", org?.id] });
-      void queryClient.invalidateQueries({ queryKey: ["employee-reports", org?.id] });
-    },
-    onError: (error: Error) => toast.error(error.message),
   });
   useEffect(() => {
     const it = departments.data?.find((department) =>
@@ -252,14 +227,6 @@ export function EmployeeReportsWorkspace() {
   if (!org) return <p className="text-sm text-muted-foreground">Выберите организацию.</p>;
   return (
     <div className="min-w-0 space-y-3">
-      {canManageReportMembers ? (
-        <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={() => setReportSettingsOpen(true)}>
-            <Settings2 className="mr-2 h-4 w-4" />
-            Настроить список
-          </Button>
-        </div>
-      ) : null}
       <ReportsHeader
         filters={filters}
         departments={departments.data ?? []}
@@ -429,54 +396,6 @@ export function EmployeeReportsWorkspace() {
           )}
         </div>
       )}
-      <Dialog
-        open={reportSettingsOpen}
-        onOpenChange={(open) => {
-          setReportSettingsOpen(open);
-          if (open && reportMemberSettings.data) setReportMemberIds(reportMemberSettings.data.memberIds);
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Список сотрудников отчётов</DialogTitle>
-            <DialogDescription>
-              В разделе будут показаны только выбранные сотрудники. По умолчанию выбраны сотрудники IT-отдела.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[55dvh] space-y-2 overflow-y-auto pr-1">
-            {reportMemberSettings.isPending ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Загружаем сотрудников…</p>
-            ) : reportMemberSettings.data?.members.length ? (
-              reportMemberSettings.data.members.map((member) => {
-                const checked = reportMemberIds.includes(member.id);
-                return (
-                  <label key={member.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted/50">
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(next) => setReportMemberIds((current) =>
-                        next ? [...new Set([...current, member.id])] : current.filter((id) => id !== member.id),
-                      )}
-                    />
-                    <UserAvatar avatarUrl={member.avatar_url} name={member.full_name} className="h-8 w-8" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block break-words text-sm font-medium">{member.full_name}</span>
-                      <span className="block text-xs text-muted-foreground">{member.department_name || member.role_name || "Сотрудник"}</span>
-                    </span>
-                  </label>
-                );
-              })
-            ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">Подходящих сотрудников нет.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReportSettingsOpen(false)}>Отмена</Button>
-            <Button disabled={saveReportMembers.isPending || reportMemberSettings.isPending} onClick={() => saveReportMembers.mutate()}>
-              {saveReportMembers.isPending ? "Сохраняем…" : "Сохранить"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog
         open={Boolean(previewTarget)}
         onOpenChange={(open) => {
