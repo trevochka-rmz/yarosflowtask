@@ -77,6 +77,13 @@ export type EmployeeReport = {
   tasks: ReportTask[];
   commits: ReportCommit[];
   videos: ReportVideo[];
+  shortReports: Array<{
+    id: number;
+    date: string;
+    createdAt?: string;
+    videoReportId?: number | null;
+    text: string;
+  }>;
   activities: EmployeeActivity[];
   activeDays: number;
   lastActivity?: string;
@@ -126,6 +133,13 @@ type ApiEmployeeDetail = {
     created_at?: string;
     video_url?: string | null;
     analysis?: unknown;
+  }>;
+  short_reports?: Array<{
+    id: number;
+    report_date: string;
+    created_at?: string;
+    video_report_id?: number | null;
+    employee_report: string;
   }>;
   activities: Array<{
     type: "task" | "commit" | "video";
@@ -456,6 +470,15 @@ function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
     tasks: data.tasks,
     commits: data.commits,
     videos,
+    shortReports: (data.short_reports ?? [])
+      .filter((report) => Boolean(report.employee_report?.trim()))
+      .map((report) => ({
+        id: report.id,
+        date: String(report.report_date).slice(0, 10),
+        createdAt: report.created_at,
+        videoReportId: report.video_report_id ?? null,
+        text: report.employee_report.trim(),
+      })),
     activities,
     activeDays: data.employee.active_days,
     lastActivity: data.employee.last_activity ?? activities[0]?.date,

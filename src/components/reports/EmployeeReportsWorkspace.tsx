@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  FileText,
   FileVideo,
   GitBranch,
   ListChecks,
@@ -627,6 +628,26 @@ function ReportPanel({
           ) : null}
         </div>
       </header>
+      {report.shortReports.length ? (
+        <section className="mt-5 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+          <div className="flex items-center gap-2 font-semibold">
+            <FileText className="h-4 w-4 text-violet-600" />
+            Краткие отчёты
+          </div>
+          <div className="mt-3 space-y-3">
+            {report.shortReports.map((shortReport) => (
+              <article key={shortReport.id} className="rounded-lg border border-border bg-card p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-medium">{formatReportDay(shortReport.date)}</span>
+                </div>
+                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                  {shortReport.text}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <Tabs value={tab} onValueChange={setTab} className="mt-5">
         <TabsList className="h-auto w-full max-w-full justify-start overflow-x-auto">
           <TabsTrigger value="overview">Обзор</TabsTrigger>

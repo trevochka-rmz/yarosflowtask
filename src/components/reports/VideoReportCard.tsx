@@ -39,9 +39,6 @@ export function VideoReportCard({
   canRegenerateAnalysis?: boolean;
   onRegenerateAnalysis?: (videoReportId: number) => Promise<void>;
 }) {
-  const hasSummary = Boolean(
-    video.summary?.completed || video.summary?.problems || video.summary?.plans,
-  );
   const [hasStartedPlayback, setHasStartedPlayback] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
@@ -135,6 +132,21 @@ export function VideoReportCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {canRegenerateAnalysis && video.id && onRegenerateAnalysis ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isRegeneratingAnalysis}
+              onClick={() => void regenerateAnalysis()}
+            >
+              {isRegeneratingAnalysis ? (
+                <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-3.5 w-3.5" />
+              )}
+              {isRegeneratingAnalysis ? "Анализируем…" : "Видеоанализ"}
+            </Button>
+          ) : null}
           {canDelete && video.id && onDelete ? (
             <Button variant="outline" size="sm" disabled={isDeleting} onClick={deleteVideo}>
               <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -158,7 +170,7 @@ export function VideoReportCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.55fr)] lg:items-center">
+      <div className="mt-4">
         <div>
           <div ref={playerContainerRef} className="relative overflow-hidden rounded-xl bg-black">
             {video.url ? (
@@ -230,52 +242,10 @@ export function VideoReportCard({
           ) : null}
         </div>
 
-        <section className="min-w-0 rounded-xl bg-muted/50 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 font-medium">
-              <Sparkles className="h-4 w-4 text-violet-500" />
-              Текст видеоотчета
-            </div>
-            {canRegenerateAnalysis && video.id && onRegenerateAnalysis ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isRegeneratingAnalysis}
-                onClick={() => void regenerateAnalysis()}
-              >
-                {isRegeneratingAnalysis ? (
-                  <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-3.5 w-3.5" />
-                )}
-                {isRegeneratingAnalysis ? "Анализируем…" : "Видеоанализ"}
-              </Button>
-            ) : null}
-          </div>
-          {hasSummary ? (
-            <div className="mt-3 space-y-3 text-sm text-muted-foreground">
-              {video.summary?.completed ? <p>{video.summary.completed}</p> : null}
-              {video.summary?.problems ? <p>Проблемы: {video.summary.problems}</p> : null}
-              {video.summary?.plans ? <p>Планы: {video.summary.plans}</p> : null}
-            </div>
-          ) : (
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Краткий отчёт формируется после отправки ролика. Ролик уже сохранён и доступен для
-              просмотра.
-            </p>
-          )}
-          <dl className="mt-4 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
-            <div className="flex justify-between gap-3">
-              <dt>Загружен</dt>
-              <dd>{video.createdAt ? formatDate(video.createdAt) : "не указано"}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt>Длительность</dt>
-              <dd>{detectedDuration || video.duration || "определяется после запуска"}</dd>
-            </div>
-          </dl>
-        </section>
+        <dl className="mt-3 grid gap-1 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+          <div className="flex justify-between gap-3"><dt>Загружен</dt><dd>{video.createdAt ? formatDate(video.createdAt) : "не указано"}</dd></div>
+          <div className="flex justify-between gap-3"><dt>Длительность</dt><dd>{detectedDuration || video.duration || "определяется после запуска"}</dd></div>
+        </dl>
       </div>
       {deleteError ? <p className="mt-3 text-sm text-destructive">{deleteError}</p> : null}
     </article>
