@@ -384,7 +384,12 @@ function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
         url: video.video_url ?? undefined,
         summary: analysis
           ? {
-              completed: typeof analysis.summary === "string" ? analysis.summary : undefined,
+              completed:
+                typeof analysis.employee_report === "string"
+                  ? analysis.employee_report
+                  : typeof analysis.summary === "string"
+                    ? analysis.summary
+                    : undefined,
               problems: Array.isArray(analysis.blockers) ? analysis.blockers.join("; ") : undefined,
               plans: Array.isArray(analysis.follow_up_questions)
                 ? analysis.follow_up_questions.join("; ")
