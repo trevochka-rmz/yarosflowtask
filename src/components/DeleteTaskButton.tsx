@@ -20,11 +20,13 @@ export function DeleteTaskButton({
   title,
   tenantId,
   onDeleted,
+  className,
 }: {
   taskId: number;
   title: string;
   tenantId?: number;
   onDeleted?: () => void;
+  className?: string;
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -49,7 +51,7 @@ export function DeleteTaskButton({
           variant="ghost"
           aria-label="Удалить задачу"
           title="Удалить задачу"
-          className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+          className={`h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive ${className ?? ""}`}
           onClick={(e) => {
             e.stopPropagation();
           }}

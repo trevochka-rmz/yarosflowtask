@@ -6,13 +6,7 @@ import { formatDate } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /* -------- Иконки / цвета провайдеров -------- */
-export function ProviderIcon({
-  provider,
-  className,
-}: {
-  provider: string;
-  className?: string;
-}) {
+export function ProviderIcon({ provider, className }: { provider: string; className?: string }) {
   const base = cn("flex items-center justify-center rounded-xl text-white font-bold", className);
 
   if (provider === "BITRIX24")

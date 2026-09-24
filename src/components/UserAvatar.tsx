@@ -8,12 +8,7 @@ type UserAvatarProps = {
   fallbackClassName?: string;
 };
 
-export function UserAvatar({
-  avatarUrl,
-  name,
-  className,
-  fallbackClassName,
-}: UserAvatarProps) {
+export function UserAvatar({ avatarUrl, name, className, fallbackClassName }: UserAvatarProps) {
   const initials =
     String(name || "?")
       .trim()
@@ -27,7 +22,10 @@ export function UserAvatar({
     <Avatar className={cn("h-8 w-8 shrink-0", className)}>
       {avatarUrl ? <AvatarImage src={avatarUrl} alt={name || "Аватар"} /> : null}
       <AvatarFallback
-        className={cn("bg-brand-gradient text-xs font-semibold text-primary-foreground", fallbackClassName)}
+        className={cn(
+          "bg-brand-gradient text-xs font-semibold text-primary-foreground",
+          fallbackClassName,
+        )}
       >
         {initials}
       </AvatarFallback>

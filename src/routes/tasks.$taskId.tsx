@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { TaskAttachments } from "@/components/Attachments";
+import { DeleteTaskButton } from "@/components/DeleteTaskButton";
 import { AssignmentBadge, PriorityBadge, SourceBadge, StatusBadge } from "@/components/Badges";
 import { ExpandableText } from "@/components/ExpandableText";
 import { ExportMenu } from "@/components/ExportMenu";
@@ -62,6 +63,7 @@ function isManagerRole(role?: string | null) {
 
 function TaskDetail() {
   const { taskId } = Route.useParams();
+  const navigate = useNavigate();
   const id = Number(taskId);
   const { data: user } = useCurrentUser();
   const { tenant } = useCurrentTenant();
@@ -247,16 +249,25 @@ function TaskDetail() {
                   </h1>
                 </div>
                 {canModifyTask ? (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
-                    title={editing ? "Отменить редактирование" : "Редактировать задачу"}
-                    className="h-9 w-9 shrink-0 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
-                    onClick={() => setEditing((v) => !v)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                      title={editing ? "Отменить редактирование" : "Редактировать задачу"}
+                      className="h-9 w-9 text-primary-foreground hover:bg-white/15 hover:text-primary-foreground"
+                      onClick={() => setEditing((v) => !v)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <DeleteTaskButton
+                      taskId={task.id}
+                      title={task.title}
+                      tenantId={organizationId}
+                      className="text-primary-foreground hover:bg-destructive/30 hover:text-primary-foreground"
+                      onDeleted={() => void navigate({ to: "/tasks" })}
+                    />
+                  </div>
                 ) : null}
               </div>
             </div>
