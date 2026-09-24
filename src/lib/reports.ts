@@ -73,6 +73,7 @@ export type EmployeeReport = {
     sent_by_user_id: number;
     video_report_id?: number | null;
   } | null;
+  reportDeliveryPending?: boolean;
 };
 
 type ApiEmployee = Pick<
@@ -412,6 +413,7 @@ function normalizeEmployeeReport(data: ApiEmployeeDetail): EmployeeReport {
     activeDays: data.employee.active_days,
     lastActivity: data.employee.last_activity ?? activities[0]?.date,
     reportDelivery: data.report_delivery ?? null,
+    reportDeliveryPending: Boolean(data.report_delivery_pending),
   };
 }
 

@@ -9,6 +9,7 @@ import {
   FileVideo,
   GitBranch,
   ListChecks,
+  LoaderCircle,
   Send,
   Users,
 } from "lucide-react";
@@ -84,6 +85,7 @@ export function EmployeeReportsWorkspace() {
     reportDate: string;
     ownerSendingForOther?: boolean;
   }>();
+  const [deliveryInProgress, setDeliveryInProgress] = useState(false);
   const isCurrentOrgOwner = ["owner", "владелец"].includes(
     String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
   );
@@ -166,6 +168,7 @@ export function EmployeeReportsWorkspace() {
     onSuccess: (data) => {
       if (data.notification?.pending) {
         toast.success("Отправка начата. Ролик появится в Telegram после обработки.");
+        setDeliveryInProgress(true);
         setPreviewTarget(undefined);
         // В фоне Telegram может принимать большой файл дольше обычного.
         // Обновляем карточку несколько раз, чтобы кнопка стала
@@ -195,6 +198,15 @@ export function EmployeeReportsWorkspace() {
       reportsService.previewEmployeeReport(org!.id, memberId, reportDate),
     onError: (error: Error) => toast.error(error.message),
   });
+  useEffect(() => {
+    if (!deliveryInProgress) return;
+    const timer = window.setInterval(() => {
+      void activeReport.refetch().then(({ data }) => {
+        if (!data?.reportDeliveryPending) setDeliveryInProgress(false);
+      });
+    }, 4_000);
+    return () => window.clearInterval(timer);
+  }, [activeReport.refetch, deliveryInProgress]);
   // После успешной загрузки 1С-снимок сохранён на backend. Обновляем только
   // сводный список, чтобы красный Git-индикатор сразу стал зелёным.
   useEffect(() => {
@@ -356,7 +368,11 @@ export function EmployeeReportsWorkspace() {
                 setPreviewTarget(target);
                 previewVideo.mutate(target);
               }}
-              isSending={sendVideo.isPending}
+              isSending={
+                sendVideo.isPending
+                || deliveryInProgress
+                || Boolean((activeReport.data ?? active).reportDeliveryPending)
+              }
             />
           )}
         </div>
@@ -429,7 +445,7 @@ export function EmployeeReportsWorkspace() {
                 if (previewTarget) void sendVideo.mutateAsync(previewTarget);
               }}
             >
-              <Send className="h-4 w-4" />
+              {sendVideo.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               {sendVideo.isPending
                 ? "Отправляем…"
                 : previewTarget?.ownerSendingForOther
@@ -520,7 +536,7 @@ function ReportPanel({
                   disabled={isSending}
                   onClick={onPreview}
                 >
-                  <Send className="h-4 w-4" />
+                  {isSending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {isSending
                     ? "Отправляем…"
                     : reportWasSent
