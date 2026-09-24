@@ -96,17 +96,43 @@ export function EmployeeReportsWorkspace() {
   }>();
   const [deliveryInProgress, setDeliveryInProgress] = useState(false);
   const isCurrentOrgOwner = ["owner", "владелец"].includes(
-    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
+    String(org?.role_code || org?.role_name || "")
+      .trim()
+      .toLowerCase(),
   );
   const canRegenerateVideoAnalysis = [
-    "owner", "bot_owner", "владелец", "administrator", "admin", "platform_admin",
-    "администратор", "director", "директор",
-  ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
+    "owner",
+    "bot_owner",
+    "владелец",
+    "administrator",
+    "admin",
+    "platform_admin",
+    "администратор",
+    "director",
+    "директор",
+  ].includes(
+    String(org?.role_code || org?.role_name || "")
+      .trim()
+      .toLowerCase(),
+  );
   const canViewGeneralReport = [
-    "owner", "владелец", "director", "директор", "administrator", "admin", "администратор", "админ",
-  ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
+    "owner",
+    "владелец",
+    "director",
+    "директор",
+    "administrator",
+    "admin",
+    "администратор",
+    "админ",
+  ].includes(
+    String(org?.role_code || org?.role_name || "")
+      .trim()
+      .toLowerCase(),
+  );
   const isDirector = ["director", "директор"].includes(
-    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
+    String(org?.role_code || org?.role_name || "")
+      .trim()
+      .toLowerCase(),
   );
   const updateFilters = (next: ReportFilters) => {
     setFilters(next);
@@ -143,8 +169,7 @@ export function EmployeeReportsWorkspace() {
     const it = departments.data?.find((department) =>
       ["it", "ит"].includes(department.name.trim().toLowerCase()),
     );
-    if (it && filters.departmentId !== it.id)
-      updateFilters({ ...filters, departmentId: it.id });
+    if (it && filters.departmentId !== it.id) updateFilters({ ...filters, departmentId: it.id });
   }, [departments.data, filters.departmentId]);
   const reports = useQuery({
     queryKey: ["employee-reports", org?.id, filters],
@@ -179,7 +204,9 @@ export function EmployeeReportsWorkspace() {
     if (isDirector && selected === undefined && !linkedMemberId) setSelected("general");
   }, [isDirector, linkedMemberId, selected]);
   const generalSelected = canViewGeneralReport && selected === "general";
-  const active = generalSelected ? undefined : list.find((x) => x.member.id === selected) ?? list[0];
+  const active = generalSelected
+    ? undefined
+    : (list.find((x) => x.member.id === selected) ?? list[0]);
   const generalReport = useQuery({
     queryKey: ["employee-general-report", org?.id, filters.from, filters.to],
     queryFn: () => reportsService.getGeneralReport(org!.id, filters),
@@ -229,14 +256,16 @@ export function EmployeeReportsWorkspace() {
   useEffect(() => {
     if (!deliveryInProgress || !org || !active) return;
     const timer = window.setInterval(() => {
-      void reportsService.employeeReportDeliveryStatus(org.id, active.member.id, filters.to).then((data) => {
-        if (!data.pending) {
-          setDeliveryInProgress(false);
-          void queryClient.invalidateQueries({
-            queryKey: ["employee-report-detail", org.id, active.member.id],
-          });
-        }
-      });
+      void reportsService
+        .employeeReportDeliveryStatus(org.id, active.member.id, filters.to)
+        .then((data) => {
+          if (!data.pending) {
+            setDeliveryInProgress(false);
+            void queryClient.invalidateQueries({
+              queryKey: ["employee-report-detail", org.id, active.member.id],
+            });
+          }
+        });
     }, 4_000);
     return () => window.clearInterval(timer);
   }, [active, deliveryInProgress, filters.to, org, queryClient]);
@@ -297,7 +326,9 @@ export function EmployeeReportsWorkspace() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">Общий отчёт</span>
-                  <span className="block truncate text-xs text-muted-foreground">Краткие отчёты команды</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    Краткие отчёты команды
+                  </span>
                 </span>
               </button>
             ) : null}
@@ -414,7 +445,11 @@ export function EmployeeReportsWorkspace() {
               }}
               canRegenerateVideoAnalysis={canRegenerateVideoAnalysis}
               onRegenerateVideoAnalysis={async (videoReportId) => {
-                await reportsService.regenerateVideoAnalysis(org.id, active.member.id, videoReportId);
+                await reportsService.regenerateVideoAnalysis(
+                  org.id,
+                  active.member.id,
+                  videoReportId,
+                );
                 await Promise.all([
                   queryClient.invalidateQueries({
                     queryKey: ["employee-report-detail", org.id, active.member.id],
@@ -433,9 +468,9 @@ export function EmployeeReportsWorkspace() {
                 previewVideo.mutate(target);
               }}
               isSending={
-                sendVideo.isPending
-                || deliveryInProgress
-                || Boolean((activeReport.data ?? active).reportDeliveryPending)
+                sendVideo.isPending ||
+                deliveryInProgress ||
+                Boolean((activeReport.data ?? active).reportDeliveryPending)
               }
             />
           )}
@@ -458,33 +493,35 @@ export function EmployeeReportsWorkspace() {
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
             {previewVideo.isPending ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Готовим предпросмотр…</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Готовим предпросмотр…
+              </p>
             ) : previewVideo.data ? (
               <div className="rounded-xl border bg-muted/30 p-4">
-              <p className="mb-3 text-xs font-medium text-muted-foreground">
-                {previewVideo.data.has_video
-                  ? "🎥 Видеоролик будет прикреплён"
-                  : "📝 Отчёт будет отправлен без видеоролика"}
-              </p>
-              {!previewVideo.data.has_video ? (
-                <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  Чтобы добавить ролик, отмените этот предпросмотр, загрузите видеоотчёт и затем
-                  снова откройте отправку отчёта. Ролик не прикрепляется автоматически.
+                <p className="mb-3 text-xs font-medium text-muted-foreground">
+                  {previewVideo.data.has_video
+                    ? "🎥 Видеоролик будет прикреплён"
+                    : "📝 Отчёт будет отправлен без видеоролика"}
                 </p>
-              ) : null}
-              {!previewVideo.data.caption.includes("Краткая сводка из 1С") ? (
-                <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  Отчёт из 1С пока не найден. Сначала заполните отчёт в 1С — после обновления он
-                  появится здесь.
+                {!previewVideo.data.has_video ? (
+                  <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+                    Чтобы добавить ролик, отмените этот предпросмотр, загрузите видеоотчёт и затем
+                    снова откройте отправку отчёта. Ролик не прикрепляется автоматически.
+                  </p>
+                ) : null}
+                {!previewVideo.data.caption.includes("Краткая сводка из 1С") ? (
+                  <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+                    Отчёт из 1С пока не найден. Сначала заполните отчёт в 1С — после обновления он
+                    появится здесь.
+                  </p>
+                ) : null}
+                <div
+                  className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
+                  dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
+                />
+                <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
+                  📋 Открыть полный отчёт
                 </p>
-              ) : null}
-              <div
-                className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
-                dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
-              />
-              <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
-                📋 Открыть полный отчёт
-              </p>
               </div>
             ) : (
               <p className="py-8 text-center text-sm text-destructive">
@@ -509,7 +546,11 @@ export function EmployeeReportsWorkspace() {
                 if (previewTarget) void sendVideo.mutateAsync(previewTarget);
               }}
             >
-              {sendVideo.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {sendVideo.isPending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               {sendVideo.isPending
                 ? "Отправляем…"
                 : previewTarget?.ownerSendingForOther
@@ -610,18 +651,22 @@ function ReportPanel({
                   disabled={isSending || !hasReportDataForSelectedDate}
                   onClick={onPreview}
                 >
-                  {isSending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {isSending ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                   {isSending
                     ? "Отправляем…"
                     : !hasReportDataForSelectedDate
                       ? "Добавьте отчёт"
-                    : reportWasSent
-                      ? ownerSendingForOther
-                        ? "Переотправить руководству"
-                        : "Переотправить руководству и себе"
-                      : ownerSendingForOther
-                        ? "Отправить руководству"
-                        : "Отправить руководству и себе"}
+                      : reportWasSent
+                        ? ownerSendingForOther
+                          ? "Переотправить руководству"
+                          : "Переотправить руководству и себе"
+                        : ownerSendingForOther
+                          ? "Отправить руководству"
+                          : "Отправить руководству и себе"}
                 </Button>
               ) : null}
             </div>
@@ -632,7 +677,7 @@ function ReportPanel({
         <section className="mt-5 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
           <div className="flex items-center gap-2 font-semibold">
             <FileText className="h-4 w-4 text-violet-600" />
-            Краткие отчёты
+            Краткий отчёт из отчетов за сегодня
           </div>
           <div className="mt-3 space-y-3">
             {report.shortReports.map((shortReport) => (
@@ -694,7 +739,7 @@ function ReportPanel({
       {isSingleDay && (tab === "git" || tab === "overview") ? (
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <article className="rounded-xl border p-4">
-            <h2 className="font-semibold">Краткая сводка дня</h2>
+            <h2 className="font-semibold">Краткая сводка из 1С</h2>
             {git ? (
               <>
                 <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
