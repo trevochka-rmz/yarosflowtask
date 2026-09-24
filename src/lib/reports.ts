@@ -348,6 +348,11 @@ export const reportsService = {
       { method: "POST", body: { reportDate } },
     );
   },
+  async employeeReportDeliveryStatus(orgId: number, employeeId: number, reportDate: string) {
+    return apiFetch<{ pending: boolean }>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/report-notification/status?reportDate=${encodeURIComponent(reportDate)}`,
+    );
+  },
 };
 
 function memberFromApi(employee: ApiEmployee): OrgMember {

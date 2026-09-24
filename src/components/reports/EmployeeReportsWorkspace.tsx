@@ -199,14 +199,19 @@ export function EmployeeReportsWorkspace() {
     onError: (error: Error) => toast.error(error.message),
   });
   useEffect(() => {
-    if (!deliveryInProgress) return;
+    if (!deliveryInProgress || !org || !active) return;
     const timer = window.setInterval(() => {
-      void activeReport.refetch().then(({ data }) => {
-        if (!data?.reportDeliveryPending) setDeliveryInProgress(false);
+      void reportsService.employeeReportDeliveryStatus(org.id, active.member.id, filters.to).then((data) => {
+        if (!data.pending) {
+          setDeliveryInProgress(false);
+          void queryClient.invalidateQueries({
+            queryKey: ["employee-report-detail", org.id, active.member.id],
+          });
+        }
       });
     }, 4_000);
     return () => window.clearInterval(timer);
-  }, [activeReport.refetch, deliveryInProgress]);
+  }, [active, deliveryInProgress, filters.to, org, queryClient]);
   // После успешной загрузки 1С-снимок сохранён на backend. Обновляем только
   // сводный список, чтобы красный Git-индикатор сразу стал зелёным.
   useEffect(() => {
