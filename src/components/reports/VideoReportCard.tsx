@@ -30,10 +30,14 @@ export function VideoReportCard({
   video,
   canDelete = false,
   onDelete,
+  canRegenerateAnalysis = false,
+  onRegenerateAnalysis,
 }: {
   video: ReportVideo;
   canDelete?: boolean;
   onDelete?: (videoReportId: number) => Promise<void>;
+  canRegenerateAnalysis?: boolean;
+  onRegenerateAnalysis?: (videoReportId: number) => Promise<void>;
 }) {
   const hasSummary = Boolean(
     video.summary?.completed || video.summary?.problems || video.summary?.plans,
@@ -43,6 +47,7 @@ export function VideoReportCard({
   const [playbackError, setPlaybackError] = useState(false);
   const [detectedDuration, setDetectedDuration] = useState<string>();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRegeneratingAnalysis, setIsRegeneratingAnalysis] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -101,6 +106,19 @@ export function VideoReportCard({
       setDeleteError(message);
       toast.error(message);
       setIsDeleting(false);
+    }
+  };
+
+  const regenerateAnalysis = async () => {
+    if (!video.id || !onRegenerateAnalysis || isRegeneratingAnalysis) return;
+    setIsRegeneratingAnalysis(true);
+    try {
+      await onRegenerateAnalysis(video.id);
+      toast.success("Видеоанализ обновлён");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось создать видеоанализ");
+    } finally {
+      setIsRegeneratingAnalysis(false);
     }
   };
 
@@ -213,9 +231,27 @@ export function VideoReportCard({
         </div>
 
         <section className="min-w-0 rounded-xl bg-muted/50 p-4">
-          <div className="flex items-center gap-2 font-medium">
-            <Sparkles className="h-4 w-4 text-violet-500" />
-            Текст видеоотчета
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 font-medium">
+              <Sparkles className="h-4 w-4 text-violet-500" />
+              Текст видеоотчета
+            </div>
+            {canRegenerateAnalysis && video.id && onRegenerateAnalysis ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isRegeneratingAnalysis}
+                onClick={() => void regenerateAnalysis()}
+              >
+                {isRegeneratingAnalysis ? (
+                  <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-3.5 w-3.5" />
+                )}
+                {isRegeneratingAnalysis ? "Анализируем…" : "Видеоанализ"}
+              </Button>
+            ) : null}
           </div>
           {hasSummary ? (
             <div className="mt-3 space-y-3 text-sm text-muted-foreground">

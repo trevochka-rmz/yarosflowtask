@@ -89,6 +89,10 @@ export function EmployeeReportsWorkspace() {
   const isCurrentOrgOwner = ["owner", "владелец"].includes(
     String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
   );
+  const canRegenerateVideoAnalysis = [
+    "owner", "bot_owner", "владелец", "administrator", "admin", "platform_admin",
+    "администратор", "director", "директор",
+  ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
   const updateFilters = (next: ReportFilters) => {
     setFilters(next);
     void navigate({
@@ -363,6 +367,16 @@ export function EmployeeReportsWorkspace() {
                   queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
                 ]);
               }}
+              canRegenerateVideoAnalysis={canRegenerateVideoAnalysis}
+              onRegenerateVideoAnalysis={async (videoReportId) => {
+                await reportsService.regenerateVideoAnalysis(org.id, active.member.id, videoReportId);
+                await Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: ["employee-report-detail", org.id, active.member.id],
+                  }),
+                  queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
+                ]);
+              }}
               onPreview={() => {
                 const target = {
                   memberId: active.member.id,
@@ -474,6 +488,8 @@ function ReportPanel({
   selectedReportDate,
   onUploaded,
   onDeleted,
+  canRegenerateVideoAnalysis,
+  onRegenerateVideoAnalysis,
   onPreview,
   isSending,
 }: {
@@ -489,6 +505,8 @@ function ReportPanel({
   selectedReportDate: string;
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
+  canRegenerateVideoAnalysis: boolean;
+  onRegenerateVideoAnalysis: (videoReportId: number) => Promise<void>;
   onPreview: () => void;
   isSending: boolean;
 }) {
@@ -676,6 +694,8 @@ function ReportPanel({
                   video={periodVideo}
                   canDelete={canUpload}
                   onDelete={onDeleted}
+                  canRegenerateAnalysis={canRegenerateVideoAnalysis}
+                  onRegenerateAnalysis={onRegenerateVideoAnalysis}
                 />
               ))}
             </div>
