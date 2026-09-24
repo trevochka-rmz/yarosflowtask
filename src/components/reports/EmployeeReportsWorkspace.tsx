@@ -523,6 +523,12 @@ function ReportPanel({
   const hasVideoForSelectedDate = report.videos.some(
     (item) => isoDate(new Date(item.date)) === selectedReportDate,
   );
+  const hasTextReportForSelectedDate = report.commits.some(
+    (commit) =>
+      Boolean(commit.report_text?.trim()) && isoDate(new Date(commit.date)) === selectedReportDate,
+  );
+  const hasReportDataForSelectedDate =
+    hasVideoForSelectedDate || hasTextReportForSelectedDate || report.tasks.length > 0;
   return (
     <section className="min-w-0 overflow-hidden rounded-2xl border bg-card p-5">
       <header className="flex flex-wrap items-center gap-3">
@@ -556,12 +562,14 @@ function ReportPanel({
                 <Button
                   type="button"
                   className="bg-emerald-600 hover:bg-emerald-700"
-                  disabled={isSending}
+                  disabled={isSending || !hasReportDataForSelectedDate}
                   onClick={onPreview}
                 >
                   {isSending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {isSending
                     ? "Отправляем…"
+                    : !hasReportDataForSelectedDate
+                      ? "Добавьте отчёт"
                     : reportWasSent
                       ? ownerSendingForOther
                         ? "Переотправить руководству"
