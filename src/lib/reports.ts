@@ -102,6 +102,20 @@ export type GeneralShortReport = {
   employee_report: string;
   member: Pick<OrgMember, "id" | "full_name" | "avatar_url" | "department_name">;
 };
+export type TeamDailyReport = {
+  id: number;
+  report_date: string;
+  team_report: string;
+  generated_at: string;
+  report_data?: {
+    overall_status?: "green" | "yellow" | "red";
+    day_summary?: string;
+  };
+};
+export type GeneralReport = {
+  team_report: TeamDailyReport | null;
+  employee_reports: GeneralShortReport[];
+};
 
 type ApiEmployee = Pick<
   OrgMember,
@@ -249,7 +263,7 @@ export const reportsService = {
     }),
   getGeneralReport: (orgId: number, filters: Pick<ReportFilters, "from" | "to">) => {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
-    return apiFetch<GeneralShortReport[]>(`/organizations/${orgId}/reports/general?${params}`);
+    return apiFetch<GeneralReport>(`/organizations/${orgId}/reports/general?${params}`);
   },
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });

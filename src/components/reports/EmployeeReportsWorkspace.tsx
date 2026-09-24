@@ -385,7 +385,8 @@ export function EmployeeReportsWorkspace() {
           </aside>
           {generalSelected ? (
             <GeneralReportPanel
-              reports={generalReport.data ?? []}
+              reports={generalReport.data?.employee_reports ?? []}
+              teamReport={generalReport.data?.team_report ?? null}
               pending={generalReport.isPending}
               error={generalReport.isError}
             />

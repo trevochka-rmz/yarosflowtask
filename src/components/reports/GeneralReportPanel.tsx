@@ -1,6 +1,6 @@
-import { FileText, LoaderCircle, Users } from "lucide-react";
+import { FileText, LoaderCircle, Sparkles, Users } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
-import type { GeneralShortReport } from "@/lib/reports";
+import type { GeneralShortReport, TeamDailyReport } from "@/lib/reports";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" }).format(
@@ -10,10 +10,12 @@ function formatDate(value: string) {
 
 export function GeneralReportPanel({
   reports,
+  teamReport,
   pending,
   error,
 }: {
   reports: GeneralShortReport[];
+  teamReport: TeamDailyReport | null;
   pending: boolean;
   error: boolean;
 }) {
@@ -29,10 +31,22 @@ export function GeneralReportPanel({
         <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><Users className="h-5 w-5" /></span>
         <div className="min-w-0">
           <h1 className="text-xl font-semibold">Общий отчёт</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Краткие выжимки из видеоотчётов сотрудников</p>
+          <p className="mt-1 text-sm text-muted-foreground">Итог команды и краткие отчёты сотрудников</p>
         </div>
         <span className="ml-auto rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">{reports.length} {reports.length === 1 ? "отчёт" : "отчётов"}</span>
       </header>
+      {teamReport ? (
+        <article className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <header className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <div>
+              <h2 className="font-semibold">Итоговый отчёт IT-команды</h2>
+              <p className="text-xs text-muted-foreground">{formatDate(teamReport.report_date)}</p>
+            </div>
+          </header>
+          <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{teamReport.team_report}</p>
+        </article>
+      ) : null}
       {reports.length ? (
         <div className="mt-4 grid gap-3 xl:grid-cols-2">
           {reports.map((report) => (
