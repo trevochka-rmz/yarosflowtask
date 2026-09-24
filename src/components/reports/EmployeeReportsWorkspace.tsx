@@ -11,6 +11,7 @@ import {
   ListChecks,
   LoaderCircle,
   Send,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,7 +28,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserAvatar } from "@/components/UserAvatar";
 import { orgApi, useCurrentOrg } from "@/lib/org";
 import { useCurrentUser } from "@/lib/use-current-user";
-import { isoDate, reportsService, type ReportFilters, type ReportType } from "@/lib/reports";
+import {
+  isoDate,
+  reportsService,
+  type GeneralShortReport,
+  type ReportFilters,
+  type ReportType,
+} from "@/lib/reports";
 import { parseGitReport } from "@/lib/git-report-parser";
 import { STATUS_LABELS } from "@/lib/api";
 import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./ReportPrimitives";
@@ -78,7 +85,7 @@ export function EmployeeReportsWorkspace() {
     search: typeof routeSearch.reportSearch === "string" ? routeSearch.reportSearch : undefined,
   }));
   const [source, setSource] = useState<ReportType>(() => searchSource(routeSearch.reportSource));
-  const [selected, setSelected] = useState<number>();
+  const [selected, setSelected] = useState<number | "general">();
   const [tab, setTab] = useState<"overview" | "git" | "tasks" | "video">("overview");
   const [previewTarget, setPreviewTarget] = useState<{
     memberId: number;
@@ -93,6 +100,12 @@ export function EmployeeReportsWorkspace() {
     "owner", "bot_owner", "владелец", "administrator", "admin", "platform_admin",
     "администратор", "director", "директор",
   ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
+  const canViewGeneralReport = [
+    "owner", "владелец", "director", "директор", "administrator", "admin", "администратор", "админ",
+  ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
+  const isDirector = ["director", "директор"].includes(
+    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
+  );
   const updateFilters = (next: ReportFilters) => {
     setFilters(next);
     void navigate({
@@ -160,7 +173,16 @@ export function EmployeeReportsWorkspace() {
     appliedLinkedMemberId.current = linkedMemberId;
     setSelected(linkedMemberId);
   }, [linkedMemberId, list]);
-  const active = list.find((x) => x.member.id === selected) ?? list[0];
+  useEffect(() => {
+    if (isDirector && selected === undefined && !linkedMemberId) setSelected("general");
+  }, [isDirector, linkedMemberId, selected]);
+  const generalSelected = canViewGeneralReport && selected === "general";
+  const active = generalSelected ? undefined : list.find((x) => x.member.id === selected) ?? list[0];
+  const generalReport = useQuery({
+    queryKey: ["employee-general-report", org?.id, filters.from, filters.to],
+    queryFn: () => reportsService.getGeneralReport(org!.id, filters),
+    enabled: !!org && generalSelected,
+  });
   const activeReport = useQuery({
     queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
     queryFn: () => reportsService.getEmployee(org!.id, active!.member.id, filters),
@@ -254,7 +276,7 @@ export function EmployeeReportsWorkspace() {
         <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
           {reports.error.message}
         </p>
-      ) : !active ? (
+      ) : !active && !generalSelected ? (
         <EmptyReport />
       ) : (
         <div className="grid min-w-0 gap-4 xl:grid-cols-[29%_1fr]">
@@ -262,6 +284,21 @@ export function EmployeeReportsWorkspace() {
             <div className="border-b p-4">
               <b>Сотрудники</b>
             </div>
+            {canViewGeneralReport ? (
+              <button
+                type="button"
+                onClick={() => setSelected("general")}
+                className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${generalSelected ? "border-l-2 border-l-primary bg-primary/8" : ""}`}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium">Общий отчёт</span>
+                  <span className="block truncate text-xs text-muted-foreground">Краткие отчёты команды</span>
+                </span>
+              </button>
+            ) : null}
             {list.map((report) => {
               const git = report.commits.length > 0,
                 jira = report.tasks.length > 0,
@@ -271,7 +308,7 @@ export function EmployeeReportsWorkspace() {
                 <button
                   key={report.member.id}
                   onClick={() => setSelected(report.member.id)}
-                  className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
+                  className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active?.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
                 >
                   <EmployeeName member={report.member} compact />
                   {isCurrentUser ? (
@@ -314,7 +351,13 @@ export function EmployeeReportsWorkspace() {
               </div>
             </div>
           </aside>
-          {activeReport.isPending ? (
+          {generalSelected ? (
+            <GeneralReportPanel
+              reports={generalReport.data ?? []}
+              pending={generalReport.isPending}
+              error={generalReport.isError}
+            />
+          ) : activeReport.isPending ? (
             <section className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
               Загружаем отчет сотрудника…
             </section>

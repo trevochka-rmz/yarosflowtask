@@ -87,6 +87,14 @@ export type EmployeeReport = {
   } | null;
   reportDeliveryPending?: boolean;
 };
+export type GeneralShortReport = {
+  id: number;
+  member_id: number;
+  report_date: string;
+  created_at: string;
+  employee_report: string;
+  member: Pick<OrgMember, "id" | "full_name" | "avatar_url" | "department_name">;
+};
 
 type ApiEmployee = Pick<
   OrgMember,
@@ -225,6 +233,10 @@ export const reportsService = {
       method: "PUT",
       body: { memberIds, departmentIds },
     }),
+  getGeneralReport: (orgId: number, filters: Pick<ReportFilters, "from" | "to">) => {
+    const params = new URLSearchParams({ from: filters.from, to: filters.to });
+    return apiFetch<GeneralShortReport[]>(`/organizations/${orgId}/reports/general?${params}`);
+  },
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
     if (filters.departmentId) params.set("departmentId", String(filters.departmentId));
