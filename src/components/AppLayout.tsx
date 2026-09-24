@@ -3,7 +3,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bot,
-  ClipboardList,
   FileClock,
   GitPullRequestArrow,
   Home,
@@ -460,6 +459,7 @@ type NavItem = {
   icon: typeof Home;
   exact?: boolean;
   perm?: string;
+  platformOnly?: boolean;
 };
 
 type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean };
@@ -477,13 +477,6 @@ const GROUPS: NavGroup[] = [
         perm: "organization.update",
       },
       { title: "Флот ботов", url: "/bots", icon: Bot, exact: true, perm: "bot.read" },
-      {
-        title: "Подключение/создание ботов",
-        url: "/bots/new",
-        icon: Plus,
-        perm: "bot.read",
-      },
-      { title: "TaskFlow — новое ТЗ", url: "/taskflow", icon: ClipboardList, perm: "task.create" },
       { title: "Задачи", url: "/tasks", icon: ListChecks, perm: "task.read" },
       { title: "Отчёты", url: "/reports", icon: ChartNoAxesColumnIncreasing },
     ],
@@ -514,12 +507,10 @@ const GROUPS: NavGroup[] = [
   },
   {
     label: "Платформа",
-    adminOnly: true,
-    items: [{ title: "Администрирование", url: "/admin", icon: Shield }],
-  },
-  {
-    label: "Настройки",
-    items: [{ title: "Настройки", url: "/notification-settings", icon: SlidersHorizontal }],
+    items: [
+      { title: "Администрирование", url: "/admin", icon: Shield, platformOnly: true },
+      { title: "Настройки", url: "/notification-settings", icon: SlidersHorizontal },
+    ],
   },
 ];
 
@@ -568,7 +559,9 @@ function AppSidebar({ locked }: { locked?: boolean }) {
               .map((group) => ({
                 ...group,
                 items: group.items.filter((i) =>
-                  i.url === "/notification-settings"
+                  i.platformOnly
+                    ? isPlatformAdmin
+                    : i.url === "/notification-settings"
                     ? canManageNotifications
                     : i.perm ? can(i.perm) : true,
                 ),

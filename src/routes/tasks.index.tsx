@@ -543,6 +543,12 @@ function TasksPage() {
                 <Columns3 className="h-4 w-4" /> Канбан
               </button>
             </div>
+            <Button asChild variant="outline" className="shrink-0">
+              <Link to="/taskflow">
+                <span className="hidden sm:inline">Сгенерировать</span>
+                <span className="sm:hidden">ИИ</span>
+              </Link>
+            </Button>
             <Button className="shrink-0" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Добавить задачу</span>
               <span className="sm:hidden">Добавить</span>
