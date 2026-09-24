@@ -38,6 +38,7 @@ import {
 import { parseGitReport } from "@/lib/git-report-parser";
 import { STATUS_LABELS } from "@/lib/api";
 import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./ReportPrimitives";
+import { GeneralReportPanel } from "./GeneralReportPanel";
 import { VideoReportCard } from "./VideoReportCard";
 import { VideoReportUpload } from "./VideoReportUpload";
 
