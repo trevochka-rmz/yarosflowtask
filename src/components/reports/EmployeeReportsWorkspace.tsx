@@ -114,25 +114,7 @@ export function EmployeeReportsWorkspace() {
       .trim()
       .toLowerCase(),
   );
-  const canViewGeneralReport = [
-    "owner",
-    "владелец",
-    "director",
-    "директор",
-    "administrator",
-    "admin",
-    "администратор",
-    "админ",
-  ].includes(
-    String(org?.role_code || org?.role_name || "")
-      .trim()
-      .toLowerCase(),
-  );
-  const isDirector = ["director", "директор"].includes(
-    String(org?.role_code || org?.role_name || "")
-      .trim()
-      .toLowerCase(),
-  );
+  const canViewGeneralReport = Boolean(org?.id);
   const updateFilters = (next: ReportFilters) => {
     setFilters(next);
     void navigate({
@@ -200,8 +182,12 @@ export function EmployeeReportsWorkspace() {
     setSelected(linkedMemberId);
   }, [linkedMemberId, list]);
   useEffect(() => {
-    if (isDirector && selected === undefined && !linkedMemberId) setSelected("general");
-  }, [isDirector, linkedMemberId, selected]);
+    if (selected !== undefined || linkedMemberId || reports.isPending) return;
+    const currentMember = list.find(
+      (report) => Number(report.member.user_id) === Number(currentUser?.id),
+    );
+    setSelected(currentMember?.member.id ?? "general");
+  }, [currentUser?.id, linkedMemberId, list, reports.isPending, selected]);
   const generalSelected = canViewGeneralReport && selected === "general";
   const active = generalSelected
     ? undefined
@@ -302,7 +288,7 @@ export function EmployeeReportsWorkspace() {
       />
       {reports.isPending ? (
         <p className="p-8 text-sm text-muted-foreground">Загружаем отчеты…</p>
-      ) : reports.isError ? (
+      ) : reports.isError && !generalSelected ? (
         <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
           {reports.error.message}
         </p>
