@@ -431,7 +431,7 @@ export function EmployeeReportsWorkspace() {
               }}
               canRegenerateVideoAnalysis={canRegenerateVideoAnalysis}
               onRegenerateVideoAnalysis={async (videoReportId) => {
-                await reportsService.regenerateVideoAnalysis(
+                const result = await reportsService.regenerateVideoAnalysis(
                   org.id,
                   active.member.id,
                   videoReportId,
@@ -442,6 +442,7 @@ export function EmployeeReportsWorkspace() {
                   }),
                   queryClient.invalidateQueries({ queryKey: ["employee-reports", org.id] }),
                 ]);
+                return result;
               }}
               onPreview={() => {
                 const target = {
@@ -578,7 +579,7 @@ function ReportPanel({
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
   canRegenerateVideoAnalysis: boolean;
-  onRegenerateVideoAnalysis: (videoReportId: number) => Promise<void>;
+  onRegenerateVideoAnalysis: (videoReportId: number) => Promise<{ reused?: boolean }>;
   onPreview: () => void;
   isSending: boolean;
 }) {
@@ -600,8 +601,12 @@ function ReportPanel({
     if (!videoForAnalysis?.id || isGeneratingShortReport) return;
     setIsGeneratingShortReport(true);
     try {
-      await onRegenerateVideoAnalysis(videoForAnalysis.id);
-      toast.success("Краткий отчёт обновлён");
+      const result = await onRegenerateVideoAnalysis(videoForAnalysis.id);
+      toast.success(
+        result.reused
+          ? "Модель временно недоступна: используется сохранённый краткий отчёт"
+          : "Краткий отчёт обновлён",
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Не удалось создать краткий отчёт");
     } finally {

@@ -390,7 +390,7 @@ export const reportsService = {
     );
   },
   async regenerateVideoAnalysis(orgId: number, employeeId: number, videoReportId: number) {
-    return apiFetch<{ employee_report: string }>(
+    return apiFetch<{ employee_report: string; reused?: boolean }>(
       `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}/analysis/regenerate`,
       { method: "POST" },
     );
