@@ -318,6 +318,7 @@ export function EmployeeReportsWorkspace() {
               </button>
             ) : null}
             {list.map((report) => {
+              const oneCRequired = report.member.one_c_report_required !== false;
               const git = report.commits.length > 0,
                 jira = report.tasks.length > 0,
                 video = report.videos.length > 0;
@@ -336,8 +337,8 @@ export function EmployeeReportsWorkspace() {
                   ) : null}
                   <span className="ml-auto flex gap-1">
                     <i
-                      title="Git-отчет"
-                      className={`h-2 w-2 rounded-full ${git ? "bg-emerald-500" : "bg-rose-400"}`}
+                      title={oneCRequired ? "Отчёт 1С" : "Отчёт 1С не требуется"}
+                      className={`h-2 w-2 rounded-full ${git ? "bg-emerald-500" : oneCRequired ? "bg-rose-400" : "bg-slate-400"}`}
                     />
                     <i
                       title="Jira"
@@ -359,6 +360,9 @@ export function EmployeeReportsWorkspace() {
                 </p>
                 <p className="flex items-center gap-2">
                   <i className="h-2 w-2 rounded-full bg-rose-400" /> Git-отчет: нет
+                </p>
+                <p className="flex items-center gap-2">
+                  <i className="h-2 w-2 rounded-full bg-slate-400" /> 1С: не требуется
                 </p>
                 <p className="flex items-center gap-2">
                   <i className="h-2 w-2 rounded-full bg-blue-500" /> Jira: есть активность

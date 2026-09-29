@@ -56,6 +56,7 @@ export type ReportSettingsMember = Pick<
 >;
 export type ReportMemberSettings = {
   memberIds: number[];
+  oneCOptionalMemberIds: number[];
   departmentIds: number[];
   defaultDepartmentIds: number[];
   defaultMemberIds: number[];
@@ -134,6 +135,7 @@ type ApiEmployee = Pick<
   completed_tasks: number;
   video_reports: number;
   video_report_eligible?: boolean;
+  one_c_report_required?: boolean;
   active_days: number;
   last_activity?: string | null;
 };
@@ -256,10 +258,10 @@ function textCommitActivity(value: unknown) {
 export const reportsService = {
   reportMemberSettings: (orgId: number) =>
     apiFetch<ReportMemberSettings>(`/organizations/${orgId}/reports/settings/members`),
-  updateReportMemberSettings: (orgId: number, memberIds: number[], departmentIds: number[]) =>
+  updateReportMemberSettings: (orgId: number, memberIds: number[], departmentIds: number[], oneCOptionalMemberIds: number[]) =>
     apiFetch<ReportMemberSettings>(`/organizations/${orgId}/reports/settings/members`, {
       method: "PUT",
-      body: { memberIds, departmentIds },
+      body: { memberIds, departmentIds, oneCOptionalMemberIds },
     }),
   getGeneralReport: (orgId: number, filters: Pick<ReportFilters, "from" | "to">) => {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });

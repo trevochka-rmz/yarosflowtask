@@ -114,13 +114,15 @@ function EmployeeReportMembersCard({ settings, loading, orgId }: {
   const queryClient = useQueryClient();
   const [departmentIds, setDepartmentIds] = useState<number[]>([]);
   const [memberIds, setMemberIds] = useState<number[]>([]);
+  const [oneCOptionalMemberIds, setOneCOptionalMemberIds] = useState<number[]>([]);
   useEffect(() => {
     if (!settings) return;
     setDepartmentIds(settings.departmentIds);
     setMemberIds(settings.memberIds);
+    setOneCOptionalMemberIds(settings.oneCOptionalMemberIds);
   }, [settings]);
   const save = useMutation({
-    mutationFn: () => reportsService.updateReportMemberSettings(orgId, memberIds, departmentIds),
+    mutationFn: () => reportsService.updateReportMemberSettings(orgId, memberIds, departmentIds, oneCOptionalMemberIds),
     onSuccess: () => {
       toast.success("Список сотрудников отчётов сохранён");
       void queryClient.invalidateQueries({ queryKey: ["employee-report-members-settings", orgId] });
@@ -140,6 +142,7 @@ function EmployeeReportMembersCard({ settings, loading, orgId }: {
       : departmentIds.filter((id) => id !== departmentId);
     setDepartmentIds(nextDepartments);
     if (!checked) setMemberIds((current) => current.filter((id) => settings.members.find((member) => member.id === id)?.department_id !== departmentId));
+    if (!checked) setOneCOptionalMemberIds((current) => current.filter((id) => settings.members.find((member) => member.id === id)?.department_id !== departmentId));
   };
   return <Card>
     <CardHeader>
@@ -160,11 +163,26 @@ function EmployeeReportMembersCard({ settings, loading, orgId }: {
         <p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Users className="h-4 w-4" /> Сотрудники ({memberIds.length})</p>
         <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">
           {members.map((member) => <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted">
-            <Checkbox checked={memberIds.includes(member.id)} disabled={save.isPending} onCheckedChange={(checked) => setMemberIds((current) => checked === true ? [...new Set([...current, member.id])] : current.filter((id) => id !== member.id))} />
+            <Checkbox checked={memberIds.includes(member.id)} disabled={save.isPending} onCheckedChange={(checked) => {
+              setMemberIds((current) => checked === true ? [...new Set([...current, member.id])] : current.filter((id) => id !== member.id));
+              if (checked !== true) setOneCOptionalMemberIds((current) => current.filter((id) => id !== member.id));
+            }} />
             <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
             <span className="shrink-0 text-xs text-muted-foreground">{member.role_name || member.department_name || "Сотрудник"}</span>
           </label>)}
           {!members.length && <p className="px-2 py-3 text-sm text-muted-foreground">Выберите хотя бы один отдел.</p>}
+        </div>
+      </div>
+      <div>
+        <p className="mb-1 text-sm font-medium">Отчёт 1С не обязателен</p>
+        <p className="mb-2 text-xs text-muted-foreground">Эти сотрудники показывают Jira-задачи и видеоотчёт; отсутствие отчёта 1С отмечается нейтральным индикатором и в краткой сводке передаётся как «Данные 1С: —».</p>
+        <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
+          {members.filter((member) => memberIds.includes(member.id)).map((member) => <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted">
+            <Checkbox checked={oneCOptionalMemberIds.includes(member.id)} disabled={save.isPending} onCheckedChange={(checked) => setOneCOptionalMemberIds((current) => checked === true ? [...new Set([...current, member.id])] : current.filter((id) => id !== member.id))} />
+            <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">1С не требуется</span>
+          </label>)}
+          {!members.some((member) => memberIds.includes(member.id)) && <p className="px-2 py-3 text-sm text-muted-foreground">Сначала выберите сотрудников для отчётов.</p>}
         </div>
       </div>
       <Button disabled={save.isPending} onClick={() => save.mutate()}>{save.isPending ? "Сохраняем…" : "Сохранить список"}</Button>
