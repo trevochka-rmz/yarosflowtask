@@ -93,7 +93,7 @@ function NotificationSettingsPage() {
                   Отправить: {recipient.fullName}
                 </Button>
               ))}
-              {!settings.data.recipients.some((recipient) => recipient.reminderEligible) && <p className="text-sm text-muted-foreground">Нет Owner или сотрудников IT с подключённым Telegram.</p>}
+              {!settings.data.recipients.some((recipient) => recipient.reminderEligible) && <p className="text-sm text-muted-foreground">В списке отчётов нет сотрудников с подключённым Telegram.</p>}
             </CardContent>
           </Card>
           )}
@@ -177,7 +177,7 @@ function NotificationCard({ setting, recipients, saving, onSave }: {
 }) {
   const [draft, setDraft] = useState(setting);
   useEffect(() => setDraft(setting), [setting]);
-  const available = setting.key === "video_report_reminder" ? recipients.filter((item) => item.reminderEligible) : recipients;
+  const available = recipients;
   const selected = new Set(draft.recipientMemberIds);
   const toggle = (memberId: number) => {
     update({ recipientMemberIds: selected.has(memberId) ? draft.recipientMemberIds.filter((id) => id !== memberId) : [...draft.recipientMemberIds, memberId] });
@@ -188,7 +188,7 @@ function NotificationCard({ setting, recipients, saving, onSave }: {
     onSave({ notificationKey: setting.key, isEnabled: next.isEnabled, sendTime: next.sendTime, recipientMemberIds: next.recipientMemberIds, includeAuthor: next.includeAuthor, messageTemplate: next.messageTemplate });
   };
   const description = setting.key === "video_report_reminder"
-    ? "Напоминает Owner и сотрудникам IT загрузить видеоотчёт."
+    ? "Получатели берутся из списка «Отчёты по сотрудникам»: выберите отделы и сотрудников ниже."
     : setting.key === "video_report_delivery"
       ? "Отправляет готовый видеоотчёт после ручной или автоматической отправки."
       : "Отправляет руководителям итоговую сводку по задачам.";
@@ -200,10 +200,10 @@ function NotificationCard({ setting, recipients, saving, onSave }: {
     </CardHeader>
     <CardContent className="space-y-4">
       {setting.scheduled && <div className="flex max-w-xs items-center gap-3"><Label htmlFor={`${setting.key}-time`} className="shrink-0">Время</Label><input id={`${setting.key}-time`} type="time" value={draft.sendTime} disabled={saving} onChange={(event) => update({ sendTime: event.target.value })} className="h-9 rounded-md border border-input bg-background px-2 text-sm" /></div>}
-      <div><p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Users className="h-4 w-4" /> Получатели ({draft.recipientMemberIds.length})</p><div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
+      {setting.key === "video_report_reminder" ? <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">Напоминание получат {draft.recipientMemberIds.length} {draft.recipientMemberIds.length === 1 ? "сотрудник" : "сотрудников"} из выбранного списка с подключённым Telegram. Состав меняется в блоке «Отчёты по сотрудникам» ниже.</p> : <div><p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Users className="h-4 w-4" /> Получатели ({draft.recipientMemberIds.length})</p><div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
         {available.map((recipient) => <label key={recipient.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"><Checkbox checked={selected.has(recipient.id)} disabled={saving} onCheckedChange={() => toggle(recipient.id)} /><span className="min-w-0 flex-1 truncate">{recipient.fullName}</span><span className="shrink-0 text-xs text-muted-foreground">{recipient.roleName || recipient.departmentName || "Участник"}</span></label>)}
         {!available.length && <p className="px-2 py-3 text-sm text-muted-foreground">Нет доступных получателей с подключённым Telegram.</p>}
-      </div><p className="mt-2 text-xs text-muted-foreground">Выберите конкретных получателей. При выключенной рассылке расписание и список сохраняются.</p></div>
+      </div><p className="mt-2 text-xs text-muted-foreground">Выберите конкретных получателей. При выключенной рассылке расписание и список сохраняются.</p></div>}
       {setting.key === "video_report_delivery" && <label className="flex items-center gap-2 text-sm"><Checkbox checked={draft.includeAuthor} disabled={saving} onCheckedChange={(includeAuthor) => update({ includeAuthor: includeAuthor === true })} /> Отправлять копию автору отчёта</label>}
       {(setting.key === "video_report_reminder" || setting.key === "video_report_delivery") && <div className="space-y-2"><Label htmlFor={`${setting.key}-template`}>Текст сообщения</Label><textarea id={`${setting.key}-template`} value={draft.messageTemplate ?? ""} disabled={saving} onChange={(event) => setDraft((current) => ({ ...current, messageTemplate: event.target.value }))} onBlur={() => update({ messageTemplate: draft.messageTemplate })} className="min-h-24 w-full rounded-md border border-input bg-background p-2 text-sm" placeholder={setting.key === "video_report_reminder" ? "Текст напоминания" : "Заголовок готового отчёта"} /><p className="text-xs text-muted-foreground">{setting.key === "video_report_reminder" ? "Можно использовать {{name}}." : "Можно использовать {{employeeName}} и {{reportDate}}. Ниже автоматически добавятся задачи, ссылка на отчёт и видео."}</p>{preview && <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap"><span className="mb-1 block text-xs font-medium text-muted-foreground">Предпросмотр</span>{preview}</div>}</div>}
     </CardContent>
