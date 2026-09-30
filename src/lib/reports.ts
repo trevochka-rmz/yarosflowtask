@@ -64,7 +64,7 @@ export type ReportMemberSettings = {
   departments: Array<{ id: number; name: string; code: string | null }>;
 };
 
-export const MAX_VIDEO_REPORT_SIZE = 700 * 1024 * 1024;
+export const MAX_VIDEO_REPORT_SIZE = 200 * 1024 * 1024;
 export type EmployeeActivity = {
   id: string;
   kind: Exclude<ReportType, "all">;
@@ -315,7 +315,7 @@ export const reportsService = {
     signal?: AbortSignal,
   ) {
     if (video.size > MAX_VIDEO_REPORT_SIZE) {
-      throw new Error("Размер видеоотчёта не должен превышать 700 МБ");
+      throw new Error("Размер видеоотчёта не должен превышать 200 МБ");
     }
     const body = new FormData();
     body.set("reportDate", reportDate);
