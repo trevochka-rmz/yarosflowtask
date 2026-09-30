@@ -92,6 +92,7 @@ export type EmployeeReport = {
     sent_at: string;
     sent_by_user_id: number;
     video_report_id?: number | null;
+    delivery_status?: "PENDING" | "SENT";
   } | null;
   reportDeliveryPending?: boolean;
 };
@@ -169,6 +170,7 @@ type ApiEmployeeDetail = {
     sent_at: string;
     sent_by_user_id: number;
     video_report_id?: number | null;
+    delivery_status?: "PENDING" | "SENT";
   } | null;
 };
 

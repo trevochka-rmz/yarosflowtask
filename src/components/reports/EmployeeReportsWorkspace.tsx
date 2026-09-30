@@ -670,7 +670,9 @@ function ReportPanel({
                 <Button
                   type="button"
                   className="bg-emerald-600 hover:bg-emerald-700"
-                  disabled={isSending || !hasReportDataForSelectedDate}
+                  disabled={
+                    isSending || reportWasSent || !hasReportDataForSelectedDate
+                  }
                   onClick={onPreview}
                 >
                   {isSending ? (
@@ -683,9 +685,7 @@ function ReportPanel({
                     : !hasReportDataForSelectedDate
                       ? "Добавьте отчёт"
                       : reportWasSent
-                        ? ownerSendingForOther
-                          ? "Переотправить руководству"
-                          : "Переотправить руководству и себе"
+                        ? "Отчёт уже отправлен"
                         : ownerSendingForOther
                           ? "Отправить руководству"
                           : "Отправить руководству и себе"}
