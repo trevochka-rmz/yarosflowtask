@@ -1,5 +1,6 @@
 import { FileText, LoaderCircle, Sparkles, Users } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Button } from "@/components/ui/button";
 import type { GeneralShortReport, TeamDailyReport } from "@/lib/reports";
 
 function formatDate(value: string) {
@@ -13,11 +14,17 @@ export function GeneralReportPanel({
   teamReport,
   pending,
   error,
+  canRegenerate = false,
+  generating = false,
+  onRegenerate,
 }: {
   reports: GeneralShortReport[];
   teamReport: TeamDailyReport | null;
   pending: boolean;
   error: boolean;
+  canRegenerate?: boolean;
+  generating?: boolean;
+  onRegenerate?: () => void;
 }) {
   if (pending) {
     return <section className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground"><LoaderCircle className="mr-2 inline h-4 w-4 animate-spin" />Загружаем краткие отчёты…</section>;
@@ -34,6 +41,7 @@ export function GeneralReportPanel({
           <p className="mt-1 text-sm text-muted-foreground">Итог команды и краткие отчёты сотрудников</p>
         </div>
         <span className="ml-auto rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">{reports.length} {reports.length === 1 ? "отчёт" : "отчётов"}</span>
+        {canRegenerate ? <Button size="sm" variant="outline" disabled={generating || !reports.length} onClick={onRegenerate}><Sparkles className={`mr-1.5 h-4 w-4 ${generating ? "animate-spin" : ""}`} />{teamReport ? "Перегенерировать" : "Сформировать"}</Button> : null}
       </header>
       {teamReport ? (
         <article className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">

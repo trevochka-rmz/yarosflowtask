@@ -197,6 +197,14 @@ export function EmployeeReportsWorkspace() {
     queryFn: () => reportsService.getGeneralReport(org!.id, filters),
     enabled: !!org && generalSelected,
   });
+  const regenerateTeamReport = useMutation({
+    mutationFn: () => reportsService.regenerateTeamDailyReport(org!.id, filters.to),
+    onSuccess: () => {
+      toast.success("Итоговый отчёт команды сформирован");
+      void queryClient.invalidateQueries({ queryKey: ["employee-general-report", org?.id] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
   const activeReport = useQuery({
     queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
     queryFn: () => reportsService.getEmployee(org!.id, active!.member.id, filters),
@@ -379,6 +387,9 @@ export function EmployeeReportsWorkspace() {
               teamReport={generalReport.data?.team_report ?? null}
               pending={generalReport.isPending}
               error={generalReport.isError}
+              canRegenerate={canRegenerateVideoAnalysis}
+              generating={regenerateTeamReport.isPending}
+              onRegenerate={() => regenerateTeamReport.mutate()}
             />
           ) : activeReport.isPending ? (
             <section className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">

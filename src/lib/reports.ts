@@ -267,6 +267,10 @@ export const reportsService = {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
     return apiFetch<GeneralReport>(`/organizations/${orgId}/reports/general?${params}`);
   },
+  regenerateTeamDailyReport: (orgId: number, reportDate: string) =>
+    apiFetch<TeamDailyReport>(`/organizations/${orgId}/reports/team-daily/${encodeURIComponent(reportDate)}/regenerate`, {
+      method: "POST",
+    }),
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
     if (filters.departmentId) params.set("departmentId", String(filters.departmentId));
