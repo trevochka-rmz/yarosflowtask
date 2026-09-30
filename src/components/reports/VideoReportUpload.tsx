@@ -84,7 +84,7 @@ export function VideoReportUpload({
     upload.reset();
     if (selectedFile.size > MAX_VIDEO_REPORT_SIZE) {
       setFile(undefined);
-      setFileError("Размер видеоотчёта не должен превышать 200 МБ");
+      setFileError("Размер видеоотчёта не должен превышать 700 МБ");
       event.target.value = "";
       setOpen(true);
       return;
@@ -168,7 +168,7 @@ export function VideoReportUpload({
               />
             </label>
             <label className="block space-y-1.5 text-sm font-medium">
-              Видео (до 200 МБ)
+              Видео (до 700 МБ)
               <Button
                 type="button"
                 variant="outline"
