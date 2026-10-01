@@ -161,7 +161,9 @@ function TaskTrend({
           <h2 className="flex items-center gap-2 font-semibold text-foreground">
             <TrendingUp className="h-4 w-4 text-primary" /> Динамика задач
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Создание и переходы задач по статусам</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Создание и переходы задач по статусам
+          </p>
         </div>
         <select
           value={period}
@@ -182,12 +184,27 @@ function TaskTrend({
         ))}
       </div>
       {normalized.length === 0 ? (
-        <p className="flex h-48 items-center justify-center text-sm text-muted-foreground">Пока нет данных для графика.</p>
+        <p className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+          Пока нет данных для графика.
+        </p>
       ) : (
         <div className="mt-3 overflow-x-auto sm:mt-4">
-          <svg viewBox={`0 0 ${width} ${height + 28}`} className="h-36 w-full sm:h-52" role="img" aria-label="Динамика задач за неделю">
+          <svg
+            viewBox={`0 0 ${width} ${height + 28}`}
+            className="h-36 w-full sm:h-52"
+            role="img"
+            aria-label="Динамика задач за неделю"
+          >
             {[0.25, 0.5, 0.75, 1].map((factor) => (
-              <line key={factor} x1="0" x2={width} y1={height - padding - (height - padding * 2) * factor} y2={height - padding - (height - padding * 2) * factor} className="stroke-border" strokeDasharray="3 5" />
+              <line
+                key={factor}
+                x1="0"
+                x2={width}
+                y1={height - padding - (height - padding * 2) * factor}
+                y2={height - padding - (height - padding * 2) * factor}
+                className="stroke-border"
+                strokeDasharray="3 5"
+              />
             ))}
             {TREND_SERIES.map((series) => (
               <polyline
@@ -207,8 +224,17 @@ function TaskTrend({
                   return <circle key={series.key} cx={cx} cy={cy} r="3" fill={series.color} />;
                 })}
                 {trendLabelIndexes.has(index) && (
-                  <text x={normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1)} y={height + 18} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                    {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(new Date(`${point.date}T12:00:00`))}
+                  <text
+                    x={
+                      normalized.length < 2 ? width / 2 : (index * width) / (normalized.length - 1)
+                    }
+                    y={height + 18}
+                    textAnchor="middle"
+                    className="fill-muted-foreground text-[11px]"
+                  >
+                    {new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(
+                      new Date(`${point.date}T12:00:00`),
+                    )}
                   </text>
                 )}
               </g>
@@ -220,7 +246,18 @@ function TaskTrend({
   );
 }
 
-function StatusOverview({ counters }: { counters: { total: number; new: number; in_progress: number; waiting: number; completed: number; overdue: number } }) {
+function StatusOverview({
+  counters,
+}: {
+  counters: {
+    total: number;
+    new: number;
+    in_progress: number;
+    waiting: number;
+    completed: number;
+    overdue: number;
+  };
+}) {
   const items = [
     { label: "Новые", value: counters.new, color: "bg-sky-500" },
     { label: "В работе", value: counters.in_progress, color: "bg-violet-500" },
@@ -231,13 +268,37 @@ function StatusOverview({ counters }: { counters: { total: number; new: number; 
   const total = Math.max(1, counters.total);
   return (
     <section className="rounded-2xl border border-border bg-card p-3 shadow-soft sm:p-5">
-      <h2 className="flex items-center gap-2 font-semibold text-foreground"><BarChart3 className="h-4 w-4 text-primary" /> Статус задач</h2>
+      <h2 className="flex items-center gap-2 font-semibold text-foreground">
+        <BarChart3 className="h-4 w-4 text-primary" /> Статус задач
+      </h2>
       <div className="mt-3 flex items-center gap-3 sm:mt-5 sm:gap-5">
-        <div className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full sm:h-28 sm:w-28" style={{ background: `conic-gradient(#10b981 0deg ${(counters.completed / total) * 360}deg, #8b5cf6 ${(counters.completed / total) * 360}deg ${((counters.completed + counters.in_progress) / total) * 360}deg, #f59e0b ${((counters.completed + counters.in_progress) / total) * 360}deg ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg, #0ea5e9 ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg 360deg)` }}>
-          <div className="grid h-14 w-14 place-items-center rounded-full bg-card text-center sm:h-20 sm:w-20"><b className="text-base sm:text-xl">{counters.total}</b><span className="-mt-4 text-[9px] text-muted-foreground sm:-mt-5 sm:text-[10px]">всего</span></div>
+        <div
+          className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full sm:h-28 sm:w-28"
+          style={{
+            background: `conic-gradient(#10b981 0deg ${(counters.completed / total) * 360}deg, #8b5cf6 ${(counters.completed / total) * 360}deg ${((counters.completed + counters.in_progress) / total) * 360}deg, #f59e0b ${((counters.completed + counters.in_progress) / total) * 360}deg ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg, #0ea5e9 ${((counters.completed + counters.in_progress + counters.waiting) / total) * 360}deg 360deg)`,
+          }}
+        >
+          <div className="grid h-14 w-14 place-items-center rounded-full bg-card text-center sm:h-20 sm:w-20">
+            <b className="text-base sm:text-xl">{counters.total}</b>
+            <span className="-mt-4 text-[9px] text-muted-foreground sm:-mt-5 sm:text-[10px]">
+              всего
+            </span>
+          </div>
         </div>
         <ul className="min-w-0 flex-1 space-y-1 sm:space-y-2">
-          {items.map((item) => <li key={item.label} className="flex items-center gap-1.5 text-[11px] sm:gap-2 sm:text-sm"><i className={`h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5 ${item.color}`} /><span className="min-w-0 flex-1 text-muted-foreground">{item.label}</span><b>{item.value}</b><span className="hidden w-9 text-right text-xs text-muted-foreground sm:inline">{Math.round((item.value / total) * 100)}%</span></li>)}
+          {items.map((item) => (
+            <li
+              key={item.label}
+              className="flex items-center gap-1.5 text-[11px] sm:gap-2 sm:text-sm"
+            >
+              <i className={`h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5 ${item.color}`} />
+              <span className="min-w-0 flex-1 text-muted-foreground">{item.label}</span>
+              <b>{item.value}</b>
+              <span className="hidden w-9 text-right text-xs text-muted-foreground sm:inline">
+                {Math.round((item.value / total) * 100)}%
+              </span>
+            </li>
+          ))}
         </ul>
       </div>
     </section>
@@ -249,13 +310,23 @@ function ProjectProgress({ projects }: { projects: DashboardProjectProgress[] })
     <section className="min-w-0 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-5">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 font-semibold text-foreground"><CheckCircle2 className="h-4 w-4 text-primary" /> Прогресс по проектам</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">По активным задачам: выполнено / всего</p>
+          <h2 className="flex items-center gap-2 font-semibold text-foreground">
+            <CheckCircle2 className="h-4 w-4 text-primary" /> Прогресс по проектам
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            По активным задачам: выполнено / всего
+          </p>
         </div>
-        <Button asChild variant="ghost" size="sm" className="h-8 text-xs"><Link to="/tasks">Все задачи <ArrowRight className="h-3.5 w-3.5" /></Link></Button>
+        <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+          <Link to="/tasks">
+            Все задачи <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </Button>
       </div>
       {projects.length === 0 ? (
-        <p className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">Задач по проектам пока нет.</p>
+        <p className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
+          Задач по проектам пока нет.
+        </p>
       ) : (
         <ul className="mt-4 space-y-4">
           {projects.map((project) => {
@@ -266,12 +337,22 @@ function ProjectProgress({ projects }: { projects: DashboardProjectProgress[] })
             return (
               <li key={project.project_key}>
                 <div className="flex min-w-0 items-baseline gap-3">
-                  <p className="min-w-0 flex-1 break-words text-sm font-medium text-foreground" title={project.project_name}>{project.project_name}</p>
+                  <p
+                    className="min-w-0 flex-1 break-words text-sm font-medium text-foreground"
+                    title={project.project_name}
+                  >
+                    {project.project_name}
+                  </p>
                   <b className="shrink-0 text-sm">{percent}%</b>
-                  <span className="shrink-0 text-xs text-muted-foreground">{completed}/{total}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {completed}/{total}
+                  </span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${percent}%` }} />
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width]"
+                    style={{ width: `${percent}%` }}
+                  />
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">В работе: {inProgress}</p>
               </li>
@@ -348,9 +429,18 @@ function CounterCard({
   color?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border px-2.5 py-2 shadow-soft sm:rounded-2xl sm:p-4", color ?? "border-border bg-card")}>
-      <p className="text-[10px] font-medium leading-tight text-muted-foreground sm:text-xs">{label}</p>
-      <p className="mt-0.5 text-xl font-bold leading-none text-foreground sm:mt-1 sm:text-3xl">{value}</p>
+    <div
+      className={cn(
+        "rounded-xl border px-2.5 py-2 shadow-soft sm:rounded-2xl sm:p-4",
+        color ?? "border-border bg-card",
+      )}
+    >
+      <p className="text-[10px] font-medium leading-tight text-muted-foreground sm:text-xs">
+        {label}
+      </p>
+      <p className="mt-0.5 text-xl font-bold leading-none text-foreground sm:mt-1 sm:text-3xl">
+        {value}
+      </p>
       {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
@@ -540,13 +630,19 @@ function DirectorPage() {
     <AppLayout wide>
       {/* Заголовок */}
       <div className="rounded-3xl border border-border bg-surface-gradient p-5 shadow-soft sm:p-7">
-      <div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Управление организацией</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">Директорский центр</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{org.name} · оперативная картина по задачам и команде</p>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Управление организацией
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
+              Директорский центр
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {org.name} · оперативная картина по задачам и команде
+            </p>
+          </div>
         </div>
-      </div>
       </div>
 
       {isPending ? (
@@ -662,7 +758,6 @@ function DirectorPage() {
           </div>
 
           <ActivityFeed items={data.recent_activity} />
-
         </div>
       ) : null}
     </AppLayout>

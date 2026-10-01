@@ -108,11 +108,7 @@ function DepartmentsPage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Название отдела, например «Маркетинг»"
           />
-          <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Код (MKT)"
-          />
+          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Код (MKT)" />
           <Button type="submit" disabled={!name.trim() || create.isPending}>
             {create.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />

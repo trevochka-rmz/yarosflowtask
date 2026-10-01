@@ -108,6 +108,7 @@ export type TeamDailyReport = {
   id: number;
   report_date: string;
   team_report: string;
+  synergy_report?: string | null;
   generated_at: string;
   report_data?: {
     overall_status?: "green" | "yellow" | "red";
@@ -260,7 +261,12 @@ function textCommitActivity(value: unknown) {
 export const reportsService = {
   reportMemberSettings: (orgId: number) =>
     apiFetch<ReportMemberSettings>(`/organizations/${orgId}/reports/settings/members`),
-  updateReportMemberSettings: (orgId: number, memberIds: number[], departmentIds: number[], oneCOptionalMemberIds: number[]) =>
+  updateReportMemberSettings: (
+    orgId: number,
+    memberIds: number[],
+    departmentIds: number[],
+    oneCOptionalMemberIds: number[],
+  ) =>
     apiFetch<ReportMemberSettings>(`/organizations/${orgId}/reports/settings/members`, {
       method: "PUT",
       body: { memberIds, departmentIds, oneCOptionalMemberIds },
@@ -270,9 +276,12 @@ export const reportsService = {
     return apiFetch<GeneralReport>(`/organizations/${orgId}/reports/general?${params}`);
   },
   regenerateTeamDailyReport: (orgId: number, reportDate: string) =>
-    apiFetch<TeamDailyReport>(`/organizations/${orgId}/reports/team-daily/${encodeURIComponent(reportDate)}/regenerate`, {
-      method: "POST",
-    }),
+    apiFetch<TeamDailyReport>(
+      `/organizations/${orgId}/reports/team-daily/${encodeURIComponent(reportDate)}/regenerate`,
+      {
+        method: "POST",
+      },
+    ),
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
     if (filters.departmentId) params.set("departmentId", String(filters.departmentId));

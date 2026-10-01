@@ -18,17 +18,36 @@ export const Route = createFileRoute("/notification-settings")({
 });
 
 function isOwner(role?: string | null) {
-  return ["owner", "владелец"].includes(String(role || "").trim().toLowerCase());
+  return ["owner", "владелец"].includes(
+    String(role || "")
+      .trim()
+      .toLowerCase(),
+  );
 }
 
 function canManageNotifications(role?: string | null) {
-  return ["owner", "владелец", "director", "директор", "administrator", "администратор", "admin", "админ", "platform_admin"].includes(String(role || "").trim().toLowerCase());
+  return [
+    "owner",
+    "владелец",
+    "director",
+    "директор",
+    "administrator",
+    "администратор",
+    "admin",
+    "админ",
+    "platform_admin",
+  ].includes(
+    String(role || "")
+      .trim()
+      .toLowerCase(),
+  );
 }
 
 function NotificationSettingsPage() {
   const { org, isLoading: orgLoading } = useCurrentOrg();
   const queryClient = useQueryClient();
-  const canManage = canManageNotifications(org?.role_code) || canManageNotifications(org?.role_name);
+  const canManage =
+    canManageNotifications(org?.role_code) || canManageNotifications(org?.role_name);
   const settings = useQuery({
     queryKey: ["notification-settings", org?.id],
     queryFn: () => orgApi.notificationSettings(org!.id),
@@ -45,7 +64,12 @@ function NotificationSettingsPage() {
   });
   const test = useMutation({
     mutationFn: (memberId: number) => orgApi.testVideoReminder(org!.id, memberId),
-    onSuccess: (result) => toast.success(result.sentCount ? "Тестовое напоминание отправлено" : "Отправка завершилась без получателей"),
+    onSuccess: (result) =>
+      toast.success(
+        result.sentCount
+          ? "Тестовое напоминание отправлено"
+          : "Отправка завершилась без получателей",
+      ),
     onError: (error: Error) => toast.error(error.message),
   });
   const reportSettings = useQuery({
@@ -54,24 +78,80 @@ function NotificationSettingsPage() {
     enabled: Boolean(org && canManage),
   });
 
-  if (orgLoading) return <AppLayout><div className="p-6 text-sm text-muted-foreground">Загрузка…</div></AppLayout>;
+  if (orgLoading)
+    return (
+      <AppLayout>
+        <div className="p-6 text-sm text-muted-foreground">Загрузка…</div>
+      </AppLayout>
+    );
   if (!org || !canManage) {
-    return <AppLayout><div className="mx-auto max-w-lg p-6"><Card><CardHeader><CardTitle className="flex items-center gap-2"><LockKeyhole className="h-5 w-5" /> Нет доступа</CardTitle><CardDescription>Настраивать уведомления могут только Owner, директор и администратор организации.</CardDescription></CardHeader></Card></div></AppLayout>;
+    return (
+      <AppLayout>
+        <div className="mx-auto max-w-lg p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LockKeyhole className="h-5 w-5" /> Нет доступа
+              </CardTitle>
+              <CardDescription>
+                Настраивать уведомления могут только Owner, директор и администратор организации.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </AppLayout>
+    );
   }
-  if (settings.isPending) return <AppLayout><div className="flex justify-center p-12"><Loader2 className="h-6 w-6 animate-spin" /></div></AppLayout>;
-  if (settings.isError || !settings.data) return <AppLayout><div className="p-6 text-destructive">Не удалось загрузить настройки уведомлений.</div></AppLayout>;
+  if (settings.isPending)
+    return (
+      <AppLayout>
+        <div className="flex justify-center p-12">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </AppLayout>
+    );
+  if (settings.isError || !settings.data)
+    return (
+      <AppLayout>
+        <div className="p-6 text-destructive">Не удалось загрузить настройки уведомлений.</div>
+      </AppLayout>
+    );
 
   const owner = isOwner(org.role_code) || isOwner(org.role_name);
   return (
     <AppLayout wide>
       <main className="w-full space-y-5 p-4 pb-28 sm:p-6">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight"><BellRing className="h-6 w-6 text-primary" /> Настройки</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Уведомления и список сотрудников для отчётов организации «{org.name}».</p>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+            <BellRing className="h-6 w-6 text-primary" /> Настройки
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Уведомления и список сотрудников для отчётов организации «{org.name}».
+          </p>
         </div>
         <nav className="sticky top-2 z-10 flex gap-2 overflow-x-auto rounded-xl border bg-card/95 p-2 backdrop-blur">
-          <Button size="sm" variant="outline" onClick={() => document.getElementById("settings-notifications")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Уведомления</Button>
-          <Button size="sm" variant="outline" onClick={() => document.getElementById("settings-reports")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Отчёты сотрудников</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              document
+                .getElementById("settings-notifications")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            Уведомления
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              document
+                .getElementById("settings-reports")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            Отчёты сотрудников
+          </Button>
         </nav>
         <section id="settings-notifications" className="scroll-mt-20 space-y-5">
           {settings.data.notifications.map((notification) => (
@@ -84,29 +164,59 @@ function NotificationSettingsPage() {
             />
           ))}
           {owner && (
-          <Card className="border-dashed">
-            <CardHeader><CardTitle className="text-base">Тестовое напоминание о видеоотчёте</CardTitle><CardDescription>Отправляется только по нажатию Owner, не меняет расписание и не влияет на рабочую рассылку.</CardDescription></CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {settings.data.recipients.filter((recipient) => recipient.reminderEligible).map((recipient) => (
-                <Button key={recipient.id} variant="outline" size="sm" disabled={test.isPending} onClick={() => test.mutate(recipient.id)}>
-                  {test.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Send className="mr-1.5 h-3.5 w-3.5" />}
-                  Отправить: {recipient.fullName}
-                </Button>
-              ))}
-              {!settings.data.recipients.some((recipient) => recipient.reminderEligible) && <p className="text-sm text-muted-foreground">В списке отчётов нет сотрудников с подключённым Telegram.</p>}
-            </CardContent>
-          </Card>
+            <Card className="border-dashed">
+              <CardHeader>
+                <CardTitle className="text-base">Тестовое напоминание о видеоотчёте</CardTitle>
+                <CardDescription>
+                  Отправляется только по нажатию Owner, не меняет расписание и не влияет на рабочую
+                  рассылку.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                {settings.data.recipients
+                  .filter((recipient) => recipient.reminderEligible)
+                  .map((recipient) => (
+                    <Button
+                      key={recipient.id}
+                      variant="outline"
+                      size="sm"
+                      disabled={test.isPending}
+                      onClick={() => test.mutate(recipient.id)}
+                    >
+                      {test.isPending ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Send className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Отправить: {recipient.fullName}
+                    </Button>
+                  ))}
+                {!settings.data.recipients.some((recipient) => recipient.reminderEligible) && (
+                  <p className="text-sm text-muted-foreground">
+                    В списке отчётов нет сотрудников с подключённым Telegram.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           )}
         </section>
         <section id="settings-reports" className="scroll-mt-20">
-          <EmployeeReportMembersCard settings={reportSettings.data} loading={reportSettings.isPending} orgId={org.id} />
+          <EmployeeReportMembersCard
+            settings={reportSettings.data}
+            loading={reportSettings.isPending}
+            orgId={org.id}
+          />
         </section>
       </main>
     </AppLayout>
   );
 }
 
-function EmployeeReportMembersCard({ settings, loading, orgId }: {
+function EmployeeReportMembersCard({
+  settings,
+  loading,
+  orgId,
+}: {
   settings: Awaited<ReturnType<typeof reportsService.reportMemberSettings>> | undefined;
   loading: boolean;
   orgId: number;
@@ -122,7 +232,13 @@ function EmployeeReportMembersCard({ settings, loading, orgId }: {
     setOneCOptionalMemberIds(settings.oneCOptionalMemberIds);
   }, [settings]);
   const save = useMutation({
-    mutationFn: () => reportsService.updateReportMemberSettings(orgId, memberIds, departmentIds, oneCOptionalMemberIds),
+    mutationFn: () =>
+      reportsService.updateReportMemberSettings(
+        orgId,
+        memberIds,
+        departmentIds,
+        oneCOptionalMemberIds,
+      ),
     onSuccess: () => {
       toast.success("Список сотрудников отчётов сохранён");
       void queryClient.invalidateQueries({ queryKey: ["employee-report-members-settings", orgId] });
@@ -133,7 +249,14 @@ function EmployeeReportMembersCard({ settings, loading, orgId }: {
     },
     onError: (error: Error) => toast.error(error.message),
   });
-  if (loading) return <Card><CardContent className="p-6 text-sm text-muted-foreground">Загружаем настройки отчётов…</CardContent></Card>;
+  if (loading)
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-muted-foreground">
+          Загружаем настройки отчётов…
+        </CardContent>
+      </Card>
+    );
   if (!settings) return null;
   const members = settings.members.filter((member) => departmentIds.includes(member.department_id));
   const toggleDepartment = (departmentId: number, checked: boolean) => {
@@ -141,56 +264,137 @@ function EmployeeReportMembersCard({ settings, loading, orgId }: {
       ? [...new Set([...departmentIds, departmentId])]
       : departmentIds.filter((id) => id !== departmentId);
     setDepartmentIds(nextDepartments);
-    if (!checked) setMemberIds((current) => current.filter((id) => settings.members.find((member) => member.id === id)?.department_id !== departmentId));
-    if (!checked) setOneCOptionalMemberIds((current) => current.filter((id) => settings.members.find((member) => member.id === id)?.department_id !== departmentId));
+    if (!checked)
+      setMemberIds((current) =>
+        current.filter(
+          (id) =>
+            settings.members.find((member) => member.id === id)?.department_id !== departmentId,
+        ),
+      );
+    if (!checked)
+      setOneCOptionalMemberIds((current) =>
+        current.filter(
+          (id) =>
+            settings.members.find((member) => member.id === id)?.department_id !== departmentId,
+        ),
+      );
   };
-  return <Card>
-    <CardHeader>
-      <CardTitle className="text-lg">Отчёты по сотрудникам</CardTitle>
-      <CardDescription>Сначала выберите отделы, затем сотрудников, которые будут показываться в разделе отчётов. По умолчанию выбран IT.</CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-5">
-      <div>
-        <p className="mb-2 text-sm font-medium">Отделы для выбора</p>
-        <div className="flex flex-wrap gap-2">
-          {settings.departments.map((department) => <label key={department.id} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted">
-            <Checkbox checked={departmentIds.includes(department.id)} disabled={save.isPending} onCheckedChange={(checked) => toggleDepartment(department.id, checked === true)} />
-            {department.name}
-          </label>)}
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Отчёты по сотрудникам</CardTitle>
+        <CardDescription>
+          Сначала выберите отделы, затем сотрудников, которые будут показываться в разделе отчётов.
+          По умолчанию выбран IT.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div>
+          <p className="mb-2 text-sm font-medium">Отделы для выбора</p>
+          <div className="flex flex-wrap gap-2">
+            {settings.departments.map((department) => (
+              <label
+                key={department.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted"
+              >
+                <Checkbox
+                  checked={departmentIds.includes(department.id)}
+                  disabled={save.isPending}
+                  onCheckedChange={(checked) => toggleDepartment(department.id, checked === true)}
+                />
+                {department.name}
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
-      <div>
-        <p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Users className="h-4 w-4" /> Сотрудники ({memberIds.length})</p>
-        <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">
-          {members.map((member) => <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted">
-            <Checkbox checked={memberIds.includes(member.id)} disabled={save.isPending} onCheckedChange={(checked) => {
-              setMemberIds((current) => checked === true ? [...new Set([...current, member.id])] : current.filter((id) => id !== member.id));
-              if (checked !== true) setOneCOptionalMemberIds((current) => current.filter((id) => id !== member.id));
-            }} />
-            <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">{member.role_name || member.department_name || "Сотрудник"}</span>
-          </label>)}
-          {!members.length && <p className="px-2 py-3 text-sm text-muted-foreground">Выберите хотя бы один отдел.</p>}
+        <div>
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+            <Users className="h-4 w-4" /> Сотрудники ({memberIds.length})
+          </p>
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">
+            {members.map((member) => (
+              <label
+                key={member.id}
+                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+              >
+                <Checkbox
+                  checked={memberIds.includes(member.id)}
+                  disabled={save.isPending}
+                  onCheckedChange={(checked) => {
+                    setMemberIds((current) =>
+                      checked === true
+                        ? [...new Set([...current, member.id])]
+                        : current.filter((id) => id !== member.id),
+                    );
+                    if (checked !== true)
+                      setOneCOptionalMemberIds((current) =>
+                        current.filter((id) => id !== member.id),
+                      );
+                  }}
+                />
+                <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {member.role_name || member.department_name || "Сотрудник"}
+                </span>
+              </label>
+            ))}
+            {!members.length && (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                Выберите хотя бы один отдел.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      <div>
-        <p className="mb-1 text-sm font-medium">Отчёт 1С не обязателен</p>
-        <p className="mb-2 text-xs text-muted-foreground">Эти сотрудники показывают Jira-задачи и видеоотчёт; отсутствие отчёта 1С отмечается нейтральным индикатором и в краткой сводке передаётся как «Данные 1С: —».</p>
-        <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
-          {members.filter((member) => memberIds.includes(member.id)).map((member) => <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted">
-            <Checkbox checked={oneCOptionalMemberIds.includes(member.id)} disabled={save.isPending} onCheckedChange={(checked) => setOneCOptionalMemberIds((current) => checked === true ? [...new Set([...current, member.id])] : current.filter((id) => id !== member.id))} />
-            <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">1С не требуется</span>
-          </label>)}
-          {!members.some((member) => memberIds.includes(member.id)) && <p className="px-2 py-3 text-sm text-muted-foreground">Сначала выберите сотрудников для отчётов.</p>}
+        <div>
+          <p className="mb-1 text-sm font-medium">Отчёт 1С не обязателен</p>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Эти сотрудники показывают Jira-задачи и видеоотчёт; отсутствие отчёта 1С отмечается
+            нейтральным индикатором и в краткой сводке передаётся как «Данные 1С: —».
+          </p>
+          <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
+            {members
+              .filter((member) => memberIds.includes(member.id))
+              .map((member) => (
+                <label
+                  key={member.id}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Checkbox
+                    checked={oneCOptionalMemberIds.includes(member.id)}
+                    disabled={save.isPending}
+                    onCheckedChange={(checked) =>
+                      setOneCOptionalMemberIds((current) =>
+                        checked === true
+                          ? [...new Set([...current, member.id])]
+                          : current.filter((id) => id !== member.id),
+                      )
+                    }
+                  />
+                  <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">1С не требуется</span>
+                </label>
+              ))}
+            {!members.some((member) => memberIds.includes(member.id)) && (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                Сначала выберите сотрудников для отчётов.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      <Button disabled={save.isPending} onClick={() => save.mutate()}>{save.isPending ? "Сохраняем…" : "Сохранить список"}</Button>
-    </CardContent>
-  </Card>;
+        <Button disabled={save.isPending} onClick={() => save.mutate()}>
+          {save.isPending ? "Сохраняем…" : "Сохранить список"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
-function NotificationCard({ setting, recipients, saving, onSave }: {
+function NotificationCard({
+  setting,
+  recipients,
+  saving,
+  onSave,
+}: {
   setting: OrganizationNotificationSetting;
   recipients: Awaited<ReturnType<typeof orgApi.notificationSettings>>["recipients"];
   saving: boolean;
@@ -201,32 +405,158 @@ function NotificationCard({ setting, recipients, saving, onSave }: {
   const available = recipients;
   const selected = new Set(draft.recipientMemberIds);
   const toggle = (memberId: number) => {
-    update({ recipientMemberIds: selected.has(memberId) ? draft.recipientMemberIds.filter((id) => id !== memberId) : [...draft.recipientMemberIds, memberId] });
+    update({
+      recipientMemberIds: selected.has(memberId)
+        ? draft.recipientMemberIds.filter((id) => id !== memberId)
+        : [...draft.recipientMemberIds, memberId],
+    });
   };
-  const update = (patch: Partial<Pick<OrganizationNotificationSetting, "isEnabled" | "sendTime" | "recipientMemberIds" | "includeAuthor" | "messageTemplate">>) => {
+  const update = (
+    patch: Partial<
+      Pick<
+        OrganizationNotificationSetting,
+        "isEnabled" | "sendTime" | "recipientMemberIds" | "includeAuthor" | "messageTemplate"
+      >
+    >,
+  ) => {
     const next = { ...draft, ...patch };
     setDraft(next);
-    onSave({ notificationKey: setting.key, isEnabled: next.isEnabled, sendTime: next.sendTime, recipientMemberIds: next.recipientMemberIds, includeAuthor: next.includeAuthor, messageTemplate: next.messageTemplate });
+    onSave({
+      notificationKey: setting.key,
+      isEnabled: next.isEnabled,
+      sendTime: next.sendTime,
+      recipientMemberIds: next.recipientMemberIds,
+      includeAuthor: next.includeAuthor,
+      messageTemplate: next.messageTemplate,
+    });
   };
-  const description = setting.key === "video_report_reminder"
-    ? "Получатели берутся из списка «Отчёты по сотрудникам»: выберите отделы и сотрудников ниже."
-    : setting.key === "video_report_delivery"
-      ? "Отправляет готовый видеоотчёт после ручной или автоматической отправки."
-      : "Отправляет руководителям итоговую сводку по задачам.";
-  const preview = (draft.messageTemplate || "").replace(/{{name}}/g, "Алексей").replace(/{{employeeName}}/g, "Алексей").replace(/{{reportDate}}/g, "23 сентября 2026");
+  const description =
+    setting.key === "video_report_reminder"
+      ? "Получатели берутся из списка «Отчёты по сотрудникам»: выберите отделы и сотрудников ниже."
+      : setting.key === "video_report_delivery"
+        ? "Отправляет готовый видеоотчёт после ручной или автоматической отправки."
+        : "Отправляет руководителям итоговую сводку по задачам.";
+  const preview = (draft.messageTemplate || "")
+    .replace(/{{name}}/g, "Алексей")
+    .replace(/{{employeeName}}/g, "Алексей")
+    .replace(/{{reportDate}}/g, "23 сентября 2026");
 
-  return <Card>
-    <CardHeader className="pb-3">
-      <div className="flex items-start justify-between gap-4"><div><CardTitle className="text-lg">{setting.title}</CardTitle><CardDescription className="mt-1">{description}</CardDescription></div><Switch checked={draft.isEnabled} disabled={saving} onCheckedChange={(isEnabled) => update({ isEnabled })} aria-label={`Включить ${setting.title}`} /></div>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      {setting.scheduled && <div className="flex max-w-xs items-center gap-3"><Label htmlFor={`${setting.key}-time`} className="shrink-0">Время</Label><input id={`${setting.key}-time`} type="time" value={draft.sendTime} disabled={saving} onChange={(event) => update({ sendTime: event.target.value })} className="h-9 rounded-md border border-input bg-background px-2 text-sm" /></div>}
-      {setting.key === "video_report_reminder" ? <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">Напоминание получат {draft.recipientMemberIds.length} {draft.recipientMemberIds.length === 1 ? "сотрудник" : "сотрудников"} из выбранного списка с подключённым Telegram. Состав меняется в блоке «Отчёты по сотрудникам» ниже.</p> : <div><p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Users className="h-4 w-4" /> Получатели ({draft.recipientMemberIds.length})</p><div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
-        {available.map((recipient) => <label key={recipient.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"><Checkbox checked={selected.has(recipient.id)} disabled={saving} onCheckedChange={() => toggle(recipient.id)} /><span className="min-w-0 flex-1 truncate">{recipient.fullName}</span><span className="shrink-0 text-xs text-muted-foreground">{recipient.roleName || recipient.departmentName || "Участник"}</span></label>)}
-        {!available.length && <p className="px-2 py-3 text-sm text-muted-foreground">Нет доступных получателей с подключённым Telegram.</p>}
-      </div><p className="mt-2 text-xs text-muted-foreground">Выберите конкретных получателей. При выключенной рассылке расписание и список сохраняются.</p></div>}
-      {setting.key === "video_report_delivery" && <label className="flex items-center gap-2 text-sm"><Checkbox checked={draft.includeAuthor} disabled={saving} onCheckedChange={(includeAuthor) => update({ includeAuthor: includeAuthor === true })} /> Отправлять копию автору отчёта</label>}
-      {(setting.key === "video_report_reminder" || setting.key === "video_report_delivery") && <div className="space-y-2"><Label htmlFor={`${setting.key}-template`}>Текст сообщения</Label><textarea id={`${setting.key}-template`} value={draft.messageTemplate ?? ""} disabled={saving} onChange={(event) => setDraft((current) => ({ ...current, messageTemplate: event.target.value }))} onBlur={() => update({ messageTemplate: draft.messageTemplate })} className="min-h-24 w-full rounded-md border border-input bg-background p-2 text-sm" placeholder={setting.key === "video_report_reminder" ? "Текст напоминания" : "Заголовок готового отчёта"} /><p className="text-xs text-muted-foreground">{setting.key === "video_report_reminder" ? "Можно использовать {{name}}." : "Можно использовать {{employeeName}} и {{reportDate}}. Ниже автоматически добавятся задачи, ссылка на отчёт и видео."}</p>{preview && <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap"><span className="mb-1 block text-xs font-medium text-muted-foreground">Предпросмотр</span>{preview}</div>}</div>}
-    </CardContent>
-  </Card>;
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg">{setting.title}</CardTitle>
+            <CardDescription className="mt-1">{description}</CardDescription>
+          </div>
+          <Switch
+            checked={draft.isEnabled}
+            disabled={saving}
+            onCheckedChange={(isEnabled) => update({ isEnabled })}
+            aria-label={`Включить ${setting.title}`}
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {setting.scheduled && (
+          <div className="flex max-w-xs items-center gap-3">
+            <Label htmlFor={`${setting.key}-time`} className="shrink-0">
+              Время
+            </Label>
+            <input
+              id={`${setting.key}-time`}
+              type="time"
+              value={draft.sendTime}
+              disabled={saving}
+              onChange={(event) => update({ sendTime: event.target.value })}
+              className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            />
+          </div>
+        )}
+        {setting.key === "video_report_reminder" ? (
+          <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+            Напоминание получат {draft.recipientMemberIds.length}{" "}
+            {draft.recipientMemberIds.length === 1 ? "сотрудник" : "сотрудников"} из выбранного
+            списка с подключённым Telegram. Состав меняется в блоке «Отчёты по сотрудникам» ниже.
+          </p>
+        ) : (
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+              <Users className="h-4 w-4" /> Получатели ({draft.recipientMemberIds.length})
+            </p>
+            <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
+              {available.map((recipient) => (
+                <label
+                  key={recipient.id}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                >
+                  <Checkbox
+                    checked={selected.has(recipient.id)}
+                    disabled={saving}
+                    onCheckedChange={() => toggle(recipient.id)}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{recipient.fullName}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {recipient.roleName || recipient.departmentName || "Участник"}
+                  </span>
+                </label>
+              ))}
+              {!available.length && (
+                <p className="px-2 py-3 text-sm text-muted-foreground">
+                  Нет доступных получателей с подключённым Telegram.
+                </p>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Выберите конкретных получателей. При выключенной рассылке расписание и список
+              сохраняются.
+            </p>
+          </div>
+        )}
+        {setting.key === "video_report_delivery" && (
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={draft.includeAuthor}
+              disabled={saving}
+              onCheckedChange={(includeAuthor) => update({ includeAuthor: includeAuthor === true })}
+            />{" "}
+            Отправлять копию автору отчёта
+          </label>
+        )}
+        {(setting.key === "video_report_reminder" || setting.key === "video_report_delivery") && (
+          <div className="space-y-2">
+            <Label htmlFor={`${setting.key}-template`}>Текст сообщения</Label>
+            <textarea
+              id={`${setting.key}-template`}
+              value={draft.messageTemplate ?? ""}
+              disabled={saving}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, messageTemplate: event.target.value }))
+              }
+              onBlur={() => update({ messageTemplate: draft.messageTemplate })}
+              className="min-h-24 w-full rounded-md border border-input bg-background p-2 text-sm"
+              placeholder={
+                setting.key === "video_report_reminder"
+                  ? "Текст напоминания"
+                  : "Заголовок готового отчёта"
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              {setting.key === "video_report_reminder"
+                ? "Можно использовать {{name}}."
+                : "Можно использовать {{employeeName}} и {{reportDate}}. Ниже автоматически добавятся задачи, ссылка на отчёт и видео."}
+            </p>
+            {preview && (
+              <div className="rounded-md bg-muted p-3 text-sm whitespace-pre-wrap">
+                <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Предпросмотр
+                </span>
+                {preview}
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }

@@ -473,22 +473,22 @@ function MembersPage() {
                         className="h-10 w-10"
                       />
                       <span className="min-w-0">
-                      <span className="block truncate font-medium">{personLabel(m)}</span>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        {orgId ? (
-                          <StatusSelect
-                            member={m}
-                            orgId={orgId}
-                            canAll={canSetAllStatuses}
-                            isSelf={isSelf}
-                          />
-                        ) : (
-                          <AvailabilityBadge status={m.availability_status} />
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {m.username ? `@${m.username}` : (m.tg_id ?? "")}
-                        </span>
-                      </div>
+                        <span className="block truncate font-medium">{personLabel(m)}</span>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          {orgId ? (
+                            <StatusSelect
+                              member={m}
+                              orgId={orgId}
+                              canAll={canSetAllStatuses}
+                              isSelf={isSelf}
+                            />
+                          ) : (
+                            <AvailabilityBadge status={m.availability_status} />
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {m.username ? `@${m.username}` : (m.tg_id ?? "")}
+                          </span>
+                        </div>
                       </span>
                     </span>
                     {canDelete ? (

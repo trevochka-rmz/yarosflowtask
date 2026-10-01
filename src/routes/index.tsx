@@ -80,7 +80,9 @@ function Landing() {
   // Для роли Director стартовая страница — рабочая сводка.
   // Другие роли, включая Owner, продолжают видеть обычную главную.
   useEffect(() => {
-    const role = String(org?.role_code || org?.role_name || "").trim().toLowerCase();
+    const role = String(org?.role_code || org?.role_name || "")
+      .trim()
+      .toLowerCase();
     if (!orgLoading && ["director", "директор"].includes(role)) {
       void navigate({ to: "/director", replace: true });
     }

@@ -18,7 +18,10 @@ export const Route = createFileRoute("/admin")({
         content: "Платформенный админ: все организации и пользователи Yaya.Цифровой Бот.",
       },
       { property: "og:title", content: "Администрирование платформы — Yaya.Цифровой Бот" },
-      { property: "og:description", content: "Создание организаций и просмотр всех пользователей." },
+      {
+        property: "og:description",
+        content: "Создание организаций и просмотр всех пользователей.",
+      },
     ],
   }),
   component: AdminPage,
@@ -98,15 +101,27 @@ function AdminPage() {
           if (name.trim()) create.mutate();
         }}
       >
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Название организации" />
-        <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="slug (необяз.)" />
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Название организации"
+        />
+        <Input
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          placeholder="slug (необяз.)"
+        />
         <Input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Описание (необяз.)"
         />
         <Button type="submit" disabled={!name.trim() || create.isPending}>
-          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {create.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
           Создать
         </Button>
       </form>
