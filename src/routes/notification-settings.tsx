@@ -1,7 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { BellRing, Loader2, LockKeyhole, Send, Users } from "lucide-react";
+import {
+  BarChart3,
+  BellRing,
+  CalendarClock,
+  ClipboardList,
+  FileText,
+  Loader2,
+  LockKeyhole,
+  Send,
+  Sparkles,
+  Users,
+  Video,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -118,6 +130,12 @@ function NotificationSettingsPage() {
     );
 
   const owner = isOwner(org.role_code) || isOwner(org.role_name);
+  const dailySettings = settings.data.notifications.filter((setting) =>
+    ["daily_task_summary", "team_daily_report", "team_daily_synergy"].includes(setting.key),
+  );
+  const videoSettings = settings.data.notifications.filter((setting) =>
+    ["video_report_reminder", "video_report_delivery"].includes(setting.key),
+  );
   return (
     <AppLayout wide>
       <main className="w-full space-y-5 p-4 pb-28 sm:p-6">
@@ -129,7 +147,7 @@ function NotificationSettingsPage() {
             Уведомления и список сотрудников для отчётов организации «{org.name}».
           </p>
         </div>
-        <nav className="sticky top-2 z-10 flex gap-2 overflow-x-auto rounded-xl border bg-card/95 p-2 backdrop-blur">
+        <nav className="sticky top-2 z-10 flex gap-2 overflow-x-auto rounded-2xl border bg-card/95 p-2 shadow-sm backdrop-blur">
           <Button
             size="sm"
             variant="outline"
@@ -139,7 +157,7 @@ function NotificationSettingsPage() {
                 ?.scrollIntoView({ behavior: "smooth", block: "start" })
             }
           >
-            Уведомления
+            <BellRing className="mr-1.5 h-4 w-4" /> Уведомления
           </Button>
           <Button
             size="sm"
@@ -150,11 +168,37 @@ function NotificationSettingsPage() {
                 ?.scrollIntoView({ behavior: "smooth", block: "start" })
             }
           >
-            Отчёты сотрудников
+            <Users className="mr-1.5 h-4 w-4" /> Отчёты сотрудников
           </Button>
         </nav>
         <section id="settings-notifications" className="scroll-mt-20 space-y-5">
-          {settings.data.notifications.map((notification) => (
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl border bg-card p-4 shadow-sm md:col-span-2">
+              <p className="text-sm font-medium">Ежедневная цепочка</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                В выбранное время сотрудникам отправляются нужные вам части вечернего отчёта.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-primary">Получатели</p>
+              <p className="mt-1 text-2xl font-semibold">{dailySettings[0]?.recipientMemberIds.length ?? 0}</p>
+              <p className="text-sm text-muted-foreground">с подключённым Telegram</p>
+            </div>
+          </div>
+          <DailyDeliveryCard
+            settings={dailySettings}
+            recipients={settings.data.recipients}
+            saving={save.isPending}
+            onSave={(body) => save.mutate(body)}
+          />
+          <div className="pt-2">
+            <h2 className="text-lg font-semibold">Видеоотчёты</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Напоминания сотрудникам и доставка готовых отчётов руководителям.
+            </p>
+          </div>
+          <div className="grid gap-5 xl:grid-cols-2">
+          {videoSettings.map((notification) => (
             <NotificationCard
               key={notification.key}
               setting={notification}
@@ -163,6 +207,7 @@ function NotificationSettingsPage() {
               onSave={(body) => save.mutate(body)}
             />
           ))}
+          </div>
           {owner && (
             <Card className="border-dashed">
               <CardHeader>
@@ -389,6 +434,163 @@ function EmployeeReportMembersCard({
   );
 }
 
+function DailyDeliveryCard({
+  settings,
+  recipients,
+  saving,
+  onSave,
+}: {
+  settings: OrganizationNotificationSetting[];
+  recipients: Awaited<ReturnType<typeof orgApi.notificationSettings>>["recipients"];
+  saving: boolean;
+  onSave: (body: Parameters<typeof orgApi.updateNotificationSettings>[1]) => void;
+}) {
+  const [drafts, setDrafts] = useState(settings);
+  useEffect(() => setDrafts(settings), [settings]);
+  const summary = drafts.find((setting) => setting.key === "daily_task_summary");
+  const selectedRecipients = new Set(summary?.recipientMemberIds ?? []);
+  const saveSetting = (
+    key: OrganizationNotificationSetting["key"],
+    patch: Partial<OrganizationNotificationSetting>,
+  ) => {
+    const current = drafts.find((setting) => setting.key === key);
+    if (!current) return;
+    const next = { ...current, ...patch };
+    setDrafts((items) => items.map((item) => (item.key === key ? next : item)));
+    onSave({
+      notificationKey: key,
+      isEnabled: next.isEnabled,
+      sendTime: next.sendTime,
+      recipientMemberIds: next.recipientMemberIds,
+      includeAuthor: next.includeAuthor,
+      messageTemplate: next.messageTemplate,
+    });
+  };
+  const toggleRecipient = (memberId: number) => {
+    if (!summary) return;
+    saveSetting("daily_task_summary", {
+      recipientMemberIds: selectedRecipients.has(memberId)
+        ? summary.recipientMemberIds.filter((id) => id !== memberId)
+        : [...summary.recipientMemberIds, memberId],
+    });
+  };
+  const parts = [
+    {
+      key: "daily_task_summary" as const,
+      icon: BarChart3,
+      accent: "text-sky-600 bg-sky-500/10",
+      text: "Краткая статистика по задачам за день и неделю.",
+    },
+    {
+      key: "team_daily_report" as const,
+      icon: FileText,
+      accent: "text-primary bg-primary/10",
+      text: "Единый итог по работам, рискам и следующим действиям команды.",
+    },
+    {
+      key: "team_daily_synergy" as const,
+      icon: Sparkles,
+      accent: "text-violet-600 bg-violet-500/10",
+      text: "Подтверждённые рабочие связи между сотрудниками за день.",
+    },
+  ];
+
+  return (
+    <Card className="overflow-hidden border-primary/15 shadow-sm">
+      <CardHeader className="border-b bg-gradient-to-r from-primary/5 via-background to-violet-500/5 pb-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <ClipboardList className="h-4 w-4" />
+              </span>
+              <div>
+                <CardTitle>Вечерний отчёт</CardTitle>
+                <CardDescription className="mt-0.5">
+                  Выберите, какие блоки отправлять руководителям.
+                </CardDescription>
+              </div>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 rounded-xl border bg-background/80 px-3 py-2 text-sm shadow-sm">
+            <CalendarClock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Время</span>
+            <input
+              aria-label="Время вечернего отчёта"
+              type="time"
+              value={summary?.sendTime ?? "20:15"}
+              disabled={saving || !summary}
+              onChange={(event) => saveSetting("daily_task_summary", { sendTime: event.target.value })}
+              className="w-[5.4rem] bg-transparent text-sm font-medium outline-none"
+            />
+          </label>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-5 p-5">
+        <div className="grid gap-3 lg:grid-cols-3">
+          {parts.map(({ key, icon: Icon, accent, text }) => {
+            const setting = drafts.find((item) => item.key === key);
+            if (!setting) return null;
+            return (
+              <div key={key} className="rounded-xl border bg-card p-4 transition-colors hover:bg-muted/30">
+                <div className="flex items-start justify-between gap-3">
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${accent}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <Switch
+                    checked={setting.isEnabled}
+                    disabled={saving}
+                    onCheckedChange={(isEnabled) => saveSetting(key, { isEnabled })}
+                    aria-label={`Включить ${setting.title}`}
+                  />
+                </div>
+                <p className="mt-4 font-medium">{setting.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{text}</p>
+                <p className={`mt-3 text-xs font-medium ${setting.isEnabled ? "text-emerald-600" : "text-muted-foreground"}`}>
+                  {setting.isEnabled ? "Будет отправляться" : "Не отправляется"}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        <div className="rounded-xl border bg-muted/25 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="flex items-center gap-1.5 text-sm font-medium">
+                <Users className="h-4 w-4" /> Получатели вечернего отчёта
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Эти же получатели используются для статистики, итога команды и синергии.
+              </p>
+            </div>
+            <span className="rounded-full bg-background px-2.5 py-1 text-xs text-muted-foreground">
+              {summary?.recipientMemberIds.length ?? 0} выбрано
+            </span>
+          </div>
+          <div className="mt-3 grid max-h-44 gap-1 overflow-y-auto rounded-lg border bg-background p-2 sm:grid-cols-2">
+            {recipients.map((recipient) => (
+              <label
+                key={recipient.id}
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-muted"
+              >
+                <Checkbox
+                  checked={selectedRecipients.has(recipient.id)}
+                  disabled={saving || !summary}
+                  onCheckedChange={() => toggleRecipient(recipient.id)}
+                />
+                <span className="min-w-0 flex-1 truncate">{recipient.fullName}</span>
+                <span className="text-xs text-muted-foreground">
+                  {recipient.roleName || "Участник"}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function NotificationCard({
   setting,
   recipients,
@@ -450,7 +652,9 @@ function NotificationCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-lg">{setting.title}</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Video className="h-4 w-4 text-primary" /> {setting.title}
+            </CardTitle>
             <CardDescription className="mt-1">{description}</CardDescription>
           </div>
           <Switch
