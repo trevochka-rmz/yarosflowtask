@@ -92,7 +92,12 @@ export interface OrganizationNotificationRecipient {
 }
 
 export interface OrganizationNotificationSetting {
-  key: "video_report_reminder" | "daily_task_summary" | "video_report_delivery";
+  key:
+    | "video_report_reminder"
+    | "daily_task_summary"
+    | "team_daily_report"
+    | "team_daily_synergy"
+    | "video_report_delivery";
   title: string;
   isEnabled: boolean;
   sendTime: string;

@@ -434,7 +434,11 @@ function NotificationCard({
     setting.key === "video_report_reminder"
       ? "Получатели берутся из списка «Отчёты по сотрудникам»: выберите отделы и сотрудников ниже."
       : setting.key === "video_report_delivery"
-        ? "Отправляет готовый видеоотчёт после ручной или автоматической отправки."
+      ? "Отправляет готовый видеоотчёт после ручной или автоматической отправки."
+      : setting.key === "team_daily_report"
+        ? "Отправляет общий итог IT-команды перед статистикой по задачам."
+        : setting.key === "team_daily_synergy"
+          ? "После итогового отчёта отправляет выявленные подтверждённые связи в работе команды."
         : "Отправляет руководителям итоговую сводку по задачам.";
   const preview = (draft.messageTemplate || "")
     .replace(/{{name}}/g, "Алексей")
@@ -478,6 +482,10 @@ function NotificationCard({
             Напоминание получат {draft.recipientMemberIds.length}{" "}
             {draft.recipientMemberIds.length === 1 ? "сотрудник" : "сотрудников"} из выбранного
             списка с подключённым Telegram. Состав меняется в блоке «Отчёты по сотрудникам» ниже.
+          </p>
+        ) : setting.key === "team_daily_report" || setting.key === "team_daily_synergy" ? (
+          <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+            Получатели берутся из настройки «Статистика по задачам» выше.
           </p>
         ) : (
           <div>
