@@ -9,14 +9,35 @@ export type ParsedGitReport = {
 export function parseGitReport(raw?: string): ParsedGitReport | null {
   if (!raw?.trim()) return null;
   const hours = raw.match(/Всего отработано\s+([^\n*]+)/i)?.[1]?.trim();
-  const projectBlocks = [...raw.matchAll(/\*([^*\n]+)\*\s*\n([\s\S]*?)(?=\n\s*\*[^*\n]+\*|$)/g)];
+  const analysis = raw.split(/^ОТЧЕТ СОТРУДНИКА[ \t]*\r?$/m)[0];
+  const projectBlocks = [
+    ...analysis.matchAll(
+      /^\*([^*\r\n]+)\*[ \t]*\r?\n([\s\S]*?)(?=^\*[^*\r\n]+\*[ \t]*\r?$|^ОТЧЕТ СОТРУДНИКА\s*$|(?![\s\S]))/gm,
+    ),
+  ];
   const projects = projectBlocks
-    .map(([, name, body]) => ({
-      name: name.trim(),
-      added: body.match(/\+(\d[\d\s]*)/)?.[1],
-      removed: body.match(/-(\d[\d\s]*)/)?.[1],
-      total: body.match(/всего изменено:\s*([\d\s]+)/i)?.[1],
-    }))
+    .map(([, name, body]) => {
+      // Итог проекта может включать коммиты, отсутствующие в текстовом анализе.
+      const projectStats = body.match(/СТАТИСТИКА ПО ПРОЕКТУ:[^\r\n]*/i)?.[0];
+      const statistics = projectStats
+        ? [projectStats]
+        : [...body.matchAll(/\*\*Статистика:\*\*([^\r\n]*)/gi)].map((match) => match[1]);
+      const sum = (pattern: RegExp) => {
+        const values = statistics.flatMap((stat) => {
+          const value = stat.match(pattern)?.[1];
+          return value ? [Number(value.replace(/\s/g, ""))] : [];
+        });
+        return values.length
+          ? String(values.reduce((total, value) => total + value, 0))
+          : undefined;
+      };
+      return {
+        name: name.trim(),
+        added: sum(/\+(\d[\d\s]*)/),
+        removed: sum(/-(\d[\d\s]*)/),
+        total: sum(/всего изменено:\s*([\d\s]+)/i),
+      };
+    })
     .filter((x) => x.added || x.removed);
   const quotaError = /ОШИБКА GPT:\s*429|insufficient_quota|credit_balance_exhausted/i.test(raw);
   const summary = quotaError

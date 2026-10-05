@@ -819,6 +819,9 @@ function ReportPanel({
                   <b>{p.name}</b>
                   <p className="mt-1 text-emerald-600">{p.added && `+${p.added}`}</p>
                   <p className="text-rose-500">{p.removed && `-${p.removed}`}</p>
+                  {p.total && (
+                    <p className="text-muted-foreground">Всего изменено: {p.total} строк</p>
+                  )}
                 </div>
               ))
             ) : (
