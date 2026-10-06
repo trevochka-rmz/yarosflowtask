@@ -43,7 +43,14 @@ function DepartmentsPage() {
     staleTime: 10 * 60_000,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["org-departments", orgId] });
+  const invalidate = () => Promise.all([
+    ["org-departments", orgId],
+    ["employee-report-members-settings", orgId],
+    ["employee-reports", orgId],
+    ["employee-report-detail", orgId],
+    ["employee-general-report", orgId],
+    ["notification-settings", orgId],
+  ].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
   const onError = (e: Error) => toast.error(e.message);
 
   const create = useMutation({

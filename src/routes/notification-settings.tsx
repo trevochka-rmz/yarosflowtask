@@ -288,6 +288,8 @@ function EmployeeReportMembersCard({
       toast.success("Список сотрудников отчётов сохранён");
       void queryClient.invalidateQueries({ queryKey: ["employee-report-members-settings", orgId] });
       void queryClient.invalidateQueries({ queryKey: ["employee-reports", orgId] });
+      void queryClient.invalidateQueries({ queryKey: ["employee-report-detail", orgId] });
+      void queryClient.invalidateQueries({ queryKey: ["employee-general-report", orgId] });
       // Напоминание использует этот же список. Обновляем его данные сразу,
       // чтобы число получателей не оставалось от прежней сохранённой выборки.
       void queryClient.invalidateQueries({ queryKey: ["notification-settings", orgId] });

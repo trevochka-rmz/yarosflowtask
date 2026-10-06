@@ -151,9 +151,6 @@ export function EmployeeReportsWorkspace() {
   });
   const canViewAllDepartments = canRegenerateVideoAnalysis;
   const ownDepartmentId = members.data?.find((member) => Number(member.user_id) === Number(currentUser?.id))?.department_id;
-  const visibleDepartments = (departments.data ?? []).filter((department) =>
-    canViewAllDepartments || department.id === ownDepartmentId,
-  );
   useEffect(() => {
     if (!canViewAllDepartments && ownDepartmentId && filters.departmentId !== ownDepartmentId) {
       const { memberId: _memberId, ...rest } = filters;
@@ -165,7 +162,16 @@ export function EmployeeReportsWorkspace() {
     queryFn: () => reportsService.getOverview(org!.id, { from: filters.from, to: filters.to }),
     enabled: !!org,
   });
-  const configuredMemberIds = new Set((reports.data ?? []).map((report) => report.member.id));
+  const activeDepartmentIds = new Set((departments.data ?? []).filter((department) => department.is_active).map((department) => department.id));
+  const configuredReports = (reports.data ?? []).filter((report) =>
+    !report.member.department_id || activeDepartmentIds.has(report.member.department_id),
+  );
+  const configuredDepartmentIds = new Set(configuredReports.map((report) => report.member.department_id));
+  const visibleDepartments = (departments.data ?? []).filter((department) =>
+    department.is_active && configuredDepartmentIds.has(department.id) &&
+    (canViewAllDepartments || department.id === ownDepartmentId),
+  );
+  const configuredMemberIds = new Set(configuredReports.map((report) => report.member.id));
   const visibleMembers = (members.data ?? []).filter((member) => configuredMemberIds.has(member.id));
   const departmentScopeKey = `${org?.id}:${currentUser?.id}`;
   useEffect(() => {
@@ -174,7 +180,7 @@ export function EmployeeReportsWorkspace() {
     initializedDepartmentScope.current = departmentScopeKey;
     // Ноль в URL означает явный выбор «Все» и сохраняет его после перезагрузки.
     if ("reportDepartmentId" in routeSearch && routeSearch.reportDepartmentId !== undefined) return;
-    const target = (reports.data ?? []).find((report) => linkedMemberId
+    const target = configuredReports.find((report) => linkedMemberId
       ? report.member.id === linkedMemberId
       : Number(report.member.user_id) === Number(currentUser.id));
     if (target?.member.department_id && visibleDepartments.some((department) => department.id === target.member.department_id))
@@ -186,12 +192,19 @@ export function EmployeeReportsWorkspace() {
     updateFilters({ ...rest, departmentId });
     if (departmentId) setGeneralDepartmentId(departmentId);
     if (selected !== "general") {
-      const matching = (reports.data ?? []).filter((report) => !departmentId || report.member.department_id === departmentId);
+      const matching = configuredReports.filter((report) => !departmentId || report.member.department_id === departmentId);
       const current = matching.find((report) => Number(report.member.user_id) === Number(currentUser?.id));
       setSelected(current?.member.id ?? matching[0]?.member.id ?? "general");
     }
   };
-  const list = (reports.data ?? [])
+  useEffect(() => {
+    if (!canViewAllDepartments || !reports.isSuccess || !departments.isSuccess || !filters.departmentId ||
+      visibleDepartments.some((department) => department.id === filters.departmentId)) return;
+    const own = configuredReports.find((report) => Number(report.member.user_id) === Number(currentUser?.id));
+    const fallback = own?.member.department_id;
+    switchDepartment(fallback && visibleDepartments.some((department) => department.id === fallback) ? fallback : undefined);
+  }, [canViewAllDepartments, reports.dataUpdatedAt, departments.dataUpdatedAt, filters.departmentId, currentUser?.id]);
+  const list = configuredReports
     .filter(
       (report) =>
         (!filters.departmentId || report.member.department_id === filters.departmentId) &&
@@ -331,9 +344,9 @@ export function EmployeeReportsWorkspace() {
         <nav aria-label="Отделы сотрудников" className="rounded-2xl border bg-card p-3 shadow-soft">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Отделы</p>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {[{ id: undefined, name: "Все", count: reports.data?.length ?? 0 }, ...visibleDepartments.map((department) => ({
+            {[{ id: undefined, name: "Все", count: configuredReports.length }, ...visibleDepartments.map((department) => ({
               id: department.id, name: department.name,
-              count: (reports.data ?? []).filter((report) => report.member.department_id === department.id).length,
+              count: configuredReports.filter((report) => report.member.department_id === department.id).length,
             }))].map((department) => {
               const isSelected = filters.departmentId === department.id;
               return (

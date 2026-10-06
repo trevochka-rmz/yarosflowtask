@@ -510,23 +510,24 @@ type NavItem = {
   exact?: boolean;
   perm?: string;
   platformOnly?: boolean;
+  leadershipOnly?: boolean;
 };
 
-type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean };
+type NavGroup = { label: string; items: NavItem[]; adminOnly?: boolean; leadershipOnly?: boolean };
 
 const GROUPS: NavGroup[] = [
   {
     label: "Управление",
     items: [
       { title: "Главная", url: "/", icon: Home, exact: true },
-      { title: "Чат", url: "/chat", icon: MessageSquare, perm: "chat.read" },
+      { title: "Чат", url: "/chat", icon: MessageSquare, perm: "chat.read", leadershipOnly: true },
       {
         title: "Директорский центр",
         url: "/director",
         icon: LayoutGrid,
         perm: "organization.update",
       },
-      { title: "Флот ботов", url: "/bots", icon: Bot, exact: true, perm: "bot.read" },
+      { title: "Флот ботов", url: "/bots", icon: Bot, exact: true, perm: "bot.read", leadershipOnly: true },
       { title: "Задачи", url: "/tasks", icon: ListChecks, perm: "task.read" },
       { title: "Отчёты", url: "/reports", icon: ChartNoAxesColumnIncreasing },
     ],
@@ -542,6 +543,7 @@ const GROUPS: NavGroup[] = [
   },
   {
     label: "Интеграции",
+    leadershipOnly: true,
     items: [
       { title: "Битрикс24", url: "/integrations/bitrix24", icon: Plug },
       { title: "1С", url: "/integrations/1c", icon: Plug },
@@ -567,6 +569,10 @@ const GROUPS: NavGroup[] = [
 function AppSidebar({ locked }: { locked?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { org, can, isPlatformAdmin } = useCurrentOrg();
+  const canViewLeadershipTools = [
+    "administrator", "admin", "platform_admin", "администратор", "админ",
+    "owner", "bot_owner", "владелец", "director", "директор",
+  ].includes(String(org?.role_code || org?.role_name || "").trim().toLowerCase());
   const canManageNotifications =
     isPlatformAdmin ||
     [
@@ -618,17 +624,20 @@ function AppSidebar({ locked }: { locked?: boolean }) {
           </div>
         ) : (
           (() => {
-            const baseGroups = GROUPS.filter((g) => (g.adminOnly ? isPlatformAdmin : true))
+            const baseGroups = GROUPS.filter((g) =>
+              (!g.adminOnly || isPlatformAdmin) && (!g.leadershipOnly || canViewLeadershipTools),
+            )
               .map((group) => ({
                 ...group,
                 items: group.items.filter((i) =>
+                  (!i.leadershipOnly || canViewLeadershipTools) && (
                   i.platformOnly
                     ? isPlatformAdmin
                     : i.url === "/notification-settings"
                       ? canManageNotifications
                       : i.perm
                         ? can(i.perm)
-                        : true,
+                        : true),
                 ),
               }))
               .filter((g) => g.items.length > 0);
