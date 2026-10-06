@@ -226,6 +226,8 @@ function MembersPage() {
 
   const RoleSelect = ({ m }: { m: OrgMember }) => (
     <select
+      title={roleList.find((role) => role.id === m.role_id)?.name || m.role_name || "Роль"}
+      aria-label="Роль сотрудника"
       value={m.role_id ?? ""}
       disabled={!canUpdate || patch.isPending}
       onChange={(e) => patch.mutate({ member: m, body: { roleId: Number(e.target.value) } })}
@@ -244,6 +246,8 @@ function MembersPage() {
 
   const DeptSelect = ({ m }: { m: OrgMember }) => (
     <select
+      title={deptList.find((department) => department.id === m.department_id)?.name || "Без отдела"}
+      aria-label="Отдел сотрудника"
       value={m.department_id ?? ""}
       disabled={!canUpdate || patch.isPending}
       onChange={(e) =>
@@ -264,7 +268,7 @@ function MembersPage() {
   );
 
   return (
-    <AppLayout>
+    <AppLayout wide>
       <h1 className="text-2xl font-semibold tracking-tight text-brand-deep sm:text-3xl">
         Сотрудники организации
       </h1>
@@ -338,8 +342,8 @@ function MembersPage() {
         <p className="mt-5 text-sm text-destructive">{(members.error as Error).message}</p>
       ) : members.data?.length ? (
         <>
-          <div className="mt-5 hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft lg:block">
-            <table className="w-full text-sm">
+          <div className="mt-5 hidden overflow-x-auto rounded-2xl border border-border bg-card shadow-soft lg:block">
+            <table className="min-w-[1400px] w-full text-sm">
               <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Сотрудник</th>
@@ -347,8 +351,8 @@ function MembersPage() {
                   <th className="px-4 py-3">Telegram</th>
                   <th className="px-4 py-3">Jira username</th>
                   <th className="px-4 py-3">GitLab username</th>
-                  <th className="px-4 py-3">Роль</th>
-                  <th className="px-4 py-3">Отдел</th>
+                  <th className="w-[18%] min-w-[220px] px-4 py-3">Роль</th>
+                  <th className="w-[18%] min-w-[220px] px-4 py-3">Отдел</th>
                   <th className="px-4 py-3">Добавлен</th>
                   <th className="px-4 py-3" />
                 </tr>
