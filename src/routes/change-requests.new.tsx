@@ -1,3 +1,4 @@
+import { EmployeeRestrictedPage } from "@/components/EmployeeRestrictedPage";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/change-requests/new")({
       { property: "og:description", content: "Заявка на изменение цифрового сотрудника." },
     ],
   }),
-  component: NewChangeRequestPage,
+  component: () => <EmployeeRestrictedPage><NewChangeRequestPage /></EmployeeRestrictedPage>,
 });
 
 const TYPES = Object.keys(CR_TYPE_LABELS) as CrType[];

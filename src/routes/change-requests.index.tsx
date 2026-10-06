@@ -1,3 +1,4 @@
+import { EmployeeRestrictedPage } from "@/components/EmployeeRestrictedPage";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/change-requests/")({
       { property: "og:description", content: "Контроль изменений логики цифровых сотрудников." },
     ],
   }),
-  component: ChangeRequestsPage,
+  component: () => <EmployeeRestrictedPage><ChangeRequestsPage /></EmployeeRestrictedPage>,
 });
 
 const STATUS_FILTERS: Array<{ value: "" | CrStatus; label: string }> = [

@@ -1,3 +1,4 @@
+import { EmployeeRestrictedPage } from "@/components/EmployeeRestrictedPage";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/acquiring")({
       },
     ],
   }),
-  component: AcquiringPage,
+  component: () => <EmployeeRestrictedPage><AcquiringPage /></EmployeeRestrictedPage>,
 });
 
 type ViewFilter = "all" | "pending" | "registered" | "paid";

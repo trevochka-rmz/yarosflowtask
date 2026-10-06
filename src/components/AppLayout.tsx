@@ -569,6 +569,9 @@ const GROUPS: NavGroup[] = [
 function AppSidebar({ locked }: { locked?: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { org, can, isPlatformAdmin } = useCurrentOrg();
+  const isEmployee = ["employee", "сотрудник"].includes(
+    String(org?.role_code || org?.role_name || "").trim().toLowerCase(),
+  );
   const canViewLeadershipTools = [
     "administrator", "admin", "platform_admin", "администратор", "админ",
     "owner", "bot_owner", "владелец", "director", "директор",
@@ -630,6 +633,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
               .map((group) => ({
                 ...group,
                 items: group.items.filter((i) =>
+                  !(isEmployee && i.url === "/change-requests") &&
                   (!i.leadershipOnly || canViewLeadershipTools) && (
                   i.platformOnly
                     ? isPlatformAdmin
@@ -643,7 +647,7 @@ function AppSidebar({ locked }: { locked?: boolean }) {
               .filter((g) => g.items.length > 0);
 
             const groups =
-              org?.id === 1
+              org?.id === 1 && !isEmployee
                 ? baseGroups.map((group) => {
                     if (group.label !== "Управление") return group;
                     const items = [...group.items];

@@ -1,3 +1,4 @@
+import { EmployeeRestrictedPage } from "@/components/EmployeeRestrictedPage";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/acquiring/$terminalId")({
       },
     ],
   }),
-  component: AcquiringTerminalPage,
+  component: () => <EmployeeRestrictedPage><AcquiringTerminalPage /></EmployeeRestrictedPage>,
 });
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
