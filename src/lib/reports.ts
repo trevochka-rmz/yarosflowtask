@@ -41,6 +41,16 @@ export type ReportVideo = {
   url?: string;
   summary?: { completed?: string; problems?: string; plans?: string };
 };
+export type VideoReportProcessingStatus = {
+  video_report_id: number;
+  status: "queued" | "processing" | "ready" | "failed" | "cancelled" | null;
+  attempts: number;
+  max_attempts: number;
+  created_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+};
 export type UploadedVideoReport = {
   id: number;
   report_date: string;
@@ -322,6 +332,10 @@ export const reportsService = {
     );
     return normalizeEmployeeReport(data);
   },
+  videoProcessingStatus: (orgId: number, employeeId: number, videoReportId: number) =>
+    apiFetch<VideoReportProcessingStatus>(
+      `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}/processing`,
+    ),
   async uploadVideo(
     orgId: number,
     employeeId: number,
