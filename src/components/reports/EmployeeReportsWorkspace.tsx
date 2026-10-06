@@ -153,9 +153,6 @@ export function EmployeeReportsWorkspace() {
   const visibleDepartments = (departments.data ?? []).filter((department) =>
     canViewAllDepartments || department.id === ownDepartmentId,
   );
-  const visibleMembers = (members.data ?? []).filter((member) =>
-    canViewAllDepartments || (ownDepartmentId && member.department_id === ownDepartmentId),
-  );
   useEffect(() => {
     if (!canViewAllDepartments && ownDepartmentId && filters.departmentId !== ownDepartmentId) {
       const { memberId: _memberId, ...rest } = filters;
@@ -163,11 +160,19 @@ export function EmployeeReportsWorkspace() {
     }
   }, [canViewAllDepartments, ownDepartmentId, filters.departmentId]);
   const reports = useQuery({
-    queryKey: ["employee-reports", org?.id, filters],
-    queryFn: () => reportsService.getOverview(org!.id, filters),
+    queryKey: ["employee-reports", org?.id, filters.from, filters.to],
+    queryFn: () => reportsService.getOverview(org!.id, { from: filters.from, to: filters.to }),
     enabled: !!org,
   });
+  const configuredMemberIds = new Set((reports.data ?? []).map((report) => report.member.id));
+  const visibleMembers = (members.data ?? []).filter((member) => configuredMemberIds.has(member.id));
   const list = (reports.data ?? [])
+    .filter(
+      (report) =>
+        (!filters.departmentId || report.member.department_id === filters.departmentId) &&
+        (!filters.memberId || report.member.id === filters.memberId) &&
+        (!filters.search || (report.member.full_name ?? "").toLowerCase().includes(filters.search.toLowerCase())),
+    )
     .filter(
       (report) =>
         source === "all" ||
