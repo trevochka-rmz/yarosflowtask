@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
@@ -87,6 +87,7 @@ export function EmployeeReportsWorkspace() {
   }));
   const [source, setSource] = useState<ReportType>(() => searchSource(routeSearch.reportSource));
   const [selected, setSelected] = useState<number | "general">();
+  const [generalDepartmentId, setGeneralDepartmentId] = useState<number>();
   const [tab, setTab] = useState<"overview" | "git" | "tasks" | "video">("overview");
   const [previewTarget, setPreviewTarget] = useState<{
     memberId: number;
@@ -107,6 +108,7 @@ export function EmployeeReportsWorkspace() {
     "admin",
     "platform_admin",
     "администратор",
+    "админ",
     "director",
     "директор",
   ].includes(
@@ -146,12 +148,20 @@ export function EmployeeReportsWorkspace() {
     queryFn: () => orgApi.departments(org!.id),
     enabled: !!org,
   });
+  const canViewAllDepartments = canRegenerateVideoAnalysis;
+  const ownDepartmentId = members.data?.find((member) => Number(member.user_id) === Number(currentUser?.id))?.department_id;
+  const visibleDepartments = (departments.data ?? []).filter((department) =>
+    canViewAllDepartments || department.id === ownDepartmentId,
+  );
+  const visibleMembers = (members.data ?? []).filter((member) =>
+    canViewAllDepartments || (ownDepartmentId && member.department_id === ownDepartmentId),
+  );
   useEffect(() => {
-    const it = departments.data?.find((department) =>
-      ["it", "ит"].includes(department.name.trim().toLowerCase()),
-    );
-    if (it && filters.departmentId !== it.id) updateFilters({ ...filters, departmentId: it.id });
-  }, [departments.data, filters.departmentId]);
+    if (!canViewAllDepartments && ownDepartmentId && filters.departmentId !== ownDepartmentId) {
+      const { memberId: _memberId, ...rest } = filters;
+      updateFilters({ ...rest, departmentId: ownDepartmentId });
+    }
+  }, [canViewAllDepartments, ownDepartmentId, filters.departmentId]);
   const reports = useQuery({
     queryKey: ["employee-reports", org?.id, filters],
     queryFn: () => reportsService.getOverview(org!.id, filters),
@@ -188,17 +198,24 @@ export function EmployeeReportsWorkspace() {
     );
     setSelected(currentMember?.member.id ?? "general");
   }, [currentUser?.id, linkedMemberId, list, reports.isPending, selected]);
+  const departmentGroups = visibleDepartments
+    .filter((department) => !filters.departmentId || department.id === filters.departmentId)
+    .map((department) => ({ ...department, reports: list.filter((report) => report.member.department_id === department.id) }));
+  const unassignedReports = list.filter((report) => !report.member.department_id);
+  const selectedGeneralDepartmentId = departmentGroups.some((department) => department.id === generalDepartmentId)
+    ? generalDepartmentId : departmentGroups[0]?.id;
+  const selectedGeneralDepartmentName = departmentGroups.find((department) => department.id === selectedGeneralDepartmentId)?.name;
   const generalSelected = canViewGeneralReport && selected === "general";
   const active = generalSelected
     ? undefined
     : (list.find((x) => x.member.id === selected) ?? list[0]);
   const generalReport = useQuery({
-    queryKey: ["employee-general-report", org?.id, filters.from, filters.to],
-    queryFn: () => reportsService.getGeneralReport(org!.id, filters),
-    enabled: !!org && generalSelected,
+    queryKey: ["employee-general-report", org?.id, filters.from, filters.to, selectedGeneralDepartmentId],
+    queryFn: () => reportsService.getGeneralReport(org!.id, { ...filters, departmentId: selectedGeneralDepartmentId }),
+    enabled: !!org && generalSelected && !!selectedGeneralDepartmentId,
   });
   const regenerateTeamReport = useMutation({
-    mutationFn: () => reportsService.regenerateTeamDailyReport(org!.id, filters.to),
+    mutationFn: () => reportsService.regenerateTeamDailyReport(org!.id, filters.to, selectedGeneralDepartmentId),
     onSuccess: () => {
       toast.success("Итоговый отчёт команды сформирован");
       void queryClient.invalidateQueries({ queryKey: ["employee-general-report", org?.id] });
@@ -275,8 +292,8 @@ export function EmployeeReportsWorkspace() {
     <div className="min-w-0 space-y-3">
       <ReportsHeader
         filters={filters}
-        departments={departments.data ?? []}
-        members={members.data ?? []}
+        departments={visibleDepartments}
+        members={visibleMembers}
         onChange={updateFilters}
       />
       <ReportTypeTabs
@@ -300,7 +317,7 @@ export function EmployeeReportsWorkspace() {
         <p className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
           {reports.error.message}
         </p>
-      ) : !active && !generalSelected ? (
+      ) : !active && !generalSelected && !departmentGroups.length ? (
         <EmptyReport />
       ) : (
         <div className="grid min-w-0 gap-4 xl:grid-cols-[29%_1fr]">
@@ -308,58 +325,63 @@ export function EmployeeReportsWorkspace() {
             <div className="border-b p-4">
               <b>Сотрудники</b>
             </div>
-            {canViewGeneralReport ? (
-              <button
-                type="button"
-                onClick={() => setSelected("general")}
-                className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${generalSelected ? "border-l-2 border-l-primary bg-primary/8" : ""}`}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Sparkles className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium">Общий отчёт</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    Краткие отчёты команды
-                  </span>
-                </span>
-              </button>
-            ) : null}
-            {list.map((report) => {
-              const oneCRequired = report.member.one_c_report_required !== false;
-              const git = report.commits.length > 0,
-                jira = report.tasks.length > 0,
-                video = report.videos.length > 0;
-              const isCurrentUser = Number(report.member.user_id) === Number(currentUser?.id);
-              return (
-                <button
-                  key={report.member.id}
-                  onClick={() => setSelected(report.member.id)}
-                  className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active?.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
-                >
-                  <EmployeeName member={report.member} compact />
-                  {isCurrentUser ? (
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                      Вы
+            {[...departmentGroups, ...(unassignedReports.length ? [{ id: 0, name: "Без отдела", reports: unassignedReports }] : [])].map((department) => (
+              <Fragment key={department.id}>
+                <div className="border-b bg-muted/40 px-3 py-2 text-sm font-semibold">{department.name} <span className="font-normal text-muted-foreground">({department.reports.length})</span></div>
+                {canViewGeneralReport && department.id > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => { setGeneralDepartmentId(department.id); setSelected("general"); }}
+                    className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${generalSelected && selectedGeneralDepartmentId === department.id ? "border-l-2 border-l-primary bg-primary/8" : ""}`}
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Sparkles className="h-4 w-4" />
                     </span>
-                  ) : null}
-                  <span className="ml-auto flex gap-1">
-                    <i
-                      title={oneCRequired ? "Отчёт 1С" : "Отчёт 1С не требуется"}
-                      className={`h-2 w-2 rounded-full ${git ? "bg-emerald-500" : oneCRequired ? "bg-rose-400" : "bg-slate-400"}`}
-                    />
-                    <i
-                      title="Jira"
-                      className={`h-2 w-2 rounded-full ${jira ? "bg-blue-500" : "bg-muted-foreground/30"}`}
-                    />
-                    <i
-                      title="Видео"
-                      className={`h-2 w-2 rounded-full ${video ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
-                    />
-                  </span>
-                </button>
-              );
-            })}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">Общий отчёт — {department.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        Краткие отчёты команды
+                      </span>
+                    </span>
+                  </button>
+                ) : null}
+                {department.reports.map((report) => {
+                  const oneCRequired = report.member.one_c_report_required !== false;
+                  const git = report.commits.length > 0,
+                    jira = report.tasks.length > 0,
+                    video = report.videos.length > 0;
+                  const isCurrentUser = Number(report.member.user_id) === Number(currentUser?.id);
+                  return (
+                    <button
+                      key={report.member.id}
+                      onClick={() => setSelected(report.member.id)}
+                      className={`flex min-w-0 w-full items-center gap-3 border-b p-3 text-left hover:bg-accent/50 ${active?.member.id === report.member.id ? "border-l-2 border-l-primary bg-primary/8" : ""} ${isCurrentUser ? "bg-emerald-500/5 hover:bg-emerald-500/10" : ""}`}
+                    >
+                      <EmployeeName member={report.member} compact />
+                      {isCurrentUser ? (
+                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                          Вы
+                        </span>
+                      ) : null}
+                      <span className="ml-auto flex gap-1">
+                        <i
+                          title={oneCRequired ? "Отчёт 1С" : "Отчёт 1С не требуется"}
+                          className={`h-2 w-2 rounded-full ${git ? "bg-emerald-500" : oneCRequired ? "bg-rose-400" : "bg-slate-400"}`}
+                        />
+                        <i
+                          title="Jira"
+                          className={`h-2 w-2 rounded-full ${jira ? "bg-blue-500" : "bg-muted-foreground/30"}`}
+                        />
+                        <i
+                          title="Видео"
+                          className={`h-2 w-2 rounded-full ${video ? "bg-emerald-500" : "bg-muted-foreground/30"}`}
+                        />
+                      </span>
+                    </button>
+                  );
+                })}
+              </Fragment>
+            ))}
             <div className="border-t bg-muted/30 p-3 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Индикаторы активности</p>
               <div className="mt-2 space-y-1.5">
@@ -383,14 +405,17 @@ export function EmployeeReportsWorkspace() {
           </aside>
           {generalSelected ? (
             <GeneralReportPanel
+              departmentName={generalReport.data?.department_name ?? selectedGeneralDepartmentName ?? null}
               reports={generalReport.data?.employee_reports ?? []}
               teamReport={generalReport.data?.team_report ?? null}
-              pending={generalReport.isPending}
+              pending={!!selectedGeneralDepartmentId && generalReport.isPending}
               error={generalReport.isError}
-              canRegenerate={canRegenerateVideoAnalysis}
+              canRegenerate={canRegenerateVideoAnalysis && !!selectedGeneralDepartmentId && filters.from === filters.to}
               generating={regenerateTeamReport.isPending}
               onRegenerate={() => regenerateTeamReport.mutate()}
             />
+          ) : !active ? (
+            <EmptyReport />
           ) : activeReport.isPending ? (
             <section className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
               Загружаем отчет сотрудника…

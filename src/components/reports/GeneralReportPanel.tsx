@@ -13,6 +13,7 @@ function formatDate(value: string) {
 
 export function GeneralReportPanel({
   reports,
+  departmentName,
   teamReport,
   pending,
   error,
@@ -20,6 +21,7 @@ export function GeneralReportPanel({
   generating = false,
   onRegenerate,
 }: {
+  departmentName?: string | null;
   reports: GeneralShortReport[];
   teamReport: TeamDailyReport | null;
   pending: boolean;
@@ -50,7 +52,7 @@ export function GeneralReportPanel({
           <Users className="h-5 w-5" />
         </span>
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold">Общий отчёт</h1>
+          <h1 className="text-xl font-semibold">Общий отчёт{departmentName ? ` — ${departmentName}` : ""}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Итог команды и краткие отчёты сотрудников
           </p>
@@ -76,7 +78,7 @@ export function GeneralReportPanel({
             <header className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
               <div>
-                <h2 className="font-semibold">Итоговый отчёт IT-команды</h2>
+                <h2 className="font-semibold">Итоговый отчёт отдела{departmentName ? ` ${departmentName}` : ""}</h2>
                 <p className="text-xs text-muted-foreground">
                   {formatDate(teamReport.report_date)}
                 </p>
@@ -90,7 +92,7 @@ export function GeneralReportPanel({
             <article className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
               <header className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-violet-600" />
-                <h2 className="font-semibold">Синергия IT-команды</h2>
+                <h2 className="font-semibold">Синергия отдела{departmentName ? ` ${departmentName}` : ""}</h2>
               </header>
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                 {teamReport.synergy_report}

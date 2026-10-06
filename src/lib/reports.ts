@@ -6,7 +6,7 @@ export type ReportType = "all" | "commits" | "tasks" | "video";
 export type ReportFilters = {
   from: string;
   to: string;
-  departmentId?: number;
+  departmentId?: number | undefined;
   memberId?: number;
   search?: string;
 };
@@ -105,6 +105,7 @@ export type GeneralShortReport = {
   member: Pick<OrgMember, "id" | "full_name" | "avatar_url" | "department_name">;
 };
 export type TeamDailyReport = {
+  department_id?: number;
   id: number;
   report_date: string;
   team_report: string;
@@ -116,6 +117,8 @@ export type TeamDailyReport = {
   };
 };
 export type GeneralReport = {
+  department_id: number | null;
+  department_name: string | null;
   team_report: TeamDailyReport | null;
   employee_reports: GeneralShortReport[];
 };
@@ -271,15 +274,17 @@ export const reportsService = {
       method: "PUT",
       body: { memberIds, departmentIds, oneCOptionalMemberIds },
     }),
-  getGeneralReport: (orgId: number, filters: Pick<ReportFilters, "from" | "to">) => {
+  getGeneralReport: (orgId: number, filters: Pick<ReportFilters, "from" | "to" | "departmentId">) => {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
+    if (filters.departmentId) params.set("departmentId", String(filters.departmentId));
     return apiFetch<GeneralReport>(`/organizations/${orgId}/reports/general?${params}`);
   },
-  regenerateTeamDailyReport: (orgId: number, reportDate: string) =>
+  regenerateTeamDailyReport: (orgId: number, reportDate: string, departmentId?: number) =>
     apiFetch<TeamDailyReport>(
       `/organizations/${orgId}/reports/team-daily/${encodeURIComponent(reportDate)}/regenerate`,
       {
         method: "POST",
+        body: { departmentId },
       },
     ),
   async getOverview(orgId: number, filters: ReportFilters): Promise<EmployeeReport[]> {

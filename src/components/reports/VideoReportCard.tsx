@@ -1,12 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  ExternalLink,
-  FileVideo,
-  LoaderCircle,
-  Maximize2,
-  Play,
-  Trash2,
-} from "lucide-react";
+import { ExternalLink, FileVideo, LoaderCircle, Maximize2, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/api";
@@ -209,8 +202,14 @@ export function VideoReportCard({
         </div>
 
         <dl className="mt-3 grid gap-1 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground sm:grid-cols-2">
-          <div className="flex justify-between gap-3"><dt>Загружен</dt><dd>{video.createdAt ? formatDate(video.createdAt) : "не указано"}</dd></div>
-          <div className="flex justify-between gap-3"><dt>Длительность</dt><dd>{detectedDuration || video.duration || "определяется после запуска"}</dd></div>
+          <div className="flex justify-between gap-3">
+            <dt>Загружен</dt>
+            <dd>{video.createdAt ? formatDate(video.createdAt) : "не указано"}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt>Длительность</dt>
+            <dd>{detectedDuration || video.duration || "определяется после запуска"}</dd>
+          </div>
         </dl>
       </div>
       {deleteError ? <p className="mt-3 text-sm text-destructive">{deleteError}</p> : null}

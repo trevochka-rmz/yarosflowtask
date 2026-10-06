@@ -34,7 +34,16 @@ export function ExpandableText({ text, lines = 4 }: { text: string; lines?: numb
     <div>
       <div
         className={cn("whitespace-pre-wrap", !open && "sm:line-clamp-none")}
-        style={open ? undefined : { display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: lines, overflow: "hidden" }}
+        style={
+          open
+            ? undefined
+            : {
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: lines,
+                overflow: "hidden",
+              }
+        }
       >
         {content}
       </div>

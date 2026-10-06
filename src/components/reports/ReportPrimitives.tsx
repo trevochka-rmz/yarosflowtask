@@ -67,7 +67,7 @@ export function ReportsHeader({
     const range = value.includes("|")
       ? (() => {
           const [from, to] = value.split("|");
-          return { from, to };
+          return { from: from ?? filters.from, to: to ?? filters.to };
         })()
       : rangeFor(value);
     onChange({ ...filters, ...range });
@@ -154,18 +154,11 @@ function ReportsFilters({
   members: OrgMember[];
   onChange: (filters: ReportFilters) => void;
 }) {
-  const itDepartment = departments.find((department) =>
-    ["it", "ит"].includes(department.name.trim().toLowerCase()),
+  const visibleMembers = members.filter((member) =>
+    !filters.departmentId || member.department_id === filters.departmentId,
   );
-  const itMembers = members.filter((member) => {
-    const role = (member.role_name || "").trim().toLowerCase();
-    return (
-      (!itDepartment || member.department_id === itDepartment.id) &&
-      !["manager", "менеджер", "administrator", "администратор"].includes(role)
-    );
-  });
   return (
-    <div className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft md:grid-cols-[minmax(180px,1fr)_220px]">
+    <div className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft md:grid-cols-[minmax(180px,1fr)_200px_220px]">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -176,17 +169,31 @@ function ReportsFilters({
         />
       </div>
       <Select
+        value={String(filters.departmentId ?? "all")}
+        onValueChange={(value) => {
+          const { memberId: _memberId, ...rest } = filters;
+          onChange({ ...rest, departmentId: value === "all" ? undefined : Number(value) });
+        }}
+      >
+        <SelectTrigger><SelectValue placeholder="Отдел" /></SelectTrigger>
+        <SelectContent>
+          {departments.length > 1 ? <SelectItem value="all">Все отделы</SelectItem> : null}
+          {departments.map((department) => <SelectItem key={department.id} value={String(department.id)}>{department.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select
         value={String(filters.memberId ?? "all")}
-        onValueChange={(value) =>
-          onChange({ ...filters, memberId: value === "all" ? undefined : Number(value) })
-        }
+        onValueChange={(value) => {
+          const { memberId: _memberId, ...rest } = filters;
+          onChange(value === "all" ? rest : { ...rest, memberId: Number(value) });
+        }}
       >
         <SelectTrigger>
           <SelectValue placeholder="Сотрудник" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Все сотрудники</SelectItem>
-          {itMembers.map((member) => (
+          {visibleMembers.map((member) => (
             <SelectItem key={member.id} value={String(member.id)}>
               {member.full_name || member.username || `#${member.user_id}`}
             </SelectItem>
