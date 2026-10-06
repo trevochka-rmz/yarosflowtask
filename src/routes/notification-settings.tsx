@@ -272,9 +272,15 @@ function EmployeeReportMembersCard({
   const [oneCOptionalMemberIds, setOneCOptionalMemberIds] = useState<number[]>([]);
   useEffect(() => {
     if (!settings) return;
-    setDepartmentIds(settings.departmentIds);
-    setMemberIds(settings.memberIds);
-    setOneCOptionalMemberIds(settings.oneCOptionalMemberIds);
+    const selectedDepartments = settings.departmentIds.filter((id) =>
+      settings.departments.some((department) => department.id === id),
+    );
+    const selectedMembers = settings.memberIds.filter((id) =>
+      settings.members.some((member) => member.id === id && member.department_id !== null && selectedDepartments.includes(member.department_id)),
+    );
+    setDepartmentIds(selectedDepartments);
+    setMemberIds(selectedMembers);
+    setOneCOptionalMemberIds(settings.oneCOptionalMemberIds.filter((id) => selectedMembers.includes(id)));
   }, [settings]);
   const save = useMutation({
     mutationFn: () =>
@@ -305,26 +311,27 @@ function EmployeeReportMembersCard({
       </Card>
     );
   if (!settings) return null;
-  const members = settings.members.filter((member) => departmentIds.includes(member.department_id));
+  const departmentGroups = settings.departments
+    .filter((department) => departmentIds.includes(department.id))
+    .map((department) => ({
+      ...department,
+      members: settings.members.filter((member) => member.department_id === department.id),
+    }));
+  const optionalGroups = departmentGroups
+    .map((department) => ({ ...department, members: department.members.filter((member) => memberIds.includes(member.id)) }))
+    .filter((department) => department.members.length > 0);
   const toggleDepartment = (departmentId: number, checked: boolean) => {
     const nextDepartments = checked
       ? [...new Set([...departmentIds, departmentId])]
       : departmentIds.filter((id) => id !== departmentId);
     setDepartmentIds(nextDepartments);
-    if (!checked)
-      setMemberIds((current) =>
-        current.filter(
-          (id) =>
-            settings.members.find((member) => member.id === id)?.department_id !== departmentId,
-        ),
-      );
-    if (!checked)
-      setOneCOptionalMemberIds((current) =>
-        current.filter(
-          (id) =>
-            settings.members.find((member) => member.id === id)?.department_id !== departmentId,
-        ),
-      );
+    if (!checked) {
+      const allowedIds = new Set(settings.members
+        .filter((member) => member.department_id !== null && nextDepartments.includes(member.department_id))
+        .map((member) => member.id));
+      setMemberIds((current) => current.filter((id) => allowedIds.has(id)));
+      setOneCOptionalMemberIds((current) => current.filter((id) => allowedIds.has(id)));
+    }
   };
   return (
     <Card>
@@ -332,7 +339,7 @@ function EmployeeReportMembersCard({
         <CardTitle className="text-lg">Отчёты по сотрудникам</CardTitle>
         <CardDescription>
           Сначала выберите отделы, затем сотрудников, которые будут показываться в разделе отчётов.
-          По умолчанию выбран IT.
+          При снятии выбора отдела его сотрудники исключаются из обоих списков. Изменения применяются после сохранения.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -359,33 +366,44 @@ function EmployeeReportMembersCard({
             <Users className="h-4 w-4" /> Сотрудники ({memberIds.length})
           </p>
           <div className="max-h-64 space-y-1 overflow-y-auto rounded-md border p-2">
-            {members.map((member) => (
-              <label
-                key={member.id}
-                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
-              >
-                <Checkbox
-                  checked={memberIds.includes(member.id)}
-                  disabled={save.isPending}
-                  onCheckedChange={(checked) => {
-                    setMemberIds((current) =>
-                      checked === true
-                        ? [...new Set([...current, member.id])]
-                        : current.filter((id) => id !== member.id),
-                    );
-                    if (checked !== true)
-                      setOneCOptionalMemberIds((current) =>
-                        current.filter((id) => id !== member.id),
-                      );
-                  }}
-                />
-                <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {member.role_name || member.department_name || "Сотрудник"}
-                </span>
-              </label>
+            {departmentGroups.map((department) => (
+              <section key={department.id} className="mb-3 last:mb-0">
+                <h3 className="sticky top-0 mb-1 flex items-center justify-between rounded bg-muted px-2 py-2 text-sm font-medium">
+                  {department.name}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {department.members.filter((member) => memberIds.includes(member.id)).length} / {department.members.length}
+                  </span>
+                </h3>
+                {department.members.map((member) => (
+                  <label
+                    key={member.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                  >
+                    <Checkbox
+                      checked={memberIds.includes(member.id)}
+                      disabled={save.isPending}
+                      onCheckedChange={(checked) => {
+                        setMemberIds((current) =>
+                          checked === true
+                            ? [...new Set([...current, member.id])]
+                            : current.filter((id) => id !== member.id),
+                        );
+                        if (checked !== true)
+                          setOneCOptionalMemberIds((current) =>
+                            current.filter((id) => id !== member.id),
+                          );
+                      }}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {member.role_name || member.department_name || "Сотрудник"}
+                    </span>
+                  </label>
+                ))}
+                {!department.members.length ? <p className="px-2 py-2 text-xs text-muted-foreground">В отделе нет активных сотрудников.</p> : null}
+              </section>
             ))}
-            {!members.length && (
+            {!departmentGroups.length && (
               <p className="px-2 py-3 text-sm text-muted-foreground">
                 Выберите хотя бы один отдел.
               </p>
@@ -393,35 +411,43 @@ function EmployeeReportMembersCard({
           </div>
         </div>
         <div>
-          <p className="mb-1 text-sm font-medium">Отчёт 1С не обязателен</p>
+          <p className="mb-1 text-sm font-medium">Отчёт 1С не обязателен ({oneCOptionalMemberIds.length})</p>
           <p className="mb-2 text-xs text-muted-foreground">
             Эти сотрудники показывают Jira-задачи и видеоотчёт; отсутствие отчёта 1С отмечается
             нейтральным индикатором и в краткой сводке передаётся как «Данные 1С: —».
           </p>
           <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
-            {members
-              .filter((member) => memberIds.includes(member.id))
-              .map((member) => (
-                <label
-                  key={member.id}
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
-                >
-                  <Checkbox
-                    checked={oneCOptionalMemberIds.includes(member.id)}
-                    disabled={save.isPending}
-                    onCheckedChange={(checked) =>
-                      setOneCOptionalMemberIds((current) =>
-                        checked === true
-                          ? [...new Set([...current, member.id])]
-                          : current.filter((id) => id !== member.id),
-                      )
-                    }
-                  />
-                  <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">1С не требуется</span>
-                </label>
-              ))}
-            {!members.some((member) => memberIds.includes(member.id)) && (
+            {optionalGroups.map((department) => (
+              <section key={department.id} className="mb-3 last:mb-0">
+                <h3 className="sticky top-0 mb-1 flex items-center justify-between rounded bg-muted px-2 py-2 text-sm font-medium">
+                  {department.name}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {department.members.filter((member) => oneCOptionalMemberIds.includes(member.id)).length} / {department.members.length}
+                  </span>
+                </h3>
+                {department.members.map((member) => (
+                  <label
+                    key={member.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
+                  >
+                    <Checkbox
+                      checked={oneCOptionalMemberIds.includes(member.id)}
+                      disabled={save.isPending}
+                      onCheckedChange={(checked) =>
+                        setOneCOptionalMemberIds((current) =>
+                          checked === true
+                            ? [...new Set([...current, member.id])]
+                            : current.filter((id) => id !== member.id),
+                        )
+                      }
+                    />
+                    <span className="min-w-0 flex-1 truncate">{member.full_name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">1С не требуется</span>
+                  </label>
+                ))}
+              </section>
+            ))}
+            {!optionalGroups.length && (
               <p className="px-2 py-3 text-sm text-muted-foreground">
                 Сначала выберите сотрудников для отчётов.
               </p>
