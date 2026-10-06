@@ -77,6 +77,7 @@ export function EmployeeReportsWorkspace() {
   const routeSearch = useRouterState({ select: (state) => state.location.search });
   const linkedMemberId = searchId(routeSearch.memberId);
   const appliedLinkedMemberId = useRef<number>();
+  const initializedDepartmentScope = useRef<string | undefined>(undefined);
   const today = isoDate(new Date());
   const [filters, setFilters] = useState<ReportFilters>(() => ({
     from: searchDate(routeSearch.reportFrom) ?? today,
@@ -125,7 +126,7 @@ export function EmployeeReportsWorkspace() {
         ...previous,
         reportFrom: next.from,
         reportTo: next.to,
-        reportDepartmentId: next.departmentId,
+        reportDepartmentId: next.departmentId ?? 0,
         reportMemberId: next.memberId,
         reportSearch: next.search || undefined,
       }),
@@ -166,6 +167,30 @@ export function EmployeeReportsWorkspace() {
   });
   const configuredMemberIds = new Set((reports.data ?? []).map((report) => report.member.id));
   const visibleMembers = (members.data ?? []).filter((member) => configuredMemberIds.has(member.id));
+  const departmentScopeKey = `${org?.id}:${currentUser?.id}`;
+  useEffect(() => {
+    if (!canViewAllDepartments || !org?.id || !currentUser?.id || !reports.isSuccess || !departments.isSuccess ||
+      initializedDepartmentScope.current === departmentScopeKey) return;
+    initializedDepartmentScope.current = departmentScopeKey;
+    // Ноль в URL означает явный выбор «Все» и сохраняет его после перезагрузки.
+    if ("reportDepartmentId" in routeSearch && routeSearch.reportDepartmentId !== undefined) return;
+    const target = (reports.data ?? []).find((report) => linkedMemberId
+      ? report.member.id === linkedMemberId
+      : Number(report.member.user_id) === Number(currentUser.id));
+    if (target?.member.department_id && visibleDepartments.some((department) => department.id === target.member.department_id))
+      updateFilters({ ...filters, departmentId: target.member.department_id });
+  }, [canViewAllDepartments, departmentScopeKey, org?.id, currentUser?.id, reports.isSuccess, reports.data, departments.isSuccess]);
+  const switchDepartment = (departmentId?: number) => {
+    initializedDepartmentScope.current = departmentScopeKey;
+    const { memberId: _memberId, ...rest } = filters;
+    updateFilters({ ...rest, departmentId });
+    if (departmentId) setGeneralDepartmentId(departmentId);
+    if (selected !== "general") {
+      const matching = (reports.data ?? []).filter((report) => !departmentId || report.member.department_id === departmentId);
+      const current = matching.find((report) => Number(report.member.user_id) === Number(currentUser?.id));
+      setSelected(current?.member.id ?? matching[0]?.member.id ?? "general");
+    }
+  };
   const list = (reports.data ?? [])
     .filter(
       (report) =>
@@ -300,7 +325,35 @@ export function EmployeeReportsWorkspace() {
         departments={visibleDepartments}
         members={visibleMembers}
         onChange={updateFilters}
+        hideDepartmentFilter={canViewAllDepartments}
       />
+      {canViewAllDepartments ? (
+        <nav aria-label="Отделы сотрудников" className="rounded-2xl border bg-card p-3 shadow-soft">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Отделы</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {[{ id: undefined, name: "Все", count: reports.data?.length ?? 0 }, ...visibleDepartments.map((department) => ({
+              id: department.id, name: department.name,
+              count: (reports.data ?? []).filter((report) => report.member.department_id === department.id).length,
+            }))].map((department) => {
+              const isSelected = filters.departmentId === department.id;
+              return (
+                <button
+                  key={department.id ?? "all"}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => switchDepartment(department.id)}
+                  className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${isSelected ? "border-primary bg-primary/10 text-primary" : "border-transparent bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+                >
+                  {department.name}
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${isSelected ? "bg-primary/15" : "bg-background"}`}>
+                    {reports.isPending ? "…" : department.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      ) : null}
       <ReportTypeTabs
         type={source}
         onChange={(value) => {

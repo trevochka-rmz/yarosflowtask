@@ -36,11 +36,13 @@ export function ReportsHeader({
   departments,
   members,
   onChange,
+  hideDepartmentFilter = false,
 }: {
   filters: ReportFilters;
   departments: Department[];
   members: OrgMember[];
   onChange: (filters: ReportFilters) => void;
+  hideDepartmentFilter?: boolean;
 }) {
   const [dayOpen, setDayOpen] = React.useState(false);
   const preset = React.useMemo(() => {
@@ -138,6 +140,7 @@ export function ReportsHeader({
         departments={departments}
         members={members}
         onChange={onChange}
+        hideDepartmentFilter={hideDepartmentFilter}
       />
     </>
   );
@@ -148,17 +151,19 @@ function ReportsFilters({
   departments,
   members,
   onChange,
+  hideDepartmentFilter = false,
 }: {
   filters: ReportFilters;
   departments: Department[];
   members: OrgMember[];
   onChange: (filters: ReportFilters) => void;
+  hideDepartmentFilter?: boolean;
 }) {
   const visibleMembers = members.filter((member) =>
     !filters.departmentId || member.department_id === filters.departmentId,
   );
   return (
-    <div className="mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft md:grid-cols-[minmax(180px,1fr)_200px_220px]">
+    <div className={`mt-5 grid gap-2 rounded-2xl border border-border bg-card p-3 shadow-soft ${hideDepartmentFilter ? "md:grid-cols-[minmax(180px,1fr)_220px]" : "md:grid-cols-[minmax(180px,1fr)_200px_220px]"}`}>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -168,7 +173,7 @@ function ReportsFilters({
           placeholder="Поиск сотрудника"
         />
       </div>
-      <Select
+      {!hideDepartmentFilter ? <Select
         value={String(filters.departmentId ?? "all")}
         onValueChange={(value) => {
           const { memberId: _memberId, ...rest } = filters;
@@ -180,7 +185,7 @@ function ReportsFilters({
           {departments.length > 1 ? <SelectItem value="all">Все отделы</SelectItem> : null}
           {departments.map((department) => <SelectItem key={department.id} value={String(department.id)}>{department.name}</SelectItem>)}
         </SelectContent>
-      </Select>
+      </Select> : null}
       <Select
         value={String(filters.memberId ?? "all")}
         onValueChange={(value) => {
