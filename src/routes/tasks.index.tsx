@@ -964,7 +964,7 @@ function TasksPage() {
             <KanbanBoard
               board={board}
               movingTaskId={moveTask.isPending ? moveTask.variables?.taskId : undefined}
-              canMove={canModifyTasks}
+              canMove={Object.values(board.columns).some((tasks) => tasks.some((task) => task.can_change_status === true))}
               onMove={(taskId, column) =>
                 moveTask.mutate({ taskId, status: BOARD_COLUMN_STATUS[column] })
               }
@@ -1267,7 +1267,7 @@ function KanbanBoard({
       <p className="mb-3 text-sm text-muted-foreground">Всего задач: {board.total}</p>
       {!canMove ? (
         <p className="mb-3 text-sm text-muted-foreground">
-          Перемещение и изменение задач недоступны для роли manager.
+          У вас нет права перемещать задачи на этой доске.
         </p>
       ) : null}
       <div className="-mx-4 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:px-6">
@@ -1294,7 +1294,8 @@ function KanbanBoard({
                   setDragOverColumn(null);
                   const taskId = Number(event.dataTransfer.getData("text/plain"));
                   const taskAlreadyHere = columnTasks.some((task) => task.id === taskId);
-                  if (Number.isFinite(taskId) && !taskAlreadyHere) onMove(taskId, columnKey);
+                  const task = Object.values(board.columns).flat().find((item) => item.id === taskId);
+                  if (task?.can_change_status === true && !taskAlreadyHere) onMove(taskId, columnKey);
                 }}
                 className={cn(
                   "min-w-0 overflow-hidden rounded-lg border border-border bg-muted/35 p-1 transition-colors sm:rounded-xl sm:p-2 xl:p-3",
@@ -1322,7 +1323,7 @@ function KanbanBoard({
                         key={task.id}
                         task={task}
                         isMoving={movingTaskId === task.id}
-                        canMove={canMove}
+                        canMove={task.can_change_status === true}
                         onMove={(column) => onMove(task.id, column)}
                       />
                     ))
@@ -1408,6 +1409,11 @@ function KanbanTaskCard({
           </a>
         ) : null}
       </div>
+      {!canMove && (
+        <p className="mt-3 border-t border-border pt-2 text-xs text-muted-foreground">
+          Изменение статуса недоступно: задача не входит в вашу область доступа.
+        </p>
+      )}
       {canMove ? (
         <label className="mt-3 block border-t border-border pt-2 text-xs text-muted-foreground lg:hidden">
           Переместить в

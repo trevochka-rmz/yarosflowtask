@@ -188,7 +188,7 @@ function TaskDetail() {
     );
   }
 
-  const transitions = canModifyTask ? nextStatuses(task.status, role) : [];
+  const transitions = task.can_change_status === true ? nextStatuses(task.status, "manager") : [];
   const isJira = isJiraTask;
   const jiraKey = task.jira_key || task.external_key;
   const jiraUrl = task.jira_url || task.external_url;
