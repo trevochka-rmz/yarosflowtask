@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Building, Loader2, Plus, Trash2 } from "lucide-react";
+import { Building, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { orgApi, useCurrentOrg } from "@/lib/org";
+import { orgApi, useCurrentOrg, type Department } from "@/lib/org";
 
 export const Route = createFileRoute("/departments")({
   head: () => ({
@@ -19,6 +19,102 @@ export const Route = createFileRoute("/departments")({
   }),
   component: DepartmentsPage,
 });
+
+function DepartmentEditor({
+  department,
+  orgId,
+  onSaved,
+  disabled,
+}: {
+  department: Department;
+  orgId: number;
+  onSaved: () => Promise<unknown>;
+  disabled: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(department.name);
+  const [code, setCode] = useState(department.code ?? "");
+  const save = useMutation({
+    mutationFn: () =>
+      orgApi.updateDepartment(orgId, department.id, {
+        name: name.trim(),
+        code: code.trim().toUpperCase() || null,
+      }),
+    onSuccess: async () => {
+      await onSaved();
+      setEditing(false);
+      toast.success("Название и код отдела обновлены");
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  if (!editing)
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        onClick={() => {
+          setName(department.name);
+          setCode(department.code ?? "");
+          setEditing(true);
+        }}
+      >
+        <Pencil className="h-4 w-4" />
+        Редактировать
+      </Button>
+    );
+  const unchanged =
+    name.trim() === department.name && (code.trim().toUpperCase() || null) === department.code;
+  return (
+    <form
+      className="grid gap-3 rounded-xl border border-border bg-muted/30 p-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (name.trim() && !save.isPending && !disabled) save.mutate();
+      }}
+    >
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        Название отдела
+        <Input
+          value={name}
+          maxLength={150}
+          required
+          disabled={save.isPending || disabled}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </label>
+      <label className="grid gap-1 text-xs text-muted-foreground">
+        Код отдела
+        <Input
+          value={code}
+          maxLength={50}
+          disabled={save.isPending || disabled}
+          placeholder="Например, IT"
+          onChange={(event) => setCode(event.target.value)}
+        />
+      </label>
+      <p className="text-xs text-muted-foreground">Оставьте код пустым, если он не нужен.</p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="submit"
+          size="sm"
+          disabled={!name.trim() || unchanged || save.isPending || disabled}
+        >
+          {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />}Сохранить
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={save.isPending}
+          onClick={() => setEditing(false)}
+        >
+          Отмена
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 function DepartmentsPage() {
   const { org, can } = useCurrentOrg();
@@ -43,14 +139,18 @@ function DepartmentsPage() {
     staleTime: 10 * 60_000,
   });
 
-  const invalidate = () => Promise.all([
-    ["org-departments", orgId],
-    ["employee-report-members-settings", orgId],
-    ["employee-reports", orgId],
-    ["employee-report-detail", orgId],
-    ["employee-general-report", orgId],
-    ["notification-settings", orgId],
-  ].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+  const invalidate = () =>
+    Promise.all(
+      [
+        ["org-departments", orgId],
+        ["org-members", orgId],
+        ["employee-report-members-settings", orgId],
+        ["employee-reports", orgId],
+        ["employee-report-detail", orgId],
+        ["employee-general-report", orgId],
+        ["notification-settings", orgId],
+      ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
   const onError = (e: Error) => toast.error(e.message);
 
   const create = useMutation({
@@ -137,7 +237,7 @@ function DepartmentsPage() {
             <li key={d.id} className="rounded-2xl border border-border bg-card p-4 shadow-soft">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                 <div className="min-w-0">
-                  <span className="block truncate font-semibold text-brand-deep">{d.name}</span>
+                  <span className="block break-words font-semibold text-brand-deep">{d.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {d.code ?? "—"} · {d.is_active ? "активен" : "выключен"}
                   </span>
@@ -158,14 +258,24 @@ function DepartmentsPage() {
                 <p className="mt-2 text-sm text-muted-foreground">{d.description}</p>
               ) : null}
               {canUpdate ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3 w-full"
-                  onClick={() => toggleActive.mutate({ id: d.id, is_active: !d.is_active })}
-                >
-                  {d.is_active ? "Выключить" : "Включить"}
-                </Button>
+                <div className="mt-3 grid gap-2">
+                  <DepartmentEditor
+                    key={`${orgId}:${d.id}`}
+                    department={d}
+                    orgId={orgId!}
+                    onSaved={invalidate}
+                    disabled={remove.isPending || toggleActive.isPending}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    disabled={toggleActive.isPending || remove.isPending}
+                    onClick={() => toggleActive.mutate({ id: d.id, is_active: !d.is_active })}
+                  >
+                    {d.is_active ? "Выключить" : "Включить"}
+                  </Button>
+                </div>
               ) : null}
             </li>
           ))}

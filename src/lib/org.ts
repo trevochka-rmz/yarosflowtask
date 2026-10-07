@@ -272,7 +272,7 @@ export const orgApi = {
   updateDepartment: (
     id: number,
     departmentId: number,
-    body: { name?: string; description?: string; is_active?: boolean },
+    body: { name?: string; code?: string | null; description?: string; is_active?: boolean },
   ) =>
     apiFetch<Department>(`/organizations/${id}/departments/${departmentId}`, {
       method: "PATCH",
