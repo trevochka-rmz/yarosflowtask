@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Lock, Trash2, UserPlus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { UserAvatar } from "@/components/UserAvatar";
 import { formatDate } from "@/lib/api";
 import {
@@ -130,9 +131,26 @@ function MembersPage() {
   const [roleId, setRoleId] = useState("");
   const [departmentId, setDepartmentId] = useState("");
 
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterDepartment, setFilterDepartment] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  useEffect(() => {
+    setSearch("");
+    setDebouncedSearch("");
+    setFilterRole("");
+    setFilterDepartment("");
+  }, [orgId]);
+  const filters = { search: debouncedSearch, roleId: filterRole, departmentId: filterDepartment };
+  const hasFilters = !!(search.trim() || filterRole || filterDepartment);
+
   const members = useQuery({
-    queryKey: ["org-members", orgId],
-    queryFn: () => orgApi.members(orgId!),
+    queryKey: ["org-members", orgId, filters],
+    queryFn: () => orgApi.members(orgId!, filters),
     enabled: !!orgId && canRead,
   });
   const roles = useQuery({
@@ -336,6 +354,70 @@ function MembersPage() {
         </form>
       ) : null}
 
+      <div className="mt-5 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_220px_220px_auto]">
+        <label className="grid gap-1 text-xs text-muted-foreground sm:col-span-2 lg:col-span-1">
+          Поиск сотрудников
+          <Input
+            value={search}
+            maxLength={200}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Имя, Telegram, Jira, GitLab или Telegram ID"
+          />
+        </label>
+        <label className="grid gap-1 text-xs text-muted-foreground">
+          Роль
+          <select
+            className={selectClass}
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+          >
+            <option value="">Все роли</option>
+            {roleList.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs text-muted-foreground">
+          Отдел
+          <select
+            className={selectClass}
+            value={filterDepartment}
+            onChange={(e) => setFilterDepartment(e.target.value)}
+          >
+            <option value="">Все отделы</option>
+            <option value="none">Без отдела</option>
+            {deptList.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          className="self-end"
+          variant="outline"
+          disabled={!hasFilters}
+          onClick={() => {
+            setSearch("");
+            setDebouncedSearch("");
+            setFilterRole("");
+            setFilterDepartment("");
+          }}
+        >
+          Сбросить
+        </Button>
+        {members.data && (
+          <p
+            className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-4"
+            aria-live="polite"
+          >
+            {hasFilters ? "Найдено" : "Сотрудников"}: {members.data.length}
+          </p>
+        )}
+      </div>
+
       {members.isPending ? (
         <p className="mt-5 text-sm text-muted-foreground">Загрузка…</p>
       ) : members.isError ? (
@@ -343,18 +425,20 @@ function MembersPage() {
       ) : members.data?.length ? (
         <>
           <div className="mt-5 hidden overflow-x-auto rounded-2xl border border-border bg-card shadow-soft lg:block">
-            <table className="min-w-[1400px] w-full text-sm">
+            <table className="w-full min-w-[1800px] table-fixed text-sm">
               <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3">Сотрудник</th>
-                  <th className="px-4 py-3">Статус</th>
-                  <th className="px-4 py-3">Telegram</th>
-                  <th className="px-4 py-3">Jira username</th>
-                  <th className="px-4 py-3">GitLab username</th>
-                  <th className="w-[18%] min-w-[220px] px-4 py-3">Роль</th>
-                  <th className="w-[18%] min-w-[220px] px-4 py-3">Отдел</th>
-                  <th className="px-4 py-3">Добавлен</th>
-                  <th className="px-4 py-3" />
+                  <th className="w-[340px] px-4 py-3">Сотрудник</th>
+                  <th className="w-[160px] px-4 py-3">Статус</th>
+                  <th className="w-[180px] px-4 py-3">Telegram</th>
+                  <th className="w-[200px] px-4 py-3">Jira username</th>
+                  <th className="w-[200px] px-4 py-3">GitLab username</th>
+                  <th className="w-[240px] px-4 py-3">Роль</th>
+                  <th className="w-[240px] px-4 py-3">Отдел</th>
+                  <th className="w-[160px] px-4 py-3">Добавлен</th>
+                  <th className="w-[64px] px-4 py-3">
+                    <span className="sr-only">Действия</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -365,26 +449,27 @@ function MembersPage() {
                       <td className="px-4 py-3 font-medium">
                         <div className="flex items-center gap-2.5">
                           <UserAvatar
-                            avatarUrl={m.avatar_url}
+                            avatarUrl={m.avatar_url ?? null}
                             name={m.full_name || m.username}
                             className="h-9 w-9"
                           />
-                          {canUpdate ? (
-                            <input
-                              className="h-9 min-w-0 w-full rounded-md border border-input bg-card px-2 text-sm"
-                              defaultValue={m.organization_full_name ?? ""}
-                              placeholder={personLabel(m)}
-                              aria-label={`Имя и фамилия ${personLabel(m)}`}
-                              onBlur={(e) => {
-                                const value = e.target.value.trim();
-                                const next = value || null;
-                                if (next === (m.organization_full_name ?? null)) return;
-                                patch.mutate({ member: m, body: { organizationFullName: next } });
-                              }}
-                            />
-                          ) : (
-                            <span className="min-w-0 truncate">{personLabel(m)}</span>
-                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="mb-1 whitespace-normal break-words">{personLabel(m)}</p>
+                            {canUpdate ? (
+                              <input
+                                className="h-9 min-w-0 w-full rounded-md border border-input bg-card px-2 text-sm"
+                                defaultValue={m.organization_full_name ?? ""}
+                                placeholder={personLabel(m)}
+                                aria-label={`Имя и фамилия ${personLabel(m)}`}
+                                onBlur={(e) => {
+                                  const value = e.target.value.trim();
+                                  const next = value || null;
+                                  if (next === (m.organization_full_name ?? null)) return;
+                                  patch.mutate({ member: m, body: { organizationFullName: next } });
+                                }}
+                              />
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -472,12 +557,12 @@ function MembersPage() {
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <UserAvatar
-                        avatarUrl={m.avatar_url}
+                        avatarUrl={m.avatar_url ?? null}
                         name={m.full_name || m.username}
                         className="h-10 w-10"
                       />
                       <span className="min-w-0">
-                        <span className="block truncate font-medium">{personLabel(m)}</span>
+                        <span className="block break-words font-medium">{personLabel(m)}</span>
                         <div className="mt-0.5 flex items-center gap-2">
                           {orgId ? (
                             <StatusSelect
@@ -574,7 +659,11 @@ function MembersPage() {
           </ul>
         </>
       ) : (
-        <p className="mt-5 text-sm text-muted-foreground">Сотрудников пока нет.</p>
+        <p className="mt-5 text-sm text-muted-foreground">
+          {hasFilters
+            ? "По заданным условиям сотрудники не найдены. Измените поиск или сбросьте фильтры."
+            : "Сотрудников пока нет."}
+        </p>
       )}
     </AppLayout>
   );

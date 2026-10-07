@@ -215,8 +215,11 @@ export const orgApi = {
       { method: "POST", body: { memberId } },
     ),
 
-  members: (id: number, opts?: { forJira?: boolean; hasJiraUsername?: boolean }) => {
+  members: (id: number, opts?: { forJira?: boolean; hasJiraUsername?: boolean; search?: string; roleId?: string; departmentId?: string }) => {
     const params = new URLSearchParams();
+    if (opts?.search) params.set("search", opts.search);
+    if (opts?.roleId) params.set("roleId", opts.roleId);
+    if (opts?.departmentId) params.set("departmentId", opts.departmentId);
     if (opts?.forJira) params.set("forJira", "1");
     if (opts?.hasJiraUsername) params.set("hasJiraUsername", "true");
     const qs = params.toString();
