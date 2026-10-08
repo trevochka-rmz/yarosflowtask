@@ -43,6 +43,8 @@ export type ReportVideo = {
 };
 export type VideoReportProcessingStatus = {
   video_report_id: number;
+  storage_status?: "local" | "remote";
+  stages?: Array<{ stage: "extract" | "transcribe" | "summarize" | "compress" | "store" | "cleanup" | "deliver" | "delete"; status: "queued" | "processing" | "ready" | "failed" | "cancelled"; attempts: number; error: string | null }>;
   status: "queued" | "processing" | "ready" | "failed" | "cancelled" | null;
   attempts: number;
   max_attempts: number;
@@ -52,6 +54,7 @@ export type VideoReportProcessingStatus = {
   error: string | null;
 };
 export type UploadedVideoReport = {
+  storage_status?: "local" | "remote";
   id: number;
   report_date: string;
   video_url: string | null;
@@ -74,7 +77,7 @@ export type ReportMemberSettings = {
   departments: Array<{ id: number; name: string; code: string | null }>;
 };
 
-export const MAX_VIDEO_REPORT_SIZE = 200 * 1024 * 1024;
+export const MAX_VIDEO_REPORT_SIZE = 700 * 1024 * 1024;
 export type EmployeeActivity = {
   id: string;
   kind: Exclude<ReportType, "all">;
@@ -164,6 +167,7 @@ type ApiEmployeeDetail = {
     created_at?: string;
     video_url?: string | null;
     analysis?: unknown;
+    storage_status?: "local" | "remote";
   }>;
   short_reports?: Array<{
     id: number;
@@ -345,7 +349,7 @@ export const reportsService = {
     signal?: AbortSignal,
   ) {
     if (video.size > MAX_VIDEO_REPORT_SIZE) {
-      throw new Error("Размер видеоотчёта не должен превышать 200 МБ");
+      throw new Error("Размер видеоотчёта не должен превышать 700 МБ");
     }
     const body = new FormData();
     body.set("reportDate", reportDate);
@@ -426,7 +430,7 @@ export const reportsService = {
     );
   },
   async regenerateVideoAnalysis(orgId: number, employeeId: number, videoReportId: number) {
-    return apiFetch<{ employee_report: string; reused?: boolean }>(
+    return apiFetch<{ employee_report: string; reused?: boolean; pending?: boolean }>(
       `/organizations/${orgId}/reports/employees/${employeeId}/video-reports/${videoReportId}/analysis/regenerate`,
       { method: "POST" },
     );

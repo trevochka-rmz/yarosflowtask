@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink, FileVideo, LoaderCircle, Maximize2, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/api";
-import type { ReportVideo } from "@/lib/reports";
+import { reportsService, type ReportVideo } from "@/lib/reports";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCurrentOrg } from "@/lib/org";
 
 function formatDuration(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return undefined;
@@ -20,13 +22,35 @@ function formatDuration(seconds: number) {
 
 export function VideoReportCard({
   video,
+  memberId,
   canDelete = false,
   onDelete,
 }: {
   video: ReportVideo;
+  memberId: number;
   canDelete?: boolean;
   onDelete?: (videoReportId: number) => Promise<void>;
 }) {
+  const { org } = useCurrentOrg();
+  const queryClient = useQueryClient();
+  const processing = useQuery({
+    queryKey: ["video-report-processing", org?.id, memberId, video.id],
+    queryFn: () => reportsService.videoProcessingStatus(org!.id, memberId, video.id!),
+    enabled: Boolean(org && video.id),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.stages?.some((stage) => ["queued", "processing"].includes(stage.status))
+        ? 5_000
+        : data && ["queued", "processing"].includes(data.status ?? "") ? 5_000 : false;
+    },
+  });
+  const summaryStatus = processing.data?.stages?.find((stage) => stage.stage === "summarize")?.status;
+  useEffect(() => {
+    if (summaryStatus === "ready") {
+      void queryClient.invalidateQueries({ queryKey: ["employee-report-detail", org?.id, memberId] });
+      void queryClient.invalidateQueries({ queryKey: ["employee-report", org?.id] });
+    }
+  }, [summaryStatus, org?.id, memberId, queryClient]);
   const [hasStartedPlayback, setHasStartedPlayback] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackError, setPlaybackError] = useState(false);
@@ -36,6 +60,13 @@ export function VideoReportCard({
   const [isStartingPlayback, setIsStartingPlayback] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (processing.data?.status === "ready" && !hasStartedPlayback) {
+      videoRef.current?.load();
+      setPlaybackError(false);
+    }
+  }, [processing.data?.status, hasStartedPlayback]);
 
   const startPlayback = async () => {
     if (!videoRef.current || isStartingPlayback) return;
@@ -129,6 +160,16 @@ export function VideoReportCard({
         </div>
       </div>
 
+      {processing.data && ["queued", "processing"].includes(processing.data.status ?? "") ? (
+        <p className="mt-3 text-sm text-muted-foreground">Видео сохранено. Готовим его для просмотра и отправки…</p>
+      ) : processing.data?.status === "failed" ? (
+        <p className="mt-3 text-sm text-destructive">Не удалось подготовить видео. Исходный файл сохранён.</p>
+      ) : null}
+      {summaryStatus && ["queued", "processing"].includes(summaryStatus) ? (
+        <p className="mt-2 text-sm text-muted-foreground">Формируем краткий отчёт из аудио…</p>
+      ) : summaryStatus === "failed" ? (
+        <p className="mt-2 text-sm text-destructive">Краткий отчёт не сформирован. Видео можно отправить с пояснением.</p>
+      ) : null}
       <div className="mt-4">
         <div>
           <div ref={playerContainerRef} className="relative overflow-hidden rounded-xl bg-black">
@@ -141,8 +182,7 @@ export function VideoReportCard({
                   controlsList="nodownload noremoteplayback noplaybackrate"
                   disablePictureInPicture
                   playsInline
-                  // MinIO currently ignores HTTP Range. Do not automatically
-                  // download a potentially 200 MB report on page open.
+                  // Не скачиваем большой оригинал при открытии страницы.
                   preload="none"
                   src={video.url}
                   onLoadedMetadata={(event) => {

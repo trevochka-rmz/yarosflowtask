@@ -269,6 +269,7 @@ export function EmployeeReportsWorkspace() {
     queryKey: ["employee-report-detail", org?.id, active?.member.id, filters],
     queryFn: () => reportsService.getEmployee(org!.id, active!.member.id, filters),
     enabled: !!org && !!active,
+    refetchInterval: (query) => query.state.data?.reportDeliveryPending ? 4_000 : false,
   });
   const sendVideo = useMutation({
     mutationFn: ({ memberId, reportDate }: { memberId: number; reportDate: string }) =>
@@ -318,7 +319,8 @@ export function EmployeeReportsWorkspace() {
               queryKey: ["employee-report-detail", org.id, active.member.id],
             });
           }
-        });
+        })
+        .catch(() => { /* Следующая проверка повторит запрос после восстановления соединения. */ });
     }, 4_000);
     return () => window.clearInterval(timer);
   }, [active, deliveryInProgress, filters.to, org, queryClient]);
@@ -547,6 +549,7 @@ export function EmployeeReportsWorkspace() {
                   active.member.id,
                   videoReportId,
                 );
+                void queryClient.invalidateQueries({ queryKey: ["video-report-processing", org.id, active.member.id, videoReportId] });
                 await Promise.all([
                   queryClient.invalidateQueries({
                     queryKey: ["employee-report-detail", org.id, active.member.id],
@@ -690,7 +693,7 @@ function ReportPanel({
   onUploaded: () => void;
   onDeleted: (videoReportId: number) => Promise<void>;
   canRegenerateVideoAnalysis: boolean;
-  onRegenerateVideoAnalysis: (videoReportId: number) => Promise<{ reused?: boolean }>;
+  onRegenerateVideoAnalysis: (videoReportId: number) => Promise<{ reused?: boolean; pending?: boolean }>;
   onPreview: () => void;
   isSending: boolean;
 }) {
@@ -714,7 +717,9 @@ function ReportPanel({
     try {
       const result = await onRegenerateVideoAnalysis(videoForAnalysis.id);
       toast.success(
-        result.reused
+        result.pending
+          ? "Генерация начата. Краткий отчёт появится после обработки."
+          : result.reused
           ? "Модель временно недоступна: используется сохранённый краткий отчёт"
           : "Краткий отчёт обновлён",
       );
@@ -963,6 +968,7 @@ function ReportPanel({
                 <VideoReportCard
                   key={periodVideo.id ?? `${periodVideo.date}-${periodVideo.url ?? "video"}`}
                   video={periodVideo}
+                  memberId={report.member.id}
                   canDelete={canUpload}
                   onDelete={onDeleted}
                 />

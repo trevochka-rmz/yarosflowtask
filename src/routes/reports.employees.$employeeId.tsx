@@ -384,6 +384,7 @@ function Videos({
         <VideoReportCard
           key={video.id ?? `${video.date}-${index}`}
           video={video}
+          memberId={report.member.id}
           canDelete={canDelete}
           onDelete={onDelete}
         />
