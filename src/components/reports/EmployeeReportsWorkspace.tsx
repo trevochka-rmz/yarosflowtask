@@ -276,8 +276,8 @@ export function EmployeeReportsWorkspace() {
       reportsService.sendEmployeeReport(org!.id, memberId, reportDate),
     onSuccess: (data) => {
       if (data.notification?.pending) {
-        toast.success("Отчёт принят в очередь. Можно закрыть сайт — отправка продолжится в фоне.", {
-          description: "Отчёт придёт выбранным получателям в Telegram. Копия автору — если включена в настройках.",
+        toast.success("Отчёт принят в очередь", {
+          description: "Можно закрыть сайт — отправка продолжится в фоне. Отчёт будет отправлен руководству в Telegram. Если включена копия автору, вы также получите его в личном чате.",
           duration: 10_000,
         });
         setDeliveryInProgress(true);
@@ -582,11 +582,11 @@ export function EmployeeReportsWorkspace() {
       )}
       {deliveryInProgress || activeReport.data?.reportDeliveryPending ? (
         <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm" role="status">
-          <p className="font-medium">Отчёт в очереди на отправку</p>
+          <p className="font-medium">Отчёт принят в очередь</p>
           <p className="mt-1 text-muted-foreground">
-            Можно закрыть сайт — обработка и отправка продолжатся в фоне.
-            {" "}Отчёт придёт выбранным получателям в Telegram.
-            Копия автору — если включена в настройках.
+            Можно закрыть сайт — отправка продолжится в фоне. Отчёт будет отправлен
+            руководству в Telegram. Если включена копия автору, вы также получите его
+            в личном чате.
           </p>
         </div>
       ) : null}
@@ -623,9 +623,16 @@ export function EmployeeReportsWorkspace() {
                   </p>
                 ) : null}
                 {!previewVideo.data.caption.includes("Краткая сводка из 1С") ? (
-                  <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                    Отчёт из 1С пока не найден. Сначала заполните отчёт в 1С — после обновления он
-                    появится здесь.
+                  <p className="mb-3 rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">
+                    Заполните отчёт в 1С, чтобы после обновления он появился в общем отчёте
+                    и учитывался при формировании краткого отчёта. Видеоотчёт можно отправить и без него.
+                  </p>
+                ) : null}
+                {!previewVideo.data.caption.includes("Задачи из Jira") ? (
+                  <p className="mb-3 rounded-lg border bg-background px-3 py-2 text-sm text-muted-foreground">
+                    Обновите задачи в Jira, чтобы после синхронизации изменения за выбранную дату
+                    появились в общем отчёте и учитывались при формировании краткого отчёта.
+                    Видеоотчёт можно отправить и без задач Jira.
                   </p>
                 ) : null}
                 <div
