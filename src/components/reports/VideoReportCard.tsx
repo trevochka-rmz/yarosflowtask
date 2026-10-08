@@ -166,7 +166,10 @@ export function VideoReportCard({
         <p className="mt-3 text-sm text-destructive">Не удалось подготовить видео. Исходный файл сохранён.</p>
       ) : null}
       {summaryStatus && ["queued", "processing"].includes(summaryStatus) ? (
-        <p className="mt-2 text-sm text-muted-foreground">Формируем краткий отчёт из аудио…</p>
+        <p className="mt-2 text-sm text-muted-foreground" role="status">
+          Формируем краткий отчёт из аудио… Он появится на странице и будет добавлен
+          к сообщению при отправке видео.
+        </p>
       ) : summaryStatus === "failed" ? (
         <p className="mt-2 text-sm text-destructive">Краткий отчёт не сформирован. Видео можно отправить с пояснением.</p>
       ) : null}

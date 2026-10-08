@@ -276,7 +276,10 @@ export function EmployeeReportsWorkspace() {
       reportsService.sendEmployeeReport(org!.id, memberId, reportDate),
     onSuccess: (data) => {
       if (data.notification?.pending) {
-        toast.success("Отправка начата. Ролик появится в Telegram после обработки.");
+        toast.success("Отчёт принят в очередь. Можно закрыть сайт — отправка продолжится в фоне.", {
+          description: "Отчёт придёт выбранным получателям в Telegram. Копия автору — если включена в настройках.",
+          duration: 10_000,
+        });
         setDeliveryInProgress(true);
         setPreviewTarget(undefined);
         // В фоне Telegram может принимать большой файл дольше обычного.
@@ -294,8 +297,8 @@ export function EmployeeReportsWorkspace() {
       const sent = Number(data.notification?.sent ?? 0);
       toast.success(
         sent > 0
-          ? "Полный отчёт отправлен руководству и вам"
-          : "Отчёт подготовлен, но руководитель с подключённым Telegram не найден",
+          ? "Отчёт отправлен выбранным получателям в Telegram"
+          : "Отчёт не отправлен. Проверьте настройки получателей и уведомлений",
       );
       setPreviewTarget(undefined);
       void queryClient.invalidateQueries({ queryKey: ["employee-report-detail", org?.id] });
@@ -577,6 +580,16 @@ export function EmployeeReportsWorkspace() {
           )}
         </div>
       )}
+      {deliveryInProgress || activeReport.data?.reportDeliveryPending ? (
+        <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm" role="status">
+          <p className="font-medium">Отчёт в очереди на отправку</p>
+          <p className="mt-1 text-muted-foreground">
+            Можно закрыть сайт — обработка и отправка продолжатся в фоне.
+            {" "}Отчёт придёт выбранным получателям в Telegram.
+            Копия автору — если включена в настройках.
+          </p>
+        </div>
+      ) : null}
       <Dialog
         open={Boolean(previewTarget)}
         onOpenChange={(open) => {
@@ -587,9 +600,8 @@ export function EmployeeReportsWorkspace() {
           <DialogHeader>
             <DialogTitle>Предпросмотр уведомления</DialogTitle>
             <DialogDescription>
-              {previewTarget?.ownerSendingForOther
-                ? "Так сообщение будет выглядеть у получателей отчёта. Самому сотруднику оно не отправится."
-                : "Так сообщение будет выглядеть у руководства и у вас. Оно ещё не отправлено."}
+              Сообщение будет отправлено получателям, выбранным в настройках уведомлений.
+              Оно ещё не отправлено.
             </DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -620,6 +632,15 @@ export function EmployeeReportsWorkspace() {
                   className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
                   dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
                 />
+                {previewVideo.data.has_video && !previewVideo.data.caption.includes("Краткий отчёт") ? (
+                  <div className="mt-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-3 text-sm">
+                    <p className="font-medium">Здесь будет краткий отчёт</p>
+                    <p className="mt-1 text-muted-foreground">
+                      Он автоматически формируется из аудио видео. Перед отправкой дождёмся
+                      обработки и добавим готовый текст к ролику.
+                    </p>
+                  </div>
+                ) : null}
                 <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
                   📋 Открыть полный отчёт
                 </p>

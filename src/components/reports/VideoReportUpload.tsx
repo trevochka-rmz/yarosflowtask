@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import { useMutation } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import { useCurrentOrg } from "@/lib/org";
 import {
   isoDate,
   MAX_VIDEO_REPORT_SIZE,
+  MAX_VIDEO_REPORT_SIZE_MB,
   reportsService,
   type UploadedVideoReport,
 } from "@/lib/reports";
@@ -39,7 +39,6 @@ export function VideoReportUpload({
   const [file, setFile] = useState<File>();
   const [fileError, setFileError] = useState<string>();
   const [uploadProgress, setUploadProgress] = useState<number>();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadAbortRef = useRef<AbortController>();
   const upload = useMutation({
     mutationFn: async () => {
@@ -84,7 +83,7 @@ export function VideoReportUpload({
     upload.reset();
     if (selectedFile.size > MAX_VIDEO_REPORT_SIZE) {
       setFile(undefined);
-      setFileError("Размер видеоотчёта не должен превышать 700 МБ");
+      setFileError(`Размер видеоотчёта не должен превышать ${MAX_VIDEO_REPORT_SIZE_MB} МБ`);
       event.target.value = "";
       setOpen(true);
       return;
@@ -95,24 +94,8 @@ export function VideoReportUpload({
     setOpen(true);
   };
 
-  const openFilePicker = () => {
-    // iOS and Telegram WebView can leave a Dialog overlay on screen when the
-    // native picker is opened from inside a modal. Close it before the picker.
-    flushSync(() => setOpen(false));
-    fileInputRef.current?.click();
-  };
-
   return (
     <>
-      <Input
-        ref={fileInputRef}
-        className="sr-only"
-        type="file"
-        accept="video/*"
-        tabIndex={-1}
-        onCancel={() => setOpen(true)}
-        onChange={handleFileChange}
-      />
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {
@@ -167,20 +150,31 @@ export function VideoReportUpload({
                 required
               />
             </label>
-            <label className="block space-y-1.5 text-sm font-medium">
-              Видео (до 700 МБ)
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-start font-normal"
-                disabled={upload.isPending}
-                onClick={openFilePicker}
+            <div className="space-y-1.5 text-sm font-medium">
+              <p>Видео (до {MAX_VIDEO_REPORT_SIZE_MB} МБ)</p>
+              <div
+                className={`relative flex min-h-11 items-center gap-2 rounded-md border border-input bg-background px-4 py-2 font-normal focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${upload.isPending ? "opacity-50" : "hover:bg-accent hover:text-accent-foreground"}`}
               >
                 <Upload className="mr-2 h-4 w-4" />
-                {file ? "Выбрать другое видео" : "Выбрать видео"}
-              </Button>
-            </label>
+                <span>{file ? "Выбрать другое видео" : "Выбрать видео"}</span>
+                {/* Нативное поле занимает всю кнопку: iOS получает прямое
+                    нажатие и устойчивую область для системного меню выбора.
+                    Диалог остаётся смонтированным, включая при отмене выбора. */}
+                <input
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                  type="file"
+                  accept="video/*"
+                  aria-label={file ? "Выбрать другое видео" : "Выбрать видео"}
+                  disabled={upload.isPending}
+                  onChange={handleFileChange}
+                />
+              </div>
+            </div>
             {file ? <p className="text-xs text-muted-foreground">{file.name}</p> : null}
+            <p className="text-xs text-muted-foreground">
+              После загрузки автоматически сформируем краткий отчёт из аудио видео.
+              Он появится на странице и будет добавлен к сообщению при отправке.
+            </p>
             {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
             {upload.isPending ? (
               <div
