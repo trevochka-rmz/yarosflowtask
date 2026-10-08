@@ -2,6 +2,7 @@ import { FileText, LoaderCircle, Sparkles, Users } from "lucide-react";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import type { GeneralShortReport, TeamDailyReport } from "@/lib/reports";
+import type { ReactNode } from "react";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -20,6 +21,7 @@ export function GeneralReportPanel({
   canRegenerate = false,
   generating = false,
   onRegenerate,
+  weeklySynergy,
 }: {
   departmentName?: string | null;
   reports: GeneralShortReport[];
@@ -29,6 +31,7 @@ export function GeneralReportPanel({
   canRegenerate?: boolean;
   generating?: boolean;
   onRegenerate?: () => void;
+  weeklySynergy?: ReactNode;
 }) {
   if (pending) {
     return (
@@ -101,6 +104,7 @@ export function GeneralReportPanel({
           ) : null}
         </>
       ) : null}
+      {weeklySynergy}
       {reports.length ? (
         <div className="mt-4 grid gap-3 xl:grid-cols-2">
           {reports.map((report) => (

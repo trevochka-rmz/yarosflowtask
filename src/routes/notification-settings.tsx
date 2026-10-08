@@ -136,6 +136,7 @@ function NotificationSettingsPage() {
   const videoSettings = settings.data.notifications.filter((setting) =>
     ["video_report_reminder", "video_report_delivery"].includes(setting.key),
   );
+  const weeklySynergySetting = settings.data.notifications.find((setting) => setting.key === "team_weekly_synergy");
   return (
     <AppLayout wide>
       <main className="w-full space-y-5 p-4 pb-28 sm:p-6">
@@ -191,6 +192,26 @@ function NotificationSettingsPage() {
             saving={save.isPending}
             onSave={(body) => save.mutate(body)}
           />
+          {owner && weeklySynergySetting ? <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" />Синергия команды IT</CardTitle>
+              <CardDescription>Все сохранённые краткие отчёты IT за неделю, без суббот и воскресений. Только действующие Owner получают рекомендации, приоритеты и основания. Этот анализ дополняет ежедневные взаимосвязи.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <Label className="flex items-center gap-2">
+                  <Switch checked={weeklySynergySetting.isEnabled} disabled={save.isPending} onCheckedChange={(isEnabled) => save.mutate({ notificationKey: "team_weekly_synergy", isEnabled, sendTime: weeklySynergySetting.sendTime, recipientMemberIds: [], includeAuthor: false, messageTemplate: null })} />
+                  Отправлять синергию команды по рабочим дням
+                </Label>
+                <label className="flex items-center gap-2 text-sm">Время (Бишкек)
+                  <input aria-label="Время отправки синергии команды" type="time" className="rounded-md border bg-background px-3 py-2" value={weeklySynergySetting.sendTime} disabled={save.isPending} onChange={(event) => {
+                    if (/^([01]\d|2[0-3]):[0-5]\d$/.test(event.target.value)) save.mutate({ notificationKey: "team_weekly_synergy", isEnabled: weeklySynergySetting.isEnabled, sendTime: event.target.value, recipientMemberIds: [], includeAuthor: false, messageTemplate: null });
+                  }} />
+                </label>
+              </div>
+              <p className="text-sm text-muted-foreground">Получатели: только Owner организации. Сотрудникам копия не отправляется. Полный результат доступен в общем отчёте под взаимосвязями и зависимостями.</p>
+            </CardContent>
+          </Card> : null}
           <div className="pt-2">
             <h2 className="text-lg font-semibold">Видеоотчёты</h2>
             <p className="mt-1 text-sm text-muted-foreground">

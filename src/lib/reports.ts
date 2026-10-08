@@ -136,6 +136,29 @@ export type GeneralReport = {
   team_report: TeamDailyReport | null;
   employee_reports: GeneralShortReport[];
 };
+export type TeamWeeklySynergy = {
+  id: number;
+  report_date: string;
+  period_from: string;
+  status: "queued" | "processing" | "ready" | "failed";
+  source_report_count: number;
+  generated_at: string | null;
+  last_error: string | null;
+  deliveries: Array<{ member_id: number; status: string; next_message_index: number; last_error: string | null }>;
+  response_data: {
+    period: { from: string; to: string };
+    summary: { total: number; high_priority: number };
+    recommendations: Array<{
+      priority: "high" | "medium" | "low";
+      type: "expert_help" | "reuse_solution" | "duplicate_work" | "collaboration" | "knowledge_sharing";
+      title: string;
+      employees: string[];
+      description: string;
+      recommendation: string;
+      evidence: Array<{ employee: string; date: string; fact: string }>;
+    }>;
+  } | null;
+};
 
 type ApiEmployee = Pick<
   OrgMember,
@@ -289,6 +312,10 @@ export const reportsService = {
       method: "PUT",
       body: { memberIds, departmentIds, oneCOptionalMemberIds },
     }),
+  getTeamWeeklySynergy: (orgId: number, reportDate: string) =>
+    apiFetch<TeamWeeklySynergy | null>(`/organizations/${orgId}/reports/team-weekly-synergy/${reportDate}`),
+  enqueueTeamWeeklySynergy: (orgId: number, reportDate: string) =>
+    apiFetch<TeamWeeklySynergy>(`/organizations/${orgId}/reports/team-weekly-synergy/${reportDate}`, { method: "POST" }),
   getGeneralReport: (orgId: number, filters: Pick<ReportFilters, "from" | "to" | "departmentId">) => {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
     if (filters.departmentId) params.set("departmentId", String(filters.departmentId));

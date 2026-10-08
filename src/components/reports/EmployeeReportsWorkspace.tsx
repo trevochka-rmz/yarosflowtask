@@ -39,6 +39,7 @@ import { parseGitReport } from "@/lib/git-report-parser";
 import { STATUS_LABELS } from "@/lib/api";
 import { EmployeeName, EmptyReport, ReportsHeader, ReportTypeTabs } from "./ReportPrimitives";
 import { GeneralReportPanel } from "./GeneralReportPanel";
+import { TeamWeeklySynergyPanel } from "./TeamWeeklySynergyPanel";
 import { VideoReportCard } from "./VideoReportCard";
 import { VideoReportUpload } from "./VideoReportUpload";
 
@@ -262,6 +263,21 @@ export function EmployeeReportsWorkspace() {
     onSuccess: () => {
       toast.success("Итоговый отчёт команды сформирован");
       void queryClient.invalidateQueries({ queryKey: ["employee-general-report", org?.id] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const canViewWeeklySynergy = isCurrentOrgOwner && ["it", "ит"].includes((selectedGeneralDepartmentName || "").trim().toLowerCase());
+  const weeklySynergy = useQuery({
+    queryKey: ["team-weekly-synergy", org?.id, filters.to],
+    queryFn: () => reportsService.getTeamWeeklySynergy(org!.id, filters.to),
+    enabled: !!org && generalSelected && canViewWeeklySynergy,
+    refetchInterval: (query) => ["queued", "processing"].includes(query.state.data?.status ?? "") ? 5_000 : false,
+  });
+  const generateWeeklySynergy = useMutation({
+    mutationFn: () => reportsService.enqueueTeamWeeklySynergy(org!.id, filters.to),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["team-weekly-synergy", org?.id, filters.to], data);
+      toast.success("Синергия команды поставлена в очередь. Можно закрыть сайт.");
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -491,6 +507,13 @@ export function EmployeeReportsWorkspace() {
               canRegenerate={canRegenerateVideoAnalysis && !!selectedGeneralDepartmentId && filters.from === filters.to}
               generating={regenerateTeamReport.isPending}
               onRegenerate={() => regenerateTeamReport.mutate()}
+              weeklySynergy={canViewWeeklySynergy ? <TeamWeeklySynergyPanel
+                report={weeklySynergy.data ?? null}
+                loading={weeklySynergy.isPending}
+                error={weeklySynergy.isError}
+                generating={generateWeeklySynergy.isPending}
+                onGenerate={() => generateWeeklySynergy.mutate()}
+              /> : undefined}
             />
           ) : !active ? (
             <EmptyReport />

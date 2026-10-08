@@ -97,6 +97,7 @@ export interface OrganizationNotificationSetting {
     | "daily_task_summary"
     | "team_daily_report"
     | "team_daily_synergy"
+    | "team_weekly_synergy"
     | "video_report_delivery";
   title: string;
   isEnabled: boolean;
