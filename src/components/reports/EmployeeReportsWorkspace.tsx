@@ -310,6 +310,8 @@ export function EmployeeReportsWorkspace() {
       reportsService.previewEmployeeReport(org!.id, memberId, reportDate),
     onError: (error: Error) => toast.error(error.message),
   });
+  const previewCaption = previewVideo.data?.caption ?? "";
+  const previewFeedbackStart = previewCaption.indexOf("<b>Обратная связь</b>");
   useEffect(() => {
     if (!deliveryInProgress || !org || !active) return;
     const timer = window.setInterval(() => {
@@ -637,7 +639,11 @@ export function EmployeeReportsWorkspace() {
                 ) : null}
                 <div
                   className="whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
-                  dangerouslySetInnerHTML={{ __html: previewVideo.data.caption }}
+                  dangerouslySetInnerHTML={{
+                    __html: previewFeedbackStart >= 0
+                      ? previewCaption.slice(0, previewFeedbackStart).trimEnd()
+                      : previewCaption,
+                  }}
                 />
                 {previewVideo.data.has_video && !previewVideo.data.caption.includes("Краткий отчёт") ? (
                   <div className="mt-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-3 text-sm">
@@ -647,6 +653,12 @@ export function EmployeeReportsWorkspace() {
                       обработки и добавим готовый текст к ролику.
                     </p>
                   </div>
+                ) : null}
+                {previewFeedbackStart >= 0 ? (
+                  <div
+                    className="mt-3 whitespace-pre-wrap text-sm leading-relaxed [&_a]:text-primary [&_a]:underline"
+                    dangerouslySetInnerHTML={{ __html: previewCaption.slice(previewFeedbackStart) }}
+                  />
                 ) : null}
                 <p className="mt-4 rounded-md border bg-background px-3 py-2 text-center text-sm text-primary">
                   📋 Открыть полный отчёт
