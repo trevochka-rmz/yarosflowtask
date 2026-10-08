@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useCurrentOrg } from "@/lib/org";
 import {
@@ -126,7 +125,8 @@ export function VideoReportUpload({
           <DialogHeader>
             <DialogTitle>Добавить видеоотчет</DialogTitle>
             <DialogDescription>
-              {employee.full_name || "Сотрудник"}. Можно выбрать сегодня или прошедшую дату.
+              {employee.full_name || "Сотрудник"}. Видео будет добавлено за дату,
+              выбранную на странице отчётов.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -139,17 +139,16 @@ export function VideoReportUpload({
               }
             }}
           >
-            <label className="block space-y-1.5 text-sm font-medium">
-              Дата отчёта
-              <Input
-                type="date"
-                value={reportDate}
-                max={today}
-                onChange={(event) => setReportDate(event.target.value)}
-                disabled={upload.isPending}
-                required
-              />
-            </label>
+            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Дата отчёта: </span>
+              <time dateTime={reportDate} className="font-medium">
+                {new Intl.DateTimeFormat("ru-RU", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }).format(new Date(`${reportDate}T12:00:00`))}
+              </time>
+            </div>
             <div className="space-y-1.5 text-sm font-medium">
               <p>Видео (до {MAX_VIDEO_REPORT_SIZE_MB} МБ)</p>
               <div
