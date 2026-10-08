@@ -588,7 +588,7 @@ function DailyDeliveryCard({
                 <Users className="h-4 w-4" /> Получатели вечернего отчёта
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Эти же получатели используются для статистики, итога команды и синергии.
+                Эти же получатели используются для статистики, итога команды, взаимосвязей и зависимостей команды IT.
               </p>
             </div>
             <span className="rounded-full bg-background px-2.5 py-1 text-xs text-muted-foreground">

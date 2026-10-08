@@ -92,10 +92,10 @@ export function GeneralReportPanel({
             <article className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
               <header className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-violet-600" />
-                <h2 className="font-semibold">Синергия отдела{departmentName ? ` ${departmentName}` : ""}</h2>
+                <h2 className="font-semibold">Взаимосвязи и зависимости команды {departmentName || "IT"}</h2>
               </header>
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                {teamReport.synergy_report}
+                {teamReport.synergy_report.replace(/Синергия(?: дня| IT-команды)/giu, "Взаимосвязи и зависимости команды IT")}
               </p>
             </article>
           ) : null}
